@@ -5,6 +5,8 @@ import type { EpisodeRecord } from "./model";
  * reales ni de `patient_reference`: todo se une por `episode.id`.
  */
 export const DEMO_EPISODE_ID = "demo-episode-001";
+export const DEMO_SECOND_EPISODE_ID = "demo-episode-002";
+export const DEMO_OTHER_EPISODE_ID = "demo-episode-003";
 
 export const DEMO_EPISODE: EpisodeRecord = {
   episode: {
@@ -223,3 +225,81 @@ export const DEMO_EPISODE: EpisodeRecord = {
     },
   ],
 };
+
+export const DEMO_EPISODES: EpisodeRecord[] = [
+  DEMO_EPISODE,
+  {
+    episode: {
+      ...DEMO_EPISODE.episode,
+      id: DEMO_SECOND_EPISODE_ID,
+      label: "Paciente ficticio DEMO-002 · Cama 8",
+    },
+    professionals: DEMO_EPISODE.professionals,
+    shifts: DEMO_EPISODE.shifts,
+    encounters: [
+      {
+        id: "enc-demo-002-nurse",
+        episodeId: DEMO_SECOND_EPISODE_ID,
+        authorId: "prof-nurse-day",
+        shiftId: "shift-day-20",
+        occurredAt: "2026-11-20T14:15:00-03:00",
+        source: { type: "audio_dictation", label: "Dictado ficticio · Cama 8" },
+        entries: [
+          {
+            id: "ent-demo-002-assessment",
+            kind: "assessment",
+            status: "validated",
+            text: "Paciente despierto. Tolera la movilización con asistencia.",
+          },
+          {
+            id: "ent-demo-002-plan",
+            kind: "plan",
+            status: "validated",
+            text: "Coordinar próxima movilización con kinesiología.",
+          },
+        ],
+      },
+    ],
+    pendings: [
+      {
+        id: "pend-demo-002-movement",
+        episodeId: DEMO_SECOND_EPISODE_ID,
+        title: "Coordinar la próxima movilización",
+        status: "open",
+        ownerId: "prof-kine",
+        dueAt: null,
+        sourceEncounterId: "enc-demo-002-nurse",
+      },
+    ],
+    openConflicts: [],
+  },
+  {
+    episode: {
+      ...DEMO_EPISODE.episode,
+      id: DEMO_OTHER_EPISODE_ID,
+      label: "Paciente ficticio DEMO-003 · Cama 3",
+    },
+    professionals: DEMO_EPISODE.professionals,
+    shifts: DEMO_EPISODE.shifts,
+    encounters: [
+      {
+        id: "enc-demo-003-nurse",
+        episodeId: DEMO_OTHER_EPISODE_ID,
+        authorId: "prof-nurse-night",
+        shiftId: "shift-night-19",
+        occurredAt: "2026-11-20T07:40:00-03:00",
+        source: { type: "audio_dictation", label: "Dictado ficticio · Cama 3" },
+        entries: [
+          {
+            id: "ent-demo-003-assessment",
+            kind: "assessment",
+            status: "validated",
+            text: "Paciente refiere haber dormido bien durante el turno.",
+          },
+        ],
+      },
+    ],
+    pendings: [],
+    openConflicts: [],
+  },
+];

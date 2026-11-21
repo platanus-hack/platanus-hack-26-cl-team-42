@@ -138,6 +138,7 @@ export interface SourcedEntry {
  */
 export interface HandoffSnapshot {
   episodeId: string;
+  episodeLabel: string;
   cutoffAt: string;
   summaryText: string;
   recentChanges: SourcedEntry[];
@@ -149,16 +150,14 @@ export interface HandoffSnapshot {
 
 export interface Handoff {
   id: string;
-  episodeId: string;
   fromId: string;
   toId: string;
   note: string;
   sentAt: string;
-  snapshot: HandoffSnapshot;
+  snapshots: HandoffSnapshot[];
 }
 
 export interface SendHandoffInput {
-  episodeId: string;
   fromId: string;
   toId: string;
   note: string;

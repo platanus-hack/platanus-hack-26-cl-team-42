@@ -20,15 +20,23 @@ export function DemoEpisodeBanner({ episode, children }: { episode: Episode; chi
 }
 
 /** Enlace real a la atención de origen dentro del registro clínico. */
-export function SourceLink({ encounterId, children }: { encounterId: string; children: ReactNode }) {
+export function SourceLink({
+  episodeId,
+  encounterId,
+  children,
+}: {
+  episodeId: string;
+  encounterId: string;
+  children: ReactNode;
+}) {
   return (
-    <Link to="/official-form" search={{ encounter: encounterId }}>
+    <Link to="/official-form" search={{ episode: episodeId, encounter: encounterId }}>
       {children}
     </Link>
   );
 }
 
-export function OpenConflicts({ conflicts }: { conflicts: OpenConflict[] }) {
+export function OpenConflicts({ episodeId, conflicts }: { episodeId: string; conflicts: OpenConflict[] }) {
   if (conflicts.length === 0) return null;
 
   return (
@@ -40,7 +48,7 @@ export function OpenConflicts({ conflicts }: { conflicts: OpenConflict[] }) {
             <Callout.Text>{conflict.description}</Callout.Text>
             <Flex gap="2" wrap="wrap">
               {conflict.sourceEncounterIds.map((id, index) => (
-                <SourceLink key={id} encounterId={id}>
+                <SourceLink key={id} episodeId={episodeId} encounterId={id}>
                   {conflict.sourceEncounterIds.length === 1 ? "Ver atención de origen" : `Ver atención ${index + 1}`}
                 </SourceLink>
               ))}

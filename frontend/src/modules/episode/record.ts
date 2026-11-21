@@ -33,10 +33,7 @@ export interface RecordView {
  */
 export function selectRecord(record: EpisodeRecord, filter: RecordFilter = {}): RecordView {
   const { episode } = record;
-  const cutoff = Date.parse(episode.cutoffAt);
-  const eligible = record.encounters
-    .filter((encounter) => encounter.episodeId === episode.id)
-    .filter((encounter) => Date.parse(encounter.occurredAt) <= cutoff)
+  const eligible = episodeEncountersAtCutoff(record)
     .map((encounter) => ({ ...encounter, entries: encounter.entries.filter(isValidated) }))
     .filter((encounter) => encounter.entries.length > 0)
     .sort(byOccurredAt);
@@ -69,6 +66,13 @@ export function selectRecord(record: EpisodeRecord, filter: RecordFilter = {}): 
   };
 }
 
+export function episodeEncountersAtCutoff({ episode, encounters }: EpisodeRecord): Encounter[] {
+  const cutoff = Date.parse(episode.cutoffAt);
+  return encounters.filter(
+    (encounter) => encounter.episodeId === episode.id && Date.parse(encounter.occurredAt) <= cutoff,
+  );
+}
+
 /** Entradas validadas de la vista, aplanadas con su procedencia. */
 export function sourcedEntries(view: RecordView): SourcedEntry[] {
   return view.encounters.flatMap((encounter) =>
@@ -81,7 +85,10 @@ export function encounterAnchor(encounterId: string): string {
   return `atencion-${encounterId}`;
 }
 
-export function professionalById(record: EpisodeRecord, id: string | null | undefined): Professional | undefined {
+export function professionalById(
+  record: Pick<EpisodeRecord, "professionals">,
+  id: string | null | undefined,
+): Professional | undefined {
   return record.professionals.find((professional) => professional.id === id);
 }
 
@@ -144,7 +151,7 @@ export function describeFilter(record: EpisodeRecord, filter: RecordFilter): str
   return parts.length > 0 ? parts.join(" · ") : "episodio completo";
 }
 
-export function authorLine(record: EpisodeRecord, authorId: string | null | undefined): string {
+export function authorLine(record: Pick<EpisodeRecord, "professionals">, authorId: string | null | undefined): string {
   const author = professionalById(record, authorId);
   return author ? `${author.name} (${author.role})` : "Sin responsable";
 }

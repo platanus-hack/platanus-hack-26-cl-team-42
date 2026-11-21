@@ -59,7 +59,7 @@ export const WORKFLOW_STEPS = [
   {
     id: "handoff",
     label: "Traspaso",
-    summary: "Transfiere el caso a otra persona del equipo.",
+    summary: "Entrega en conjunto los pacientes que atendiste a otra persona del equipo.",
     path: "/handoff",
   },
 ] as const satisfies readonly WorkflowStep[];

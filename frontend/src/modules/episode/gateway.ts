@@ -1,19 +1,13 @@
-import { DEMO_EPISODE } from "./fixture";
-import { buildHandoffSnapshot } from "./handoff";
-import type { EpisodeRecord, Handoff, PendingTask, SendHandoffInput } from "./model";
+import { DEMO_EPISODE_ID, DEMO_EPISODES } from "./fixture";
+import { buildHandoffSnapshots } from "./handoff";
+import type { EpisodeRecord, Handoff, HandoffSnapshot, PendingTask, SendHandoffInput } from "./model";
 
-/**
- * Adaptador del episodio clínico. Hoy lo sirve un gateway local de demo
- * limitado al episodio ficticio; mañana se sustituye por uno que hable con
- * la API real sin cambiar las vistas.
- */
 export interface EpisodeGateway {
-  getRecord(episodeId: string): Promise<EpisodeRecord>;
+  listRecords(): Promise<EpisodeRecord[]>;
   closePending(input: ClosePendingInput): Promise<PendingTask>;
-  listHandoffs(episodeId: string): Promise<Handoff[]>;
+  listHandoffs(professionalId: string): Promise<Handoff[]>;
   sendHandoff(input: SendHandoffInput): Promise<Handoff>;
-  /** Solo demo: vuelve al fixture original. */
-  reset(episodeId: string): Promise<void>;
+  reset(): Promise<void>;
 }
 
 export interface ClosePendingInput {
@@ -22,102 +16,116 @@ export interface ClosePendingInput {
   closedById: string;
 }
 
-/** Lo único que la demo persiste: cierres de pendientes y traspasos enviados. */
-export interface DemoState {
-  version: 1;
-  pendingClosures: Record<string, { closedAt: string; closedById: string }>;
+type PendingClosures = Record<string, { closedAt: string; closedById: string }>;
+
+interface DemoState {
+  version: 2;
+  pendingClosures: Record<string, PendingClosures>;
   handoffs: Handoff[];
 }
 
-/** Almacenamiento desacoplado del gateway (localStorage, memoria, …). */
+type LegacyHandoff = Omit<Handoff, "snapshots"> & {
+  episodeId: string;
+  snapshot: Omit<HandoffSnapshot, "episodeLabel">;
+};
+
+interface LegacyDemoState {
+  version: 1;
+  pendingClosures: PendingClosures;
+  handoffs: LegacyHandoff[];
+}
+
+type StoredState = DemoState | LegacyDemoState;
+
 export interface DemoStore {
-  read(): DemoState | null;
+  read(): StoredState | null;
   write(state: DemoState): void;
   clear(): void;
 }
 
 interface DemoGatewayOptions {
   store: DemoStore;
-  fixture?: EpisodeRecord;
+  fixtures?: EpisodeRecord[];
   now?: () => Date;
   newId?: () => string;
 }
 
 export function createDemoEpisodeGateway({
   store,
-  fixture = DEMO_EPISODE,
+  fixtures = DEMO_EPISODES,
   now = () => new Date(),
   newId = () => `handoff-${crypto.randomUUID()}`,
 }: DemoGatewayOptions): EpisodeGateway {
-  const load = (): DemoState => store.read() ?? emptyState();
-  const assertEpisode = (episodeId: string) => {
-    if (episodeId !== fixture.episode.id) {
-      throw new Error(`La demo solo conoce el episodio ficticio "${fixture.episode.id}".`);
-    }
-  };
-  const recordFrom = (state: DemoState): EpisodeRecord => {
-    const record = structuredClone(fixture);
-    record.pendings = record.pendings.map((pending) => {
-      const closure = state.pendingClosures[pending.id];
-      return closure ? { ...pending, status: "done", ...closure } : pending;
-    });
-    return record;
-  };
+  const professionals = new Set(fixtures.flatMap(({ professionals }) => professionals.map(({ id }) => id)));
+  const load = () => upgradeState(store.read(), fixtures);
 
   return {
-    async getRecord(episodeId) {
-      assertEpisode(episodeId);
-      return recordFrom(load());
+    async listRecords() {
+      const state = load();
+      return fixtures.map((fixture) => recordFrom(fixture, state));
     },
 
     async closePending({ episodeId, pendingId, closedById }) {
-      assertEpisode(episodeId);
+      const fixture = fixtures.find(({ episode }) => episode.id === episodeId);
+      if (!fixture) throw new Error("La demo solo admite episodios ficticios conocidos.");
+      if (!fixture.professionals.some(({ id }) => id === closedById)) {
+        throw new Error("Profesional desconocido.");
+      }
+
       const state = load();
-      const record = recordFrom(state);
+      const record = recordFrom(fixture, state);
       const pending = record.pendings.find((item) => item.id === pendingId);
       if (!pending) throw new Error(`Pendiente desconocido: ${pendingId}`);
       if (pending.status === "done") throw new Error("El pendiente ya está cerrado.");
-      if (!record.professionals.some((p) => p.id === closedById)) {
-        throw new Error(`Profesional desconocido: ${closedById}`);
-      }
+
       const closure = { closedAt: now().toISOString(), closedById };
-      store.write({ ...state, pendingClosures: { ...state.pendingClosures, [pendingId]: closure } });
+      store.write({
+        ...state,
+        pendingClosures: {
+          ...state.pendingClosures,
+          [episodeId]: { ...state.pendingClosures[episodeId], [pendingId]: closure },
+        },
+      });
       return { ...pending, status: "done", ...closure };
     },
 
-    async listHandoffs(episodeId) {
-      assertEpisode(episodeId);
-      return structuredClone(load().handoffs);
+    async listHandoffs(professionalId) {
+      if (!professionals.has(professionalId)) throw new Error("Profesional desconocido.");
+      return structuredClone(
+        load().handoffs.filter(({ fromId, toId }) => fromId === professionalId || toId === professionalId),
+      );
     },
 
-    async sendHandoff({ episodeId, fromId, toId, note }) {
-      assertEpisode(episodeId);
-      const state = load();
-      const record = recordFrom(state);
-      const known = (id: string) => record.professionals.some((p) => p.id === id);
-      if (!known(fromId) || !known(toId)) throw new Error("Remitente o destinatario desconocido.");
+    async sendHandoff({ fromId, toId, note }) {
+      if (!professionals.has(fromId) || !professionals.has(toId)) {
+        throw new Error("Remitente o destinatario desconocido.");
+      }
       if (fromId === toId) throw new Error("El destinatario debe ser otra persona.");
+
+      const state = load();
+      const records = fixtures.map((fixture) => recordFrom(fixture, state));
+      const snapshots = buildHandoffSnapshots(records, fromId);
+      if (snapshots.length === 0) throw new Error("El profesional no tiene pacientes para traspasar.");
+
       const handoff: Handoff = {
         id: newId(),
-        episodeId,
         fromId,
         toId,
         note: note.trim(),
         sentAt: now().toISOString(),
-        snapshot: buildHandoffSnapshot(record),
+        snapshots,
       };
       store.write({ ...state, handoffs: [handoff, ...state.handoffs] });
       return structuredClone(handoff);
     },
 
-    async reset(episodeId) {
-      assertEpisode(episodeId);
+    async reset() {
       store.clear();
     },
   };
 }
 
-export function memoryStore(initial: DemoState | null = null): DemoStore {
+export function memoryStore(initial: StoredState | null = null): DemoStore {
   let state = initial;
   return {
     read: () => (state ? structuredClone(state) : null),
@@ -130,18 +138,14 @@ export function memoryStore(initial: DemoState | null = null): DemoStore {
   };
 }
 
-/**
- * Persiste el estado de la demo en `localStorage` bajo una clave propia del
- * episodio ficticio. Si el navegador no lo permite, cae a memoria.
- */
 export function browserStore(key: string): DemoStore {
   const fallback = memoryStore();
   return {
     read() {
       try {
         const raw = window.localStorage.getItem(key);
-        const parsed = raw ? (JSON.parse(raw) as DemoState) : null;
-        return parsed?.version === 1 ? parsed : fallback.read();
+        const parsed = raw ? (JSON.parse(raw) as StoredState) : null;
+        return parsed?.version === 1 || parsed?.version === 2 ? parsed : fallback.read();
       } catch {
         return fallback.read();
       }
@@ -151,7 +155,7 @@ export function browserStore(key: string): DemoStore {
       try {
         window.localStorage.setItem(key, JSON.stringify(state));
       } catch {
-        // Sin almacenamiento: la demo sigue en memoria hasta recargar.
+        // Los cambios se conservan en memoria hasta recargar.
       }
     },
     clear() {
@@ -159,12 +163,35 @@ export function browserStore(key: string): DemoStore {
       try {
         window.localStorage.removeItem(key);
       } catch {
-        // Nada que limpiar.
+        // El navegador puede impedir el acceso a localStorage.
       }
     },
   };
 }
 
-function emptyState(): DemoState {
-  return { version: 1, pendingClosures: {}, handoffs: [] };
+function recordFrom(fixture: EpisodeRecord, state: DemoState): EpisodeRecord {
+  const record = structuredClone(fixture);
+  const closures = state.pendingClosures[record.episode.id] ?? {};
+  record.pendings = record.pendings.map((pending) => {
+    const closure = closures[pending.id];
+    return closure ? { ...pending, status: "done", ...closure } : pending;
+  });
+  return record;
+}
+
+function upgradeState(state: StoredState | null, fixtures: EpisodeRecord[]): DemoState {
+  if (!state) return { version: 2, pendingClosures: {}, handoffs: [] };
+  if (state.version === 2) return state;
+
+  return {
+    version: 2,
+    pendingClosures: { [DEMO_EPISODE_ID]: state.pendingClosures },
+    handoffs: state.handoffs.map(({ episodeId, snapshot, ...handoff }) => ({
+      ...handoff,
+      snapshots: [{
+        ...snapshot,
+        episodeLabel: fixtures.find(({ episode }) => episode.id === episodeId)?.episode.label ?? episodeId,
+      }],
+    })),
+  };
 }

@@ -1,16 +1,23 @@
 import { formatClinicalTime } from "./format";
 import type { EpisodeRecord, HandoffSnapshot, SourcedEntry } from "./model";
-import { authorLine, datumText, pendingText, selectRecord, sourcedEntries } from "./record";
+import { authorLine, datumText, episodeEncountersAtCutoff, pendingText, selectRecord, sourcedEntries } from "./record";
 
 /** Ventana de «cambios recientes»: las últimas 12 h clínicas antes del corte. */
 export const RECENT_WINDOW_HOURS = 12;
+
+/** Incluye cada episodio en que el emisor registró una atención al corte. */
+export function buildHandoffSnapshots(records: EpisodeRecord[], fromId: string): HandoffSnapshot[] {
+  return records
+    .filter((record) => episodeEncountersAtCutoff(record).some((encounter) => encounter.authorId === fromId))
+    .map(buildHandoffSnapshot);
+}
 
 /**
  * Copia fija de lo que se comunica en un traspaso, tomada del episodio
  * completo al corte. Se clona en profundidad: cambios posteriores del
  * episodio (p. ej. cerrar un pendiente) no alteran envíos anteriores.
  */
-export function buildHandoffSnapshot(record: EpisodeRecord): HandoffSnapshot {
+function buildHandoffSnapshot(record: EpisodeRecord): HandoffSnapshot {
   const view = selectRecord(record);
   const cutoff = Date.parse(record.episode.cutoffAt);
   const windowStart = cutoff - RECENT_WINDOW_HOURS * 60 * 60 * 1000;
@@ -20,6 +27,7 @@ export function buildHandoffSnapshot(record: EpisodeRecord): HandoffSnapshot {
 
   const snapshot: HandoffSnapshot = {
     episodeId: record.episode.id,
+    episodeLabel: record.episode.label,
     cutoffAt: record.episode.cutoffAt,
     summaryText: "",
     recentChanges,
