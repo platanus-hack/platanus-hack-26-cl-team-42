@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
-import { Box } from "@radix-ui/themes";
+import { AppHeader } from "../components/AppHeader";
+import { BottomNav } from "../components/BottomNav";
 import { useAuth } from "../services/auth";
-import { Sidebar } from "../components/Sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedContent,
@@ -20,10 +20,11 @@ function AuthenticatedContent() {
 
   return (
     <>
-      <Sidebar userEmail={session?.email || ""} />
-      <Box style={{ marginLeft: "250px" }}>
+      <AppHeader userEmail={session?.email || ""} />
+      <main className="app-main">
         <Outlet />
-      </Box>
+      </main>
+      <BottomNav />
     </>
   );
 }
