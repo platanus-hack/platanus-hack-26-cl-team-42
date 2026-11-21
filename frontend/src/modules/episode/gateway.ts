@@ -36,11 +36,12 @@ export const episodeGateway: EpisodeGateway = {
     apiRequest<PendingTask>(`/episodes/${episodeId}/pendings/${pendingId}/close`, { method: "POST" }),
   listHandoffs: () => apiRequest<Handoff[]>("/episodes/handoffs"),
   async sendHandoff({ fromId, toId, note, episodeIds }) {
+    const [records, handoffs] = await Promise.all([episodeGateway.listRecords(), episodeGateway.listHandoffs()]);
     // La copia fija de lo comunicado se arma con el registro vigente de cada paciente elegido.
-    const snapshots = buildHandoffSnapshots(await episodeGateway.listRecords(), fromId).filter(
+    const snapshots = buildHandoffSnapshots(records, fromId, handoffs).filter(
       ({ episodeId }) => episodeIds.includes(episodeId),
     );
-    if (snapshots.length === 0) throw new Error("Elige al menos un paciente con atenciones para traspasar.");
+    if (snapshots.length === 0) throw new Error("Elige al menos un paciente para traspasar.");
     return apiRequest<Handoff>("/episodes/handoffs", {
       method: "POST",
       body: JSON.stringify({ to_id: Number(toId), note, snapshots }),

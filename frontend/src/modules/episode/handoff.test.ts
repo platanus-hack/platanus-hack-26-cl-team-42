@@ -25,6 +25,28 @@ describe("buildHandoffSnapshots", () => {
 
     expect(snapshot.lastEncounter).toMatchObject({ authorId: "prof-nurse-day", occurredAt: "2026-11-20T16:40:00-03:00" });
   });
+
+  it("includes received patients still assigned to the recipient before they record an encounter", () => {
+    const [received, unassigned] = buildHandoffSnapshots(DEMO_EPISODES, "prof-nurse-day");
+    const [record, , otherRecord] = DEMO_EPISODES;
+    const [other] = buildHandoffSnapshots([otherRecord], "prof-nurse-night");
+    const savedHandoff = {
+      id: "handoff-1",
+      fromId: "prof-nurse-day",
+      toId: "prof-fuentes",
+      sentAt: received.cutoffAt,
+      note: "",
+      snapshots: [received, unassigned],
+    };
+    const records = [record, otherRecord];
+
+    expect(buildHandoffSnapshots(records, "prof-fuentes")).toEqual([]);
+    const snapshots = buildHandoffSnapshots(records, "prof-fuentes", [
+      savedHandoff,
+      { ...savedHandoff, id: "handoff-2", fromId: "prof-fuentes", toId: "someone-else", snapshots: [other] },
+    ]);
+    expect(snapshots.map(({ episodeId }) => episodeId)).toEqual([received.episodeId]);
+  });
 });
 
 describe("handoffReferenceAt", () => {
