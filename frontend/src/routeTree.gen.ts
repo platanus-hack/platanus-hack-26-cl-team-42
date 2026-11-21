@@ -17,6 +17,7 @@ import { Route as AuthenticatedTranscriptionRouteImport } from './routes/_authen
 import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRecordingsRouteImport } from './routes/_authenticated/recordings'
+import { Route as AuthenticatedReconciliationRouteImport } from './routes/_authenticated/reconciliation'
 import { Route as AuthenticatedOfficialFormRouteImport } from './routes/_authenticated/official-form'
 import { Route as AuthenticatedHandoffRouteImport } from './routes/_authenticated/handoff'
 import { Route as AuthenticatedConsolidationRouteImport } from './routes/_authenticated/consolidation'
@@ -64,6 +65,12 @@ const AuthenticatedRecordingsRoute = AuthenticatedRecordingsRouteImport.update({
   path: '/recordings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedReconciliationRoute =
+  AuthenticatedReconciliationRouteImport.update({
+    id: '/reconciliation',
+    path: '/reconciliation',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedOfficialFormRoute =
   AuthenticatedOfficialFormRouteImport.update({
     id: '/official-form',
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/consolidation': typeof AuthenticatedConsolidationRoute
   '/handoff': typeof AuthenticatedHandoffRoute
   '/official-form': typeof AuthenticatedOfficialFormRoute
+  '/reconciliation': typeof AuthenticatedReconciliationRoute
   '/recordings': typeof AuthenticatedRecordingsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
@@ -122,6 +130,7 @@ export interface FileRoutesByTo {
   '/consolidation': typeof AuthenticatedConsolidationRoute
   '/handoff': typeof AuthenticatedHandoffRoute
   '/official-form': typeof AuthenticatedOfficialFormRoute
+  '/reconciliation': typeof AuthenticatedReconciliationRoute
   '/recordings': typeof AuthenticatedRecordingsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
@@ -139,6 +148,7 @@ export interface FileRoutesById {
   '/_authenticated/consolidation': typeof AuthenticatedConsolidationRoute
   '/_authenticated/handoff': typeof AuthenticatedHandoffRoute
   '/_authenticated/official-form': typeof AuthenticatedOfficialFormRoute
+  '/_authenticated/reconciliation': typeof AuthenticatedReconciliationRoute
   '/_authenticated/recordings': typeof AuthenticatedRecordingsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/consolidation'
     | '/handoff'
     | '/official-form'
+    | '/reconciliation'
     | '/recordings'
     | '/reports'
     | '/templates'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/consolidation'
     | '/handoff'
     | '/official-form'
+    | '/reconciliation'
     | '/recordings'
     | '/reports'
     | '/templates'
@@ -187,6 +199,7 @@ export interface FileRouteTypes {
     | '/_authenticated/consolidation'
     | '/_authenticated/handoff'
     | '/_authenticated/official-form'
+    | '/_authenticated/reconciliation'
     | '/_authenticated/recordings'
     | '/_authenticated/reports'
     | '/_authenticated/templates'
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRecordingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reconciliation': {
+      id: '/_authenticated/reconciliation'
+      path: '/reconciliation'
+      fullPath: '/reconciliation'
+      preLoaderRoute: typeof AuthenticatedReconciliationRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/official-form': {
       id: '/_authenticated/official-form'
       path: '/official-form'
@@ -310,6 +330,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedConsolidationRoute: typeof AuthenticatedConsolidationRoute
   AuthenticatedHandoffRoute: typeof AuthenticatedHandoffRoute
   AuthenticatedOfficialFormRoute: typeof AuthenticatedOfficialFormRoute
+  AuthenticatedReconciliationRoute: typeof AuthenticatedReconciliationRoute
   AuthenticatedRecordingsRoute: typeof AuthenticatedRecordingsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedTemplatesRoute: typeof AuthenticatedTemplatesRoute
@@ -324,6 +345,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedConsolidationRoute: AuthenticatedConsolidationRoute,
   AuthenticatedHandoffRoute: AuthenticatedHandoffRoute,
   AuthenticatedOfficialFormRoute: AuthenticatedOfficialFormRoute,
+  AuthenticatedReconciliationRoute: AuthenticatedReconciliationRoute,
   AuthenticatedRecordingsRoute: AuthenticatedRecordingsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedTemplatesRoute: AuthenticatedTemplatesRoute,

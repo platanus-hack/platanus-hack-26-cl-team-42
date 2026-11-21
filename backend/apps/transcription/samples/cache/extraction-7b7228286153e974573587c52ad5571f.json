@@ -1,0 +1,203 @@
+{
+  "metadatos": {
+    "tipo_profesional": "enfermeria",
+    "nombre_profesional": "EU Soto",
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-18T11:00:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": null,
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": 65,
+      "frecuencia_cardiaca": 100,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "presión arterial media de sesenta y cinco, frecuencia cardíaca de cien"
+    }
+  ],
+  "control_respiratorio": [],
+  "drogas_infusion": [
+    {
+      "farmaco": "noradrenalina",
+      "categoria": "vasoactivo",
+      "dosis": 0.3,
+      "unidad": "mcg/kg/min",
+      "tendencia": "aumento",
+      "hora": null,
+      "evidencia": "noradrenalina en infusión a cero coma tres, se subió por hipotensión"
+    }
+  ],
+  "medicamentos": [],
+  "escalas": [],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "CVC",
+      "ubicacion": "subclavia derecha",
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "funcionante",
+      "signos_infeccion": false,
+      "accion": "mantenido",
+      "evidencia": "vía central en subclavia derecha, sin signos de infección"
+    }
+  ],
+  "alergias": [
+    {
+      "agente": "penicilina",
+      "reaccion": "rash cutáneo",
+      "evidencia": "la hija refiere alergia a la penicilina con rash cutáneo"
+    }
+  ],
+  "alertas": [
+    {
+      "descripcion": "Hija refiere alergia a penicilina y el paciente recibe ceftriaxona",
+      "severidad": "alta",
+      "sistema": "infeccioso",
+      "evidencia": "es alérgico a la penicilina y está con ceftriaxona"
+    },
+    {
+      "descripcion": "Lesión por presión categoría 1 en sacro",
+      "severidad": "media",
+      "sistema": "piel_tegumentos",
+      "evidencia": "eritema que no blanquea en sacro"
+    }
+  ],
+  "indicaciones": [],
+  "pendientes": [
+    {
+      "descripcion": "Informar al médico alergia a penicilina referida por la familia",
+      "responsable_sugerido": "medico",
+      "plazo": "inmediato",
+      "evidencia": "hay que avisarle al doctor lo de la alergia"
+    },
+    {
+      "descripcion": "Cambios de posición cada 2 horas con protección sacra",
+      "responsable_sugerido": "tens",
+      "plazo": "cada 2 h",
+      "evidencia": "cambios de posición cada 2 horas"
+    }
+  ],
+  "observaciones_no_estructuradas": null,
+  "valoracion_por_sistemas": {
+    "neurologico": null,
+    "respiratorio": {
+      "hallazgos": [
+        {
+          "descripcion": "Secreciones mucopurulentas abundantes por TET",
+          "certeza": "afirmado",
+          "evidencia": "aspiré secreciones mucopurulentas abundantes"
+        }
+      ],
+      "evaluacion": null,
+      "plan": null,
+      "evidencia": "secreciones mucopurulentas abundantes"
+    },
+    "hemodinamico": null,
+    "renal_metabolico": null,
+    "infeccioso": null,
+    "digestivo_nutricional": null,
+    "hematologico": null,
+    "piel_tegumentos": {
+      "hallazgos": [
+        {
+          "descripcion": "Eritema no blanqueable en sacro",
+          "certeza": "afirmado",
+          "evidencia": "eritema que no blanquea en sacro"
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Protección sacra y cambios de posición",
+      "evidencia": "eritema que no blanquea en sacro"
+    }
+  },
+  "sedoanalgesia_neuro": {
+    "rass_actual": -3,
+    "rass_objetivo": null,
+    "dolor": {
+      "escala": "CPOT",
+      "puntaje": 2
+    },
+    "cam_icu": "no_evaluable",
+    "glasgow": null,
+    "pupilas": null,
+    "focalidad": null,
+    "evidencia": "RASS menos 3, CPOT 2"
+  },
+  "ventilacion_mecanica": {
+    "via_aerea": {
+      "tipo": "TET",
+      "numero": "7.5",
+      "fijacion_cm": 22,
+      "presion_cuff_cmh2o": 28
+    },
+    "modo": "VCV",
+    "volumen_corriente_ml": null,
+    "peep_cmh2o": 8,
+    "fio2": 40,
+    "fr_programada": null,
+    "presion_soporte_cmh2o": null,
+    "presion_plateau_cmh2o": null,
+    "presion_peak_cmh2o": null,
+    "driving_pressure_cmh2o": null,
+    "pafi": null,
+    "posicion_prono": null,
+    "weaning": null,
+    "evidencia": "TET 7,5 a 22 en comisura, cuff 28"
+  },
+  "balance_hidrico": {
+    "periodo_horas": 3,
+    "ingresos": [],
+    "egresos": [],
+    "diuresis_ml": 1200,
+    "diuresis_ml_kg_h": null,
+    "balance_ml": 450,
+    "balance_acumulado_ml": null,
+    "evidencia": "balance hídrico positivo de cuatrocientos cincuenta, diuresis de mil doscientos"
+  },
+  "nutricion": {
+    "via": "SNG",
+    "formula": null,
+    "velocidad_ml_h": 40,
+    "meta_kcal": null,
+    "aporte_kcal": null,
+    "tolerancia": "sin distensión",
+    "residuo_gastrico_ml": 80,
+    "evidencia": "enteral a 40, residuo 80"
+  },
+  "bundles_iaas": {
+    "neumonia_vm": "Cabecera 30°, aseo oral con clorhexidina a las 08:00, cuff 28",
+    "bacteremia_cvc": "Curación de CVC al día, sin signos de infección",
+    "itu_cup": "Sistema cerrado, bolsa bajo nivel vesical",
+    "evidencia": "aseo con clorhexidina a las 8"
+  },
+  "piel": {
+    "braden": 11,
+    "lpp": [
+      {
+        "ubicacion": "sacro",
+        "grado": "1",
+        "evidencia": "eritema que no blanquea en sacro"
+      }
+    ],
+    "curaciones": []
+  },
+  "contencion": null,
+  "toma_examenes": [
+    {
+      "examen": "gases arteriales",
+      "hora": "10:00",
+      "evidencia": "tomé gases a las 10"
+    }
+  ],
+  "eventos_adversos": [],
+  "educacion_familia": "Se orienta a la hija sobre horarios de visita.",
+  "entrega_turno": null
+}

@@ -15,8 +15,9 @@ from apps.agent.llm import ChatMessage
 from apps.recordings.models import Patient
 
 from . import extraction_services, pipeline_cache
-from .models import Report
-from .report_services import PatientRef, visible_reports
+from .consolidation_services import current_version, identity_of
+from .models import ConsolidatedVersion, Report
+from .report_services import PatientRef, saved_reports
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,9 @@ class Criticality(BaseModel):
 class PatientSummary(BaseModel):
     patient: PatientRef
     reportCount: int
+    # Versión oficial vigente (consolidada) de la que sale el resumen; 0 si aún no hay ninguna.
+    version: int
+    versionReason: str
     criticality: Criticality
     # Una línea con el soporte y el día de estadía («Día 3 · Ventilación mecánica invasiva · …»).
     status: str
@@ -62,9 +66,10 @@ class PatientSummary(BaseModel):
 
 
 def patient_summary(professional, patient: Patient) -> PatientSummary:
+    """Resumen del paciente a partir de su versión oficial vigente (lo ya consolidado)."""
     reports = list(
-        visible_reports(professional)
-        .filter(patient=patient, status=Report.Status.DONE)
+        saved_reports(professional)
+        .filter(patient=patient)
         .order_by("-extracted_record__transcription__recording__recorded_at")
     )
     latest: dict[str, Report] = {}
@@ -73,12 +78,16 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
         latest.setdefault(report.profession, report)
         counts[report.profession] = counts.get(report.profession, 0) + 1
 
-    highlights = _highlights(list(latest.values()))
+    version = current_version(patient)
+    data = version.data if version else {}
+    highlights = _highlights(version, {report.id: report for report in reports}) if version else []
     return PatientSummary(
         patient=PatientRef(
             id=patient.id, name=patient.name, identifier=patient.identifier, bed=patient.bed
         ),
         reportCount=len(reports),
+        version=version.version if version else 0,
+        versionReason=version.reason if version else "",
         byProfession=[
             ProfessionActivity(
                 profession=profession,
@@ -89,9 +98,9 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
             )
             for profession, report in latest.items()
         ],
-        criticality=_criticality(list(latest.values())),
-        status=_status(list(latest.values()), highlights),
-        brief=_brief(patient, reports),
+        criticality=_criticality([data]),
+        status=_status([data], highlights),
+        brief=_brief(patient, reports, version),
         treatmentPending=[h for h in highlights if h.group in TREATMENT_GROUPS],
         highlights=[h for h in highlights if h.group not in TREATMENT_GROUPS],
     )
@@ -198,31 +207,41 @@ LATEST_ONLY = {"control_respiratorio", "control_hemodinamico"}
 MAX_HIGHLIGHTS_PER_GROUP = 8
 
 
-def _highlights(latest_reports: list[Report]) -> list[Highlight]:
+def _highlights(version: ConsolidatedVersion, reports: dict[int, Report]) -> list[Highlight]:
+    """Lo más relevante de la versión oficial, cada ítem con el informe que lo aportó."""
     result: list[Highlight] = []
+    fallback = reports.get(version.source_report_id) if version.source_report_id else None
     for group, section, fmt in HIGHLIGHT_RULES:
         seen: set[str] = set()
-        for report in latest_reports:
-            items = (report.data or {}).get(section) or []
-            if not isinstance(items, list):
+        items = version.data.get(section) or []
+        if not isinstance(items, list):
+            continue
+        for item in items[-1:] if section in LATEST_ONLY else items:
+            text = fmt(item) if isinstance(item, dict) else ""
+            if not text or text.lower() in seen:
                 continue
-            for item in items[-1:] if section in LATEST_ONLY else items:
-                text = fmt(item) if isinstance(item, dict) else ""
-                if not text or text.lower() in seen:
-                    continue
-                seen.add(text.lower())
-                result.append(
-                    Highlight(
-                        group=group,
-                        text=text,
-                        reportId=str(report.id),
-                        section=section,
-                        profession=report.profession,
-                        authorName=report.author.name or report.author.email,
-                        at=_when(report),
-                        severity=str(item.get("severidad", "")) if isinstance(item, dict) else "",
-                    )
+            seen.add(text.lower())
+            origin = (
+                reports.get(
+                    version.provenance.get(f"{section}::{identity_of(item)}")
+                    or version.provenance.get(f"section::{section}")
                 )
+                or fallback
+            )
+            if origin is None:
+                continue
+            result.append(
+                Highlight(
+                    group=group,
+                    text=text,
+                    reportId=str(origin.id),
+                    section=section,
+                    profession=origin.profession,
+                    authorName=origin.author.name or origin.author.email,
+                    at=_when(origin),
+                    severity=str(item.get("severidad", "")) if isinstance(item, dict) else "",
+                )
+            )
         group_items = [h for h in result if h.group == group]
         for extra in group_items[MAX_HIGHLIGHTS_PER_GROUP:]:
             result.remove(extra)
@@ -241,12 +260,11 @@ CRITICALITY_LABELS = {
 }
 
 
-def _criticality(latest_reports: list[Report]) -> Criticality:
+def _criticality(datas: list[dict[str, Any]]) -> Criticality:
     """Nivel de criticidad a partir de alertas, soporte vasoactivo, ventilación y SOFA."""
     points = 0
     reasons: list[str] = []
-    for report in latest_reports:
-        data = report.data or {}
+    for data in datas:
         for alert in _items(data, "alertas"):
             severity = str(alert.get("severidad", "")).lower()
             if severity == "alta":
@@ -298,11 +316,11 @@ def _items(data: dict[str, Any], section: str) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
-def _status(latest_reports: list[Report], highlights: list[Highlight]) -> str:
+def _status(datas: list[dict[str, Any]], highlights: list[Highlight]) -> str:
     """«Día 3 de UCI · Ventilación mecánica invasiva · Noradrenalina 0,15 mcg/kg/min»."""
     parts: list[str] = []
-    for report in latest_reports:
-        day = ((report.data or {}).get("metadatos") or {}).get("dia_estada_uci")
+    for data in datas:
+        day = (data.get("metadatos") or {}).get("dia_estada_uci")
         if isinstance(day, int):
             parts.append(f"Día {day} de UCI")
             break
@@ -311,12 +329,14 @@ def _status(latest_reports: list[Report], highlights: list[Highlight]) -> str:
     return " · ".join([*parts, *support, *drugs])
 
 
-def _brief(patient: Patient, reports: list[Report]) -> str:
+def _brief(patient: Patient, reports: list[Report], version: ConsolidatedVersion | None) -> str:
     """Resumen de 2 frases del caso: lo escribe el modelo (cacheado) o, si falla, se arma a mano."""
-    if not reports:
+    if not reports or version is None:
         return ""
     key = pipeline_cache.cache_key(
-        "brief", *(f"{r.id}:{r.updated_at.isoformat()}" for r in reports)
+        "brief",
+        str(version.id),
+        *(f"{r.id}:{r.updated_at.isoformat()}" for r in reports),
     )
     cached = pipeline_cache.load("summary", key)
     if cached is not None:

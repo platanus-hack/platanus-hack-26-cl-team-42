@@ -5,7 +5,7 @@ from django.contrib.auth import admin as auth_admin
 from django.utils.translation import gettext_lazy as _
 
 from .forms import UserAdminChangeForm, UserAdminCreationForm
-from .models import User
+from .models import Shift, User
 
 if getattr(settings, "DJANGO_ADMIN_FORCE_ALLAUTH", False):
     # Force the `admin` sign in process to go through the `django-allauth` workflow:
@@ -47,3 +47,9 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
     )
+
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ["user", "starts_at", "ends_at"]
+    list_filter = ["user"]

@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.utils import timezone
 from pydantic import BaseModel
 
-from . import homologation_services, report_topics
+from . import consolidation_services, homologation_services, report_topics
 from .extraction_services import ExtractionOut
 from .extraction_services import to_out as extraction_to_out
 from .models import ExtractedRecord, Report, Transcription
@@ -53,6 +53,8 @@ class ReportOut(BaseModel):
     # Temas del informe (agrupan sus secciones) y cuáles validó ya el autor.
     topics: list[report_topics.Topic]
     validatedTopics: list[str]
+    # Qué pasó al guardarse respecto de la versión oficial: official | merged | reconciling | …
+    consolidation: str
     # Solo su autor puede completarlo y validarlo, y solo mientras está por validar.
     canEdit: bool
     recordedAt: datetime
@@ -152,7 +154,8 @@ def validate_report(report: Report) -> Report:
     report.status = Report.Status.DONE
     report.validated_at = timezone.now()
     report.save(update_fields=["status", "validated_at", "updated_at"])
-    return report
+    # Ya guardado: se compara con la versión oficial del paciente (o pasa a serlo).
+    return consolidation_services.consolidate(report)
 
 
 def reset_report(record: ExtractedRecord) -> None:
@@ -166,21 +169,42 @@ def reset_report(record: ExtractedRecord) -> None:
     )
 
 
-def list_reports(professional, patient_id: int | None = None) -> list[ReportOut]:
-    """Informes de los pacientes del profesional (de cualquier autor) y los suyos."""
-    reports = visible_reports(professional)
+def list_reports(
+    professional, patient_id: int | None = None, include_drafts: bool = False
+) -> list[ReportOut]:
+    """Informes guardados de los pacientes del profesional.
+
+    Los borradores no son informes todavía: solo se incluyen, y solo los propios, si se pide
+    (la bandeja los necesita para ofrecer «Informe por validar»).
+    """
+    condition = _saved(professional)
+    if include_drafts:
+        condition |= Q(author=professional) & ~Q(status=Report.Status.DONE)
+    reports = _reports().filter(condition).distinct()
     if patient_id is not None:
         reports = reports.filter(patient_id=patient_id)
     return [to_out(report, professional) for report in reports]
 
 
 def get_report(professional, report_id: int) -> ReportOut | None:
+    """Un informe: los guardados del equipo del paciente y los borradores propios."""
     report = visible_reports(professional).filter(pk=report_id).first()
     return to_out(report, professional) if report else None
 
 
+def saved_reports(professional):
+    """Informes guardados (validados) de los pacientes asignados al profesional, o propios."""
+    return _reports().filter(_saved(professional)).distinct()
+
+
+def _saved(professional) -> Q:
+    return Q(status=Report.Status.DONE) & (
+        Q(patient__assigned_to=professional) | Q(author=professional)
+    )
+
+
 def visible_reports(professional):
-    """Los informes propios y los validados de los pacientes asignados al profesional."""
+    """Los guardados de sus pacientes y los propios en cualquier estado (borradores incluidos)."""
     validated_of_patients = Q(patient__assigned_to=professional, status=Report.Status.DONE)
     return _reports().filter(validated_of_patients | Q(author=professional)).distinct()
 
@@ -233,6 +257,7 @@ def to_out(report: Report, viewer=None) -> ReportOut:
         homologations=report.homologations,
         error=report.error,
         extractionStatus=record.status,
+        consolidation=report.consolidation,
         validatedAt=report.validated_at,
         topics=topics_of(report),
         validatedTopics=report.validated_sections,

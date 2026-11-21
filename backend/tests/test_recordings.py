@@ -161,3 +161,22 @@ def test_demo_patients_are_assigned_and_loading_is_idempotent():
     call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
 
     assert patients_of(user).count() == 6
+    team = User.objects.get(email="enfermeria@localhost")
+    assert (team.profession, patients_of(team).count()) == ("enfermeria", 6)
+
+
+@pytest.mark.django_db
+def test_demo_team_is_on_shift_and_the_shift_can_be_toggled():
+    from django.core.management import call_command
+
+    from apps.users import shifts
+
+    User.objects.create_user(email="demo@example.com", password="pw")
+    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
+    nurse = User.objects.get(email="enfermeria@localhost")
+    assert shifts.is_on_shift(nurse)
+
+    call_command("set_demo_shift", "enfermeria@localhost", "off", stdout=StringIO())
+    assert not shifts.is_on_shift(nurse)
+    call_command("set_demo_shift", "enfermeria@localhost", "on", stdout=StringIO())
+    assert shifts.is_on_shift(nurse)

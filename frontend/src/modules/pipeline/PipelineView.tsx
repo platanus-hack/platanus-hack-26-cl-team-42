@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { professionLabel } from "../recordings/professions";
 import { HomologationChip, ReportView } from "../reports/ReportView";
 import { ApiError } from "../../services/api/client";
-import { useReports, type Homologation, type Report } from "../reports/api";
+import { useReport, type Homologation, type Report } from "../reports/api";
 import { sectionLabel, countFields } from "../templates/recordFields";
 import { useExtractRecord, useReportTemplates, useTemplate } from "../templates/api";
 import { useRetryTranscription } from "../transcription/api";
@@ -307,8 +307,8 @@ function HomologationStage({ pipeline, onFinished }: StageProps) {
 
 /** Revisión del informe recién generado: lo pendiente, completarlo y validarlo (sigue en vivo). */
 function ReportReview({ initial }: { initial: Report }) {
-  const { data: reports } = useReports();
-  const report = reports?.find((item) => item.id === initial.id) ?? initial;
+  const { data } = useReport(initial.id, initial);
+  const report = data ?? initial;
   return (
     <Flex direction="column" gap="3">
       <ReportView report={report} />

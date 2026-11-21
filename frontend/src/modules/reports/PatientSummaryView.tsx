@@ -1,7 +1,13 @@
 import { Badge, Button, Callout, Card, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
-import { usePatientSummary, type CriticalityLevel, type Highlight, type PatientSummary } from "../patients/api";
+import {
+  usePatientSummary,
+  usePatientVersions,
+  type CriticalityLevel,
+  type Highlight,
+  type PatientSummary,
+} from "../patients/api";
 import { professionLabel } from "../recordings/professions";
 import { sectionLabel } from "../templates/recordFields";
 
@@ -42,6 +48,9 @@ export function PatientSummaryView({ patientId, onOpenReports }: PatientSummaryV
   const groups = groupHighlights(summary.highlights);
   return (
     <Flex direction="column" gap="3">
+      <Text size="1" color="gray">
+        Versión oficial n.º {summary.version} · el resumen sale de lo ya consolidado entre los profesionales.
+      </Text>
       <StatusCard summary={summary} patientId={patientId} />
 
       <Flex justify="between" align="center" gap="3" wrap="wrap" mt="2">
@@ -60,6 +69,8 @@ export function PatientSummaryView({ patientId, onOpenReports }: PatientSummaryV
           </Flex>
         </CollapsibleSection>
       ))}
+
+      <VersionHistory patientId={patientId} />
 
       <CollapsibleSection
         title="Informes por profesional"
@@ -168,4 +179,36 @@ function groupHighlights(highlights: Highlight[]): [string, Highlight[]][] {
     groups.set(highlight.group, [...(groups.get(highlight.group) ?? []), highlight]);
   }
   return [...groups.entries()];
+}
+
+const REASON_LABEL = {
+  official: "Primer informe guardado",
+  merge: "Informe sin conflictos incorporado",
+  reconciliation: "Conflictos resueltos entre profesionales",
+} as const;
+
+/** Todas las versiones oficiales del paciente: la vigente y las anteriores, que no se pierden. */
+function VersionHistory({ patientId }: { patientId: number }) {
+  const { data: versions = [] } = usePatientVersions(patientId);
+  return (
+    <CollapsibleSection title="Historial de versiones" detail={`${versions.length} ${versions.length === 1 ? "versión" : "versiones"}`}>
+      <Flex direction="column" gap="2">
+        {versions.map((version) => (
+          <Flex key={version.version} justify="between" align="center" gap="3" wrap="wrap">
+            <Flex align="center" gap="2" wrap="wrap">
+              <Badge color={version.isCurrent ? "green" : "gray"} variant="soft">
+                Versión {version.version}
+                {version.isCurrent ? " · vigente" : ""}
+              </Badge>
+              <Text size="2">{REASON_LABEL[version.reason]}</Text>
+            </Flex>
+            <Text size="1" color="gray">
+              {version.sourceAuthor && `${version.sourceAuthor} · `}
+              {DATE_FORMAT.format(new Date(version.created_at))}
+            </Text>
+          </Flex>
+        ))}
+      </Flex>
+    </CollapsibleSection>
+  );
 }

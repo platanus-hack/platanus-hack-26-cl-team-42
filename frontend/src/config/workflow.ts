@@ -43,6 +43,14 @@ export const WORKFLOW_STEPS = [
     connected: true,
   },
   {
+    id: "reconciliation",
+    label: "Conflictos",
+    summary: "Concilia las diferencias entre lo reportado por distintos profesionales antes de actualizar la versión oficial.",
+    path: "/reconciliation",
+    hidden: false,
+    connected: true,
+  },
+  {
     id: "official-form",
     label: "Registro clínico",
     summary: "Registro prellenado por atención, listo para copiar a la ficha institucional.",

@@ -53,6 +53,8 @@ export interface Report {
   error: string;
   /** `pending`/`processing` mientras se incorpora información nueva al informe. */
   extractionStatus: "pending" | "processing" | "done" | "failed";
+  /** Qué pasó al guardarse respecto de la versión oficial del paciente. */
+  consolidation: "pending" | "official" | "merged" | "reconciling" | "consolidated";
   validatedAt: string | null;
   /** Temas del informe (agrupan sus secciones); se validan de a uno. */
   topics: ReportTopic[];
@@ -86,13 +88,27 @@ export const reportKeys = ["reports"] as const;
 const POLL_INTERVAL_MS = 1500;
 
 /** Informes de tus pacientes (de todos los profesionales), opcionalmente de uno solo. */
-export function useReports(patientId?: number) {
+export function useReports(patientId?: number, includeDrafts = false) {
+  const params = new URLSearchParams();
+  if (patientId !== undefined) params.set("patient_id", String(patientId));
+  if (includeDrafts) params.set("include_drafts", "true");
+  const query = params.size > 0 ? `?${params}` : "";
   return useQuery({
-    queryKey: [...reportKeys, patientId ?? "all"],
-    queryFn: () =>
-      apiRequest<Report[]>(`/transcription/reports${patientId !== undefined ? `?patient_id=${patientId}` : ""}`),
+    // Con borradores propios (para ofrecer «Informe por validar»); por defecto, solo guardados.
+    queryKey: [...reportKeys, patientId ?? "all", includeDrafts ? "drafts" : "saved"],
+    queryFn: () => apiRequest<Report[]>(`/transcription/reports${query}`),
     // Mientras un informe se completa o se rehomologa, se consulta su avance.
     refetchInterval: (query) => (query.state.data?.some(isReportBusy) ? POLL_INTERVAL_MS : false),
+  });
+}
+
+/** Un informe concreto (también los borradores propios); se refresca mientras se completa. */
+export function useReport(reportId: string, initial?: Report) {
+  return useQuery({
+    queryKey: [...reportKeys, "one", reportId],
+    queryFn: () => apiRequest<Report>(`/transcription/reports/${reportId}`),
+    initialData: initial,
+    refetchInterval: (query) => (query.state.data && isReportBusy(query.state.data) ? POLL_INTERVAL_MS : false),
   });
 }
 

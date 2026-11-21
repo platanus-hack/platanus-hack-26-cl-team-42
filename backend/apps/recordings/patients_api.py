@@ -14,6 +14,7 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 
 from apps.transcription.inbox_services import inbox_states
+from apps.transcription.models import ConsolidatedVersion
 from apps.transcription.summary_services import PatientSummary, patient_summary
 
 from . import services
@@ -89,3 +90,44 @@ def patient_out(patient) -> PatientOut:
         bed=patient.bed,
         reference=patient.reference,
     )
+
+
+class VersionOut(Schema):
+    version: int
+    reason: str
+    isCurrent: bool
+    created_at: datetime
+    sourceReportId: str | None
+    sourceAuthor: str
+    sourceProfession: str
+
+
+@router.get("/{patient_id}/versions", response=list[VersionOut])
+def list_patient_versions(request, patient_id: int):
+    """Historial de versiones oficiales del paciente: las anteriores nunca se pierden."""
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    versions = ConsolidatedVersion.objects.filter(patient=patient).select_related(
+        "source_report__author"
+    )
+    return [
+        VersionOut(
+            version=v.version,
+            reason=v.reason,
+            isCurrent=v.is_current,
+            created_at=v.created_at,
+            sourceReportId=str(v.source_report_id) if v.source_report_id else None,
+            sourceAuthor=(v.source_report.author.name or v.source_report.author.email)
+            if v.source_report
+            else "",
+            sourceProfession=v.source_report.profession if v.source_report else "",
+        )
+        for v in versions
+    ]
+
+
+@router.get("/{patient_id}/versions/{version}")
+def get_patient_version(request, patient_id: int, version: int):
+    """Los datos de una versión oficial concreta (para comparar con la vigente)."""
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    found = get_object_or_404(ConsolidatedVersion, patient=patient, version=version)
+    return {"version": found.version, "reason": found.reason, "data": found.data}

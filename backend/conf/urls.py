@@ -29,6 +29,7 @@ from apps.agent.api import router as agent_router
 from apps.recordings.api import router as recordings_router
 from apps.recordings.patients_api import router as patients_router
 from apps.transcription.api import router as transcription_router
+from apps.users.dev_api import router as dev_router
 from tracker.api import router as tracker_router
 
 ########################
@@ -38,6 +39,7 @@ API_ROUTERS = [
     ("/demo", demo_router),
     ("/recordings", recordings_router),
     ("/patients", patients_router),
+    ("/dev", dev_router),
     ("/clinical-templates", clinical_templates_router),
     ("/tracker", tracker_router),
     ("/transcription", transcription_router),

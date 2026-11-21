@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Badge, Button, Callout, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import { professionLabel } from "../recordings/professions";
@@ -54,6 +55,8 @@ export function ReportView({ report, interactive = true, focusSection }: ReportV
           <Callout.Text>{report.error || "No se pudo generar el informe."}</Callout.Text>
         </Callout.Root>
       )}
+
+      <ConsolidationNotice report={report} />
 
       <ConceptSummary homologations={report.homologations} />
 
@@ -152,6 +155,42 @@ export function StatusBadge({ report }: { report: Report }) {
       Generando
     </Badge>
   );
+}
+
+const CONSOLIDATION_NOTICE = {
+  official: ["green", "Es el primer informe guardado del paciente: pasó a ser su versión oficial."],
+  merged: ["green", "Coincide con la versión oficial: se incorporó sin conflictos y nació una versión nueva."],
+  consolidated: ["green", "Sus conflictos se resolvieron entre los profesionales y quedó incorporado a la versión oficial."],
+} as const;
+
+/** Qué pasó con el informe al guardarse respecto de la versión oficial del paciente. */
+function ConsolidationNotice({ report }: { report: Report }) {
+  if (report.status !== "done") return null;
+  if (report.consolidation === "reconciling") {
+    return (
+      <Callout.Root color="orange">
+        <Flex direction="column" gap="2">
+          <Callout.Text>
+            Este informe choca con lo ya reportado por otro profesional. Se avisó a los implicados y está en reconciliación:
+            la versión oficial no cambia hasta resolver los conflictos.
+          </Callout.Text>
+          <Flex>
+            <Link to="/reconciliation" search={{}}>
+              <Button size="1" color="orange" variant="soft">
+                Ir a resolver los conflictos
+              </Button>
+            </Link>
+          </Flex>
+        </Flex>
+      </Callout.Root>
+    );
+  }
+  const notice = report.consolidation === "pending" ? undefined : CONSOLIDATION_NOTICE[report.consolidation];
+  return notice ? (
+    <Callout.Root color={notice[0]} size="1">
+      <Callout.Text>{notice[1]}</Callout.Text>
+    </Callout.Root>
+  ) : null;
 }
 
 function PatientLine({ report }: { report: Report }) {
