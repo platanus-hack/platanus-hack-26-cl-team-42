@@ -1,16 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ReportsPage, type ReportsSearch } from "../../modules/reports/ReportsPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+/** Los informes ahora viven en «Mis pacientes»: los enlaces antiguos siguen funcionando. */
 export const Route = createFileRoute("/_authenticated/reports")({
-  validateSearch: (search: Record<string, unknown>): ReportsSearch => ({
-    patient: typeof search.patient === "string" || typeof search.patient === "number" ? String(search.patient) : undefined,
-    report: typeof search.report === "string" || typeof search.report === "number" ? String(search.report) : undefined,
-    section: typeof search.section === "string" ? search.section : undefined,
-    view: search.view === "summary" || search.view === "reports" ? search.view : undefined,
-  }),
-  component: ReportsRoute,
+  beforeLoad: ({ search }) => {
+    const { patient, report, section } = search as Record<string, unknown>;
+    throw redirect({
+      to: "/",
+      search: {
+        patient: patient === "all" || patient === undefined ? undefined : String(patient),
+        report: report === undefined ? undefined : String(report),
+        section: typeof section === "string" ? section : undefined,
+      },
+      replace: true,
+    });
+  },
 });
-
-function ReportsRoute() {
-  return <ReportsPage search={Route.useSearch()} />;
-}

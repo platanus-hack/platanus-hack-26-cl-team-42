@@ -14,8 +14,16 @@ export interface Patient {
   reference: string;
 }
 
+/** Qué necesita el paciente de ti: un informe por validar, un dictado que falló o que aún se procesa. */
+export type InboxStatus = "review" | "failed" | "processing" | "up_to_date";
+
 export interface PatientWithCount extends Patient {
   reportCount: number;
+  inboxStatus: InboxStatus;
+  /** Último dictado de cualquier profesional del equipo. */
+  lastDictationAt: string | null;
+  /** Tu dictado cuya transcripción falló y se puede reintentar. */
+  retryRecordingId: string | null;
 }
 
 export interface Highlight {
@@ -61,10 +69,15 @@ export interface PatientSummary {
 
 export const patientKeys = ["patients"] as const;
 
+const POLL_INTERVAL_MS = 3000;
+
 export function usePatients() {
   return useQuery({
     queryKey: patientKeys,
     queryFn: () => apiRequest<PatientWithCount[]>("/patients"),
+    // Mientras algún dictado se procesa, se consulta su avance.
+    refetchInterval: (query) =>
+      query.state.data?.some((patient) => patient.inboxStatus === "processing") ? POLL_INTERVAL_MS : false,
   });
 }
 

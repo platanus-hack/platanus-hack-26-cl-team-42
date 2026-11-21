@@ -9,12 +9,13 @@ describe("workflow steps", () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("offers recording, reports, the clinical record and the handoff", () => {
-    expect(VISIBLE_STEPS.map((step) => step.id)).toEqual(["recordings", "reports", "official-form", "handoff"]);
+  it("offers the patient inbox, the clinical record and the handoff", () => {
+    expect(VISIBLE_STEPS.map((step) => step.id)).toEqual(["patients", "official-form", "handoff"]);
   });
 
   it("keeps the remaining steps hidden but defined", () => {
     expect(WORKFLOW_STEPS.map((step) => step.id)).toEqual([
+      "patients",
       "recordings",
       "reports",
       "official-form",
@@ -28,10 +29,10 @@ describe("workflow steps", () => {
   });
 
   it("links the visible steps to each other only", () => {
-    const first = getWorkflowStep("recordings");
+    const first = getWorkflowStep("patients");
     const last = getWorkflowStep("handoff");
     expect(first.previous).toBeUndefined();
-    expect(first.next?.id).toBe("reports");
+    expect(first.next?.id).toBe("official-form");
     expect(last.previous?.id).toBe("official-form");
     expect(last.next).toBeUndefined();
   });

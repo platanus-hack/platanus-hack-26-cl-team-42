@@ -72,6 +72,8 @@ export function useUploadRecording() {
       // Guardar un dictado encola su transcripción en el backend.
       void queryClient.invalidateQueries({ queryKey: recordingKeys });
       void queryClient.invalidateQueries({ queryKey: transcriptKeys });
+      // La bandeja de pacientes muestra el dictado «Procesando…».
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
     },
   });
 }

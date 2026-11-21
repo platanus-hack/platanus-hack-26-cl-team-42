@@ -62,17 +62,14 @@ export function Sidebar({ userEmail }: SidebarProps) {
         {/* Navegación */}
         <ScrollArea style={{ flex: 1 }}>
           <Flex direction="column" gap="2" p="3">
-            <NavLinkButton to="/" label="Inicio" icon={<HomeIcon />} />
-            <NavSection label="Flujo">
-              {VISIBLE_STEPS.map((step, index) => (
-                <NavLinkButton
-                  key={step.id}
-                  to={step.path}
-                  label={`${index + 1}. ${step.label}`}
-                  icon={<StepIcon id={step.id} size={16} />}
-                />
-              ))}
-            </NavSection>
+            {VISIBLE_STEPS.map((step) => (
+              <NavLinkButton
+                key={step.id}
+                to={step.path}
+                label={step.label}
+                icon={<StepIcon id={step.id} size={16} />}
+              />
+            ))}
           </Flex>
         </ScrollArea>
 
@@ -157,29 +154,6 @@ function NavLinkButton({ to, label, icon }: { to: string; label: string; icon: R
         </Flex>
       </Button>
     </Link>
-  );
-}
-
-function NavSection({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Box mt="1">
-      <Text
-        size="1"
-        color="gray"
-        weight="bold"
-        style={{
-          display: "block",
-          paddingLeft: "8px",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-        }}
-      >
-        {label}
-      </Text>
-      <Flex direction="column" gap="1" mt="1" pl="2">
-        {children}
-      </Flex>
-    </Box>
   );
 }
 

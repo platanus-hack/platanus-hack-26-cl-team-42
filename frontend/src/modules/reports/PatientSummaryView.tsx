@@ -77,8 +77,8 @@ export function PatientSummaryView({ patientId, onOpenReports }: PatientSummaryV
                 </Text>
               </Flex>
               <Link
-                to="/reports"
-                search={{ patient: String(patientId), report: activity.lastReportId, view: "reports" }}
+                to="/"
+                search={{ patient: String(patientId), report: activity.lastReportId }}
                 style={{ fontSize: "var(--font-size-1)" }}
               >
                 Abrir el último informe
@@ -151,8 +151,8 @@ function HighlightRow({ item, patientId, showGroup = false }: { item: Highlight;
         <Text size="2">{item.text}</Text>
       </Flex>
       <Link
-        to="/reports"
-        search={{ patient: String(patientId), report: item.reportId, section: item.section, view: "reports" }}
+        to="/"
+        search={{ patient: String(patientId), report: item.reportId, section: item.section }}
         style={{ fontSize: "var(--font-size-1)", whiteSpace: "nowrap" }}
         title={`Informe de ${item.authorName}`}
       >

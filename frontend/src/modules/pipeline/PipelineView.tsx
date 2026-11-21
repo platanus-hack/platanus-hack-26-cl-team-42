@@ -314,10 +314,10 @@ function ReportReview({ initial }: { initial: Report }) {
       <ReportView report={report} />
       <Flex>
         <Link
-          to="/reports"
-          search={{ patient: report.patient ? String(report.patient.id) : "all", report: report.id, view: "reports" }}
+          to="/"
+          search={{ patient: report.patient ? String(report.patient.id) : undefined, report: report.id }}
         >
-          <Button variant="soft">Abrir en Informes</Button>
+          <Button variant="soft">Abrir en Mis pacientes</Button>
         </Link>
       </Flex>
     </Flex>

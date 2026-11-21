@@ -4,12 +4,16 @@ Cada profesional ve los pacientes que tiene asignados. Los pacientes vienen de o
 aquí no se crean, solo se listan y se traspasan a otro usuario.
 """
 
+from datetime import datetime
+from uuid import UUID
+
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
+from apps.transcription.inbox_services import inbox_states
 from apps.transcription.summary_services import PatientSummary, patient_summary
 
 from . import services
@@ -24,14 +28,21 @@ class TransferIn(Schema):
 
 class PatientListOut(PatientOut):
     reportCount: int
+    # Qué necesita el paciente del profesional: review, failed, processing o up_to_date.
+    inboxStatus: str
+    lastDictationAt: datetime | None
+    retryRecordingId: UUID | None
 
 
 @router.get("", response=list[PatientListOut])
 def list_patients(request):
-    """Pacientes asignados al profesional, con su número de informes."""
-    patients = services.patients_of(request.user).annotate(
-        report_count=Count("reports", filter=Q(reports__status="done"), distinct=True)
+    """Pacientes asignados al profesional, con su número de informes y su estado en la bandeja."""
+    patients = list(
+        services.patients_of(request.user).annotate(
+            report_count=Count("reports", filter=Q(reports__status="done"), distinct=True)
+        )
     )
+    states = inbox_states(request.user, [p.id for p in patients])
     return [
         PatientListOut(
             id=p.id,
@@ -40,6 +51,9 @@ def list_patients(request):
             bed=p.bed,
             reference=p.reference,
             reportCount=p.report_count,
+            inboxStatus=states[p.id].status,
+            lastDictationAt=states[p.id].last_dictation_at,
+            retryRecordingId=states[p.id].retry_recording_id,
         )
         for p in patients
     ]

@@ -19,11 +19,19 @@ export interface WorkflowStep {
 
 export const WORKFLOW_STEPS = [
   {
+    id: "patients",
+    label: "Mis pacientes",
+    summary: "Tus pacientes asignados: graba sus dictados, valida sus informes y revisa su estado.",
+    path: "/",
+    hidden: false,
+    connected: true,
+  },
+  {
     id: "recordings",
     label: "Grabar audio",
-    summary: "Graba o sube el dictado: se transcribe, se parsea a su plantilla y se homologa solo.",
+    summary: "Graba o sube el dictado y sigue su proceso: transcripción, parseo, homologación e informe.",
     path: "/recordings",
-    hidden: false,
+    hidden: true,
     connected: true,
   },
   {
@@ -31,7 +39,7 @@ export const WORKFLOW_STEPS = [
     label: "Informes",
     summary: "Informes de tus pacientes: resumen, detalle por profesional y consultas con IA.",
     path: "/reports",
-    hidden: false,
+    hidden: true,
     connected: true,
   },
   {
