@@ -1,0 +1,11 @@
+{
+  "global": "Paciente en Box 10, día 6 de estada en UCI, por pancreatitis aguda grave. Ha evolucionado con oliguria (diuresis 600 ml/24 h), balance positivo de 2200 ml (acumulado 3100 ml) e hiperkalemia, por lo que se inicia CVVH con citrato. Se inicia imipenem por necrosis pancreática infectada. Respira con oxigenoterapia por cánula nasal con saturación de 96%. Recibe nutrición parenteral total; tiene desnutrición moderada y NUTRIC alto. Queda pendiente reevaluar la vía enteral pospilórica en 72 h si cede el dolor y controlar a diario triglicéridos y glicemia.",
+  "areas": {
+    "Diagnósticos y alertas": "Pancreatitis aguda grave confirmada (K85.9).",
+    "Respiratorio": "Oxigenoterapia convencional por cánula nasal con saturación de 96%.",
+    "Renal y balance hídrico": "Paciente oligúrico, con diuresis de 600 ml en 24 h, balance positivo de 2200 ml y balance acumulado de 3100 ml. Se inicia CVVH por hiperkalemia y oliguria, con anticoagulación con citrato, dosis de efluente de 25 ml/kg/h y ultrafiltración de 100 ml.",
+    "Nutrición": "Recibe nutrición parenteral total a 60 ml/h (1500 kcal) sin complicaciones; la meta es 1900 kcal/día y 1,8 g/kg/día de proteína. Peso 64 kg, IMC 21,6; desnutrición moderada con NUTRIC alto.",
+    "Infeccioso": "Se inicia imipenem 500 mg cada 6 h por necrosis pancreática infectada (día 1 de tratamiento).",
+    "Plan y pendientes": "Reevaluar la nutrición enteral distal al píloro en 72 h si disminuye el dolor. Controlar a diario triglicéridos y glicemia mientras reciba nutrición parenteral; ambas tareas quedan a cargo del médico."
+  }
+}
