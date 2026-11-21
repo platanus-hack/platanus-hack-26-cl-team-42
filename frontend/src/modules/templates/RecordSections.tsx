@@ -1,4 +1,5 @@
 import { Badge, Callout, Card, Flex, Heading, Progress, Skeleton, Spinner, Text } from "@radix-ui/themes";
+import type { ReactNode } from "react";
 import { ComplementDialog } from "./ComplementDialog";
 import { isExtractionInProgress, type Extraction, type TemplateDetail } from "./api";
 import { countFields, isEmptyValue, sectionLabel, sectionState, type SectionState } from "./recordFields";
@@ -134,14 +135,21 @@ function PendingChip() {
   );
 }
 
-export function RecordValue({ value }: { value: unknown }) {
+export function RecordValue({ value, itemAction }: { value: unknown; itemAction?: (item: unknown, index: number) => ReactNode }) {
   if (isEmptyValue(value)) return <PendingChip />;
   if (Array.isArray(value)) {
     return (
       <Flex direction="column" gap="2">
         {value.map((item, index) => (
           <Card key={index} variant="classic">
-            <RecordValue value={item} />
+            {itemAction ? (
+              <Flex align="start" gap="2">
+                <Flex direction="column" flexGrow="1" minWidth="0"><RecordValue value={item} /></Flex>
+                {itemAction(item, index)}
+              </Flex>
+            ) : (
+              <RecordValue value={item} />
+            )}
           </Card>
         ))}
       </Flex>

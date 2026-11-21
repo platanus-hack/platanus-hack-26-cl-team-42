@@ -143,13 +143,15 @@ def run_extraction(record_id: int) -> str:
     return record.status
 
 
+@transaction.atomic
 def request_section_update(
     record: ExtractedRecord, section: str, text: str = "", audio=None
 ) -> ExtractedRecord:
     """Encola la incorporación de información nueva (escrita y/o en audio) a una sección."""
+    report = Report.objects.select_for_update().filter(extracted_record=record).first()
+    record.refresh_from_db(from_queryset=ExtractedRecord.objects.select_for_update())
     if record.status != ExtractedRecord.Status.DONE or not record.data:
         raise ExtractionError("El registro aún no está listo para completarse.")
-    report = Report.objects.filter(extracted_record=record).first()
     if report and report.status == Report.Status.DONE:
         raise ExtractionError("El informe ya fue guardado y no se puede editar.")
     if section not in record.template.output_schema["properties"]:

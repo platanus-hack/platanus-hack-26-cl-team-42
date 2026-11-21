@@ -16,6 +16,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.agent.llm import ChatMessage
@@ -188,7 +189,7 @@ def canonical_lab(name: str) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def check_report(report: Report) -> list[dict[str, Any]]:
+def check_report(report: Report, *, edited_section: str | None = None) -> list[dict[str, Any]]:
     """Alertas del informe frente a la evidencia del paciente (conserva las ya revisadas)."""
     if report.patient is None:
         return []
@@ -198,19 +199,47 @@ def check_report(report: Report) -> list[dict[str, Any]]:
         return []
     labs = _latest_results(evidence)
     alerts = [*_numeric_alerts(report, labs), *_omission_alerts(report, labs)]
-    alerts += _model_alerts(report, evidence)
-    seen = {a["id"]: a for a in report.evidence_alerts}
-    return [{**a, "acknowledged": seen.get(a["id"], {}).get("acknowledged", False)} for a in alerts]
+    if edited_section is None:
+        alerts += _model_alerts(report, evidence)
+        return _carry_acknowledgements(alerts, report.evidence_alerts)
+
+    # La edición manual conserva las observaciones del modelo como contexto de revisión.
+    for alert in report.evidence_alerts:
+        if alert["kind"] == "concept" and alert["section"] in (report.data or {}):
+            alerts.append(alert)
+    checked = _carry_acknowledgements(alerts, report.evidence_alerts)
+    return [
+        {**alert, "fromEarlierVersion": True, "acknowledged": False}
+        if alert["kind"] == "concept" and alert["section"] == edited_section
+        else alert
+        for alert in checked
+    ]
 
 
 def recheck_reports(patient: Patient) -> None:
     """Al llegar evidencia nueva, los informes por validar se revisan de nuevo."""
     for report in Report.objects.filter(patient=patient, status=Report.Status.REVIEW):
         try:
-            report.evidence_alerts = check_report(report)
-            report.save(update_fields=["evidence_alerts", "updated_at"])
+            alerts = check_report(report)
+            with transaction.atomic():
+                current = Report.objects.select_for_update().get(pk=report.pk)
+                if current.status == Report.Status.REVIEW and current.data == report.data:
+                    current.evidence_alerts = _carry_acknowledgements(
+                        alerts, current.evidence_alerts
+                    )
+                    current.save(update_fields=["evidence_alerts", "updated_at"])
         except Exception:
             logger.exception("No se pudo revisar la evidencia del informe %s", report.id)
+
+
+def _carry_acknowledgements(
+    alerts: list[dict[str, Any]], previous: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    def identity(alert: dict[str, Any]) -> tuple:
+        return (alert["id"], alert.get("evidenceId"), alert["message"], alert["severity"])
+
+    acknowledged = {identity(alert) for alert in previous if alert.get("acknowledged")}
+    return [{**alert, "acknowledged": identity(alert) in acknowledged} for alert in alerts]
 
 
 def _evidence_near(patient: Patient, moment: datetime) -> list[Evidence]:
@@ -329,7 +358,10 @@ def _numeric_alerts(report: Report, labs: dict[str, dict[str, Any]]) -> list[dic
 
 def _omission_alerts(report: Report, labs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Resultados muy alterados que el informe no menciona."""
-    mentioned = {claim["code"] for claim in _report_exams(report.data or {})}
+    data = report.data or {}
+    if "examenes" not in data:
+        return []
+    mentioned = {claim["code"] for claim in _report_exams(data)}
     alerts = []
     for code, lab in labs.items():
         if code in mentioned or lab["flag"] not in ("low", "high") or lab["numeric"] is None:

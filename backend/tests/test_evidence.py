@@ -176,6 +176,82 @@ def test_a_new_report_is_checked_against_the_exams_and_contradictions_are_alerte
     assert report.status == Report.Status.REVIEW  # alerta, no bloquea
 
 
+def test_evidence_conflicts_must_be_reviewed_before_saving_most_severe_first(doctor, patient):
+    item = _lab(
+        doctor,
+        patient,
+        results=[{"name": "Lactato", "value": "4.8"}, {"name": "Glucosa", "value": "100"}],
+    )
+    data = {
+        "medicamentos": [{"nombre": "furosemida", "dosis": 20, "unidad": None}],
+        "examenes": [
+            _exam("Glucosa", 100, "mg/dL", "elevada"),  # discrepancia rutinaria (ámbar)
+            _exam("Lactato", 2.1, "mmol/L"),  # contradice un examen alterado (rojo)
+        ],
+    }
+    report = _draft(doctor, patient, "medico", data)
+
+    pending = report_services.pending_review_items(report)
+
+    assert [(i.id, i.severity) for i in pending] == [
+        ("value:examenes:lactato", "high"),
+        ("value:examenes:glucosa", "medium"),
+        ("clarification:medicamentos:0:unidad", "medium"),
+    ]
+    # Lo dictado y la fuente que lo contradice, para mostrarlos al revisar.
+    assert pending[0].itemIndex == 1
+    assert (pending[0].evidenceId, pending[0].evidenceTitle) == (item.id, "Gases y química")
+    with pytest.raises(report_services.ValidationError, match="3 puntos"):
+        report_services.validate_report(report)
+
+    for point in pending:
+        report_services.review_item(report, point.id)
+
+    # La alerta queda marcada como revisada (no se borra) y el informe se guarda.
+    assert all(a["acknowledged"] for a in report.evidence_alerts)
+    assert report_services.validate_report(report).status == Report.Status.DONE
+
+
+def test_an_unmentioned_exam_does_not_block_a_report_without_an_exam_section(doctor, patient):
+    exam = _lab(doctor, patient, results=[{"name": "Glucosa", "value": "280"}])
+    report = _draft(doctor, patient, "kinesiologia", {"evaluacion_respiratoria": {}})
+    medical_report = _draft(doctor, patient, "medico", {"examenes": []})
+
+    assert report.evidence_alerts == []
+    [omission] = medical_report.evidence_alerts
+    assert (omission["kind"], omission["evidenceId"]) == ("omission", exam.id)
+
+    # Los borradores existentes pueden tener la omisión guardada por la regla antigua.
+    report.evidence_alerts = [omission]
+    report.save(update_fields=["evidence_alerts"])
+
+    out = report_services.to_out(report, doctor)
+    assert out.reviewItems == [] and out.evidenceAlerts == []
+    assert report_services.validate_report(report).status == Report.Status.DONE
+    assert [item.id for item in evidence.list_evidence(doctor, patient.id)] == [exam.id]
+
+
+def test_manual_exam_edit_rechecks_values_without_calling_the_model(monkeypatch, doctor, patient):
+    _lab(doctor, patient, results=[{"name": "Lactato", "value": "4.8"}])
+    report = _draft(doctor, patient, "medico", {"examenes": [_exam("Lactato", 2.1, "mmol/L")]})
+    [point] = report_services.pending_review_items(report)
+    assert point.alertKind == "value"
+
+    def unexpected_model_call(*args, **kwargs):
+        pytest.fail("Se invocó el modelo al editar un ítem")
+
+    monkeypatch.setattr(evidence, "_model_alerts", unexpected_model_call)
+    report_services.edit_item(
+        report,
+        "examenes",
+        0,
+        {**report.data["examenes"][0], "valor": 4.8},
+        report.updated_at.isoformat(),
+    )
+
+    assert report_services.pending_review_items(report) == []
+
+
 def test_a_report_consistent_with_the_exams_raises_no_alert(doctor, patient):
     _lab(doctor, patient, results=[{"name": "Lactato", "value": "1.8"}])
 
@@ -215,6 +291,19 @@ def test_new_evidence_rechecks_reports_awaiting_validation_and_keeps_reviewed_al
     assert alerts["omission:examenes:creatinina"]["acknowledged"] is False  # lo nuevo, pendiente
     with pytest.raises(report_services.ValidationError):
         report_services.acknowledge_alert(report, "no-existe")
+
+
+def test_a_new_result_for_a_reviewed_exam_requires_its_own_review(doctor, patient):
+    _lab(doctor, patient, results=[{"name": "Lactato", "value": "4.8"}])
+    report = _draft(doctor, patient, "medico", {"examenes": [_exam("Lactato", 2.1, "mmol/L")]})
+    report_services.acknowledge_alert(report, "value:examenes:lactato")
+
+    latest = _lab(doctor, patient, hours_ago=0.2, results=[{"name": "Lactato", "value": "6.2"}])
+    report.refresh_from_db()
+
+    [pending] = report_services.pending_review_items(report)
+    assert pending.evidenceId == latest.id
+    assert not pending.reviewed
 
 
 def test_the_model_adds_concept_contradictions_and_only_for_real_sections(
@@ -286,8 +375,8 @@ def test_conflict_guidance_retrieves_the_exams_related_to_the_drug(doctor, nurse
     }
     for author, profession, data in ((doctor, "medico", base), (nurse, "enfermeria", other)):
         report = _draft(author, patient, profession, data)
-        report.validated_sections = [t.id for t in report_services.topics_of(report)]
-        report.save()
+        for point in report_services.pending_review_items(report):
+            report_services.review_item(report, point.id)
         report_services.validate_report(report)
 
     conflict = Conflict.objects.get()
@@ -314,8 +403,8 @@ def test_the_anonymous_case_carries_the_exams_without_sensitive_data(doctor, nur
     other = {"alergias": [{"agente": "penicilina", "reaccion": "rash"}]}
     for author, profession, data in ((doctor, "medico", base), (nurse, "enfermeria", other)):
         report = _draft(author, patient, profession, data)
-        report.validated_sections = [t.id for t in report_services.topics_of(report)]
-        report.save()
+        for point in report_services.pending_review_items(report):
+            report_services.review_item(report, point.id)
         report_services.validate_report(report)
     conflict = Conflict.objects.get(kind="allergy")
 
@@ -347,8 +436,8 @@ def test_the_anonymous_case_carries_the_exams_without_sensitive_data(doctor, nur
 def test_the_assistant_cites_exams_and_drops_invented_ones(monkeypatch, doctor, patient):
     item = _lab(doctor, patient, results=[{"name": "Lactato", "value": "4.8"}])
     report = _draft(doctor, patient, "medico", {"resumen_24h": "Shock séptico."})
-    report.validated_sections = [t.id for t in report_services.topics_of(report)]
-    report.save()
+    for point in report_services.pending_review_items(report):
+        report_services.review_item(report, point.id)
     report_services.validate_report(report)
     reply = {
         "respuesta": "El lactato está en 4.8 mmol/L.",
@@ -420,8 +509,8 @@ def test_the_anonymous_case_includes_cultures_and_imaging_reports_anonymized(
     other = {"alergias": [{"agente": "penicilina", "reaccion": "rash"}]}
     for author, profession, data in ((doctor, "medico", base), (nurse, "enfermeria", other)):
         report = _draft(author, patient, profession, data)
-        report.validated_sections = [t.id for t in report_services.topics_of(report)]
-        report.save()
+        for point in report_services.pending_review_items(report):
+            report_services.review_item(report, point.id)
         report_services.validate_report(report)
 
     brief = rec.anonymized_brief(Conflict.objects.get(kind="allergy"))

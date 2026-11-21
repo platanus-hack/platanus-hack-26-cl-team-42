@@ -9,17 +9,19 @@ interface ComplementDialogProps {
   section: string;
   label: string;
   disabled?: boolean;
+  /** Texto del botón (por defecto «Agregar información»; p. ej. «Corregir» al revisar). */
+  triggerLabel?: string;
 }
 
 /** Permite completar una sección escribiendo, grabando un audio o subiendo un archivo. */
-export function ComplementDialog({ extractionId, section, label, disabled }: ComplementDialogProps) {
+export function ComplementDialog({ extractionId, section, label, disabled, triggerLabel = "Agregar información" }: ComplementDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
         <Button size="1" variant="soft" disabled={disabled}>
-          Agregar información
+          {triggerLabel}
         </Button>
       </Dialog.Trigger>
       <Dialog.Content maxWidth="480px">

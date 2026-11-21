@@ -167,8 +167,8 @@ def _save_report(author, patient, profession, data) -> Report:
         data=copy.deepcopy(data),
     )
     report = report_services.generate_report(record)
-    report.validated_sections = [t.id for t in report_services.topics_of(report)]
-    report.save()
+    for point in report_services.pending_review_items(report):
+        report_services.review_item(report, point.id)
     return report_services.validate_report(report)
 
 
@@ -535,8 +535,8 @@ def _run_demo_audio(author, patient, name: str) -> Report:
     extraction.run_extraction(record.id)
     report = Report.objects.get(extracted_record=record)
     assert report.status == Report.Status.REVIEW, report.error
-    report.validated_sections = [t.id for t in report_services.topics_of(report)]
-    report.save()
+    for point in report_services.pending_review_items(report):
+        report_services.review_item(report, point.id)
     return report_services.validate_report(report)
 
 

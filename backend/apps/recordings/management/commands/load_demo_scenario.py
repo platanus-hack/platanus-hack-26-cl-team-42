@@ -967,8 +967,8 @@ class Command(BaseCommand):
     def _saved(self, author, patient, profession, hours_ago: float, data: dict) -> Report:
         """Informe validado y guardado: se consolida (o abre una reconciliación) como en la app."""
         report = self._draft(author, patient, profession, hours_ago, data)
-        report.validated_sections = [t.id for t in report_services.topics_of(report)]
-        report.save()
+        for point in report_services.pending_review_items(report):
+            report_services.review_item(report, point.id)
         return report_services.validate_report(report)
 
 

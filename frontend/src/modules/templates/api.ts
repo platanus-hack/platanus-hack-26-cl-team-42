@@ -32,10 +32,23 @@ export interface Extraction {
 }
 
 /** Plantilla con su JSON Schema; `required` conserva el orden de las secciones. */
+export interface FieldSchema {
+  $ref?: string;
+  description?: string;
+  type?: string | string[];
+  anyOf?: FieldSchema[];
+  enum?: (string | number | boolean | null)[];
+  properties?: Record<string, FieldSchema>;
+  items?: FieldSchema;
+  minimum?: number;
+  maximum?: number;
+}
+
 export interface TemplateDetail extends ReportTemplate {
   output_schema: {
     required: string[];
-    properties: Record<string, { description?: string }>;
+    properties: Record<string, FieldSchema>;
+    $defs?: Record<string, FieldSchema>;
   };
 }
 
@@ -48,7 +61,7 @@ export interface SectionComplement {
 
 export interface TemplatesGateway {
   listTemplates(): Promise<ReportTemplate[]>;
-  getTemplate(slug: string): Promise<TemplateDetail>;
+  getTemplate(slug: string, version?: number): Promise<TemplateDetail>;
   listExtractions(): Promise<Extraction[]>;
   extract(transcriptId: string, templateSlug?: string): Promise<Extraction>;
   complement(extractionId: string, section: string, complement: SectionComplement): Promise<Extraction>;
@@ -56,7 +69,8 @@ export interface TemplatesGateway {
 
 export const templatesGateway: TemplatesGateway = {
   listTemplates: () => apiRequest<ReportTemplate[]>("/clinical-templates/"),
-  getTemplate: (slug) => apiRequest<TemplateDetail>(`/clinical-templates/${slug}`),
+  getTemplate: (slug, version) =>
+    apiRequest<TemplateDetail>(`/clinical-templates/${slug}${version === undefined ? "" : `?version=${version}`}`),
   listExtractions: () => apiRequest<Extraction[]>("/transcription/extractions"),
   extract: (transcriptId, templateSlug) =>
     apiRequest<Extraction>(`/transcription/transcripts/${transcriptId}/extract`, {
@@ -88,10 +102,10 @@ export function useReportTemplates() {
   });
 }
 
-export function useTemplate(slug: string | undefined) {
+export function useTemplate(slug: string | undefined, version?: number) {
   return useQuery({
-    queryKey: [...templateKeys, slug],
-    queryFn: () => templatesGateway.getTemplate(slug as string),
+    queryKey: [...templateKeys, slug, version],
+    queryFn: () => templatesGateway.getTemplate(slug as string, version),
     enabled: slug !== undefined,
     staleTime: Infinity,
   });
