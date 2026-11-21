@@ -137,6 +137,18 @@ export function useReconciliations() {
   });
 }
 
+/** Cuántos conflictos abiertos tienes por resolver (en los que reportaste uno de los lados). */
+export function useOpenConflictCount(): number {
+  const { data = [] } = useReconciliations();
+  return data
+    .filter((item) => item.status === "open")
+    .reduce(
+      (total, item) =>
+        total + item.conflicts.filter((conflict) => conflict.status === "open" && conflict.myRole !== null).length,
+      0,
+    );
+}
+
 export function useIncomingConsults() {
   return useQuery({
     queryKey: consultKeys,

@@ -1,6 +1,114 @@
 @import 'tailwindcss';
 
-/* Marca de la barra lateral */
+/* Barra superior: marca, cuenta y (solo en pantallas anchas) la navegación. En teléfono y tablet
+   vertical la navegación va abajo, en la barra de pestañas. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'brand user';
+  align-items: center;
+  gap: 12px;
+  padding: calc(8px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 8px
+    calc(16px + env(safe-area-inset-left));
+  background: var(--color-panel-solid);
+  border-bottom: 1px solid var(--gray-a5);
+}
+
+.app-header__brand {
+  grid-area: brand;
+}
+
+.app-header__user {
+  grid-area: user;
+}
+
+/* Más específico que el `display: flex` de Radix, para que de verdad se oculte. */
+.app-header .app-header__nav {
+  display: none;
+}
+
+/* Barra de pestañas inferior: al alcance del pulgar, con la zona segura del equipo. */
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(var(--tabs, 4), 1fr);
+  background: var(--color-panel-solid);
+  border-top: 1px solid var(--gray-a5);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.bottom-nav__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 60px;
+  color: var(--gray-11);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav__tab[data-active] {
+  color: var(--accent-11);
+  box-shadow: inset 0 3px 0 var(--accent-9);
+}
+
+.bottom-nav__tab:active {
+  background: var(--gray-a3);
+}
+
+.bottom-nav__icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav__badge {
+  position: absolute;
+  top: -6px;
+  left: 60%;
+}
+
+/* El contenido deja lugar a la barra inferior para que no tape el final de la página. */
+.app-main {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 900px) {
+  .app-header {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'brand nav user';
+    gap: 24px;
+  }
+
+  .app-header .app-header__nav {
+    display: flex;
+    grid-area: nav;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-header__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .app-main {
+    padding-bottom: 0;
+  }
+}
+
+/* Marca de la barra superior */
 .brand-mark {
   display: inline-flex;
   align-items: center;

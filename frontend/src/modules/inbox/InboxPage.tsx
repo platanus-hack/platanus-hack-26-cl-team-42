@@ -21,10 +21,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
+import { useMediaQuery } from "../../components/useMediaQuery";
 import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
 import { PROCESSING_STEPS, patientKeys, usePatients, useTransferPatient, type PatientWithCount } from "../patients/api";
-import { useReconciliations } from "../reconciliation/api";
+import { useOpenConflictCount, useReconciliations } from "../reconciliation/api";
 import { EvidencePanel } from "../evidence/EvidencePanel";
 import { Recorder } from "../recordings/Recorder";
 import { AssistantPanel } from "../reports/AssistantPanel";
@@ -50,21 +51,27 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const navigate = useNavigate();
   const { data = [], isPending, isError, error } = usePatients();
   const patients = sortInbox(data);
-  const { data: reconciliations = [] } = useReconciliations();
-  const openConflicts = reconciliations
-    .filter((item) => item.status === "open")
-    .reduce(
-      (total, item) =>
-        total + item.conflicts.filter((conflict) => conflict.status === "open" && conflict.myRole !== null).length,
-      0,
-    );
-  const selected = patients.find((patient) => String(patient.id) === search.patient) ?? patients[0];
+  const openConflicts = useOpenConflictCount();
+  // En tablet horizontal y escritorio, lista y detalle lado a lado; en teléfono y tablet vertical,
+  // un panel a la vez: la lista y, al tocar un paciente, su detalle con un botón para volver.
+  const wide = useMediaQuery("(min-width: 900px)");
+  const chosen = patients.find((patient) => String(patient.id) === search.patient);
+  const selected = chosen ?? (wide ? patients[0] : undefined);
+  const showList = wide || !chosen;
   const go = (next: InboxSearch) => navigate({ to: "/", search: next });
 
   return (
-    <Flex direction="column" gap="4" p={{ initial: "4", md: "6" }} style={{ maxWidth: 1280 }}>
-      <Heading size="6">Mis pacientes</Heading>
-      {openConflicts > 0 && (
+    <Flex direction="column" gap="4" p={{ initial: "3", sm: "4", md: "6" }} style={{ maxWidth: 1280, margin: "0 auto" }}>
+      {showList ? (
+        <Heading size={{ initial: "5", md: "6" }}>Mis pacientes</Heading>
+      ) : (
+        <Flex>
+          <Button size="3" variant="soft" color="gray" onClick={() => go({})}>
+            ← Mis pacientes
+          </Button>
+        </Flex>
+      )}
+      {openConflicts > 0 && showList && (
         <Callout.Root color="orange">
           <Flex align="center" justify="between" gap="3" wrap="wrap">
             <Callout.Text>
@@ -72,7 +79,7 @@ export function InboxPage({ search }: { search: InboxSearch }) {
               participas.
             </Callout.Text>
             <Link to="/reconciliation" search={{}}>
-              <Button size="1" color="orange">
+              <Button size="2" color="orange">
                 Resolver conflictos
               </Button>
             </Link>
@@ -89,21 +96,25 @@ export function InboxPage({ search }: { search: InboxSearch }) {
           description="Los pacientes vienen de otro sistema o te los traspasa otro usuario. Cuando tengas uno asignado aparecerá aquí."
         />
       ) : (
-        <Grid columns={{ initial: "1", md: "320px 1fr" }} gap={{ initial: "5", md: "8" }} align="start">
-          <Box
-            pr={{ initial: "0", md: "6" }}
-            style={{ borderRight: "1px solid var(--gray-a5)", alignSelf: "stretch" }}
-          >
-            <PatientInbox
-              patients={patients}
-              loading={isPending}
-              selected={selected?.id}
-              onSelect={(id) => go({ patient: String(id) })}
-            />
-          </Box>
-          <Box style={{ minWidth: 0 }}>
-            {selected && <PatientDetail key={selected.id} patient={selected} search={search} go={go} />}
-          </Box>
+        <Grid columns={wide ? "320px 1fr" : "1"} gap={wide ? "8" : "0"} align="start">
+          {showList && (
+            <Box
+              pr={wide ? "6" : "0"}
+              style={wide ? { borderRight: "1px solid var(--gray-a5)", alignSelf: "stretch" } : undefined}
+            >
+              <PatientInbox
+                patients={patients}
+                loading={isPending}
+                selected={selected?.id}
+                onSelect={(id) => go({ patient: String(id) })}
+              />
+            </Box>
+          )}
+          {selected && (
+            <Box style={{ minWidth: 0 }}>
+              <PatientDetail key={selected.id} patient={selected} search={search} go={go} />
+            </Box>
+          )}
         </Grid>
       )}
     </Flex>
@@ -147,7 +158,7 @@ function InboxRow({ patient, selected, onSelect }: { patient: PatientWithCount; 
         width: "100%",
         height: "auto",
         margin: 0,
-        padding: "10px 12px",
+        padding: "14px 14px",
         textAlign: "left",
         borderRadius: "var(--radius-3)",
         color: "var(--gray-12)",

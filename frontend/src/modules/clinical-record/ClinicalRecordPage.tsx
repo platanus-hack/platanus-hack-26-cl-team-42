@@ -140,7 +140,7 @@ function RecordFilters({ record, search }: { record: EpisodeRecord; search: Clin
           value={search.professional ?? ALL}
           onValueChange={(value) => update({ professional: value === ALL ? undefined : value })}
         >
-          <Select.Trigger aria-label="Filtrar por profesional" style={{ minWidth: 240 }} />
+          <Select.Trigger aria-label="Filtrar por profesional" style={{ minWidth: "min(240px, 100%)" }} />
           <Select.Content>
             <Select.Item value={ALL}>Todos los profesionales</Select.Item>
             {record.professionals.map((professional) => (
@@ -159,7 +159,7 @@ function RecordFilters({ record, search }: { record: EpisodeRecord; search: Clin
           value={search.shift ?? ALL}
           onValueChange={(value) => update({ shift: value === ALL ? undefined : value })}
         >
-          <Select.Trigger aria-label="Filtrar por turno" style={{ minWidth: 180 }} />
+          <Select.Trigger aria-label="Filtrar por turno" style={{ minWidth: "min(180px, 100%)" }} />
           <Select.Content>
             <Select.Item value={ALL}>Todos los turnos</Select.Item>
             {record.shifts.map((shift) => (
