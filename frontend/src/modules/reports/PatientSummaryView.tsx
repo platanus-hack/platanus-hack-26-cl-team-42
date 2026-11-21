@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Badge, Button, Callout, Card, Flex, Heading, Separator, Skeleton, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
@@ -23,10 +24,12 @@ const CRITICALITY_COLOR: Record<CriticalityLevel, "red" | "orange" | "amber" | "
 interface PatientSummaryViewProps {
   patientId: number;
   onOpenReports: () => void;
+  /** Apartado que va entre la tarjeta de estado y «Más información» (p. ej. consultas a los informes). */
+  assistant?: ReactNode;
 }
 
 /** Estado del paciente arriba (criticidad, resumen, pendientes del tratamiento); el resto, plegado. */
-export function PatientSummaryView({ patientId, onOpenReports }: PatientSummaryViewProps) {
+export function PatientSummaryView({ patientId, onOpenReports, assistant }: PatientSummaryViewProps) {
   const { data: summary, isPending, isError, error } = usePatientSummary(patientId);
 
   if (isError) {
@@ -48,17 +51,21 @@ export function PatientSummaryView({ patientId, onOpenReports }: PatientSummaryV
   const groups = groupHighlights(summary.highlights);
   return (
     <Flex direction="column" gap="3">
+      <Flex>
+        <Button variant="soft" onClick={onOpenReports}>
+          Vista resumen
+        </Button>
+      </Flex>
       <Text size="1" color="gray">
         Versión oficial n.º {summary.version} · el resumen sale de lo ya consolidado entre los profesionales.
       </Text>
       <StatusCard summary={summary} patientId={patientId} />
 
-      <Flex justify="between" align="center" gap="3" wrap="wrap" mt="2">
-        <Heading size="3">Más información</Heading>
-        <Button variant="soft" onClick={onOpenReports}>
-          Ver los informes del paciente
-        </Button>
-      </Flex>
+      {assistant}
+
+      <Heading size="3" mt="2">
+        Más información
+      </Heading>
 
       {groups.map(([group, items]) => (
         <CollapsibleSection key={group} title={group} detail={String(items.length)}>
@@ -242,7 +249,7 @@ const REASON_LABEL = {
 } as const;
 
 /** Todas las versiones oficiales del paciente: la vigente y las anteriores, que no se pierden. */
-function VersionHistory({ patientId }: { patientId: number }) {
+export function VersionHistory({ patientId }: { patientId: number }) {
   const { data: versions = [] } = usePatientVersions(patientId);
   return (
     <CollapsibleSection title="Historial de versiones" detail={`${versions.length} ${versions.length === 1 ? "versión" : "versiones"}`}>

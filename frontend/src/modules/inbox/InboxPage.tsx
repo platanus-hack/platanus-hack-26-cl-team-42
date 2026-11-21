@@ -29,6 +29,7 @@ import { useOpenConflictCount, useReconciliations } from "../reconciliation/api"
 import { EvidencePanel } from "../evidence/EvidencePanel";
 import { Recorder } from "../recordings/Recorder";
 import { AssistantPanel } from "../reports/AssistantPanel";
+import { PatientReportsView } from "../reports/PatientReportsView";
 import { PatientSummaryView } from "../reports/PatientSummaryView";
 import { ReportView, StatusBadge } from "../reports/ReportView";
 import { reportKeys, useReports, type Report } from "../reports/api";
@@ -42,6 +43,8 @@ export interface InboxSearch {
   report?: string;
   /** Sección del informe a destacar (enlaces del asistente y del resumen). */
   section?: string;
+  /** `reports`: vista con el resumen global, la síntesis por áreas y los informes anteriores. */
+  view?: "reports";
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });
@@ -232,7 +235,6 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
   // Incluye tus borradores (para «Informe por validar»); el historial solo muestra los guardados.
   const { data: allReports = [], isPending } = useReports(patient.id, true);
   const reports = allReports.filter((report) => report.status === "done");
-  const [historyOpen, setHistoryOpen] = useState(false);
   const queryClient = useQueryClient();
   // Al terminar de procesarse un dictado aparece (o cambia) su informe.
   useEffect(() => {
@@ -261,6 +263,17 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
     );
   }
 
+  if (search.view === "reports") {
+    return (
+      <PatientReportsView
+        patient={patient}
+        reports={reports}
+        onOpenReport={openReport}
+        onBack={() => go({ patient: patientParam })}
+      />
+    );
+  }
+
   const toValidate = allReports.filter((report) => report.canEdit && report.status === "review");
   return (
     <Flex direction="column" gap="4">
@@ -270,12 +283,15 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
       {toValidate.map((report) => (
         <ValidationPrompt key={report.id} report={report} onOpen={() => openReport(report.id)} />
       ))}
-      <PatientSummaryView patientId={patient.id} onOpenReports={() => setHistoryOpen(true)} />
+      <PatientSummaryView
+        patientId={patient.id}
+        onOpenReports={() => go({ patient: patientParam, view: "reports" })}
+        assistant={<AssistantPanel patientId={patient.id} patientName={patient.name} />}
+      />
       <EvidencePanel patientId={patient.id} />
-      <CollapsibleSection title="Historial de informes" detail={String(reports.length)} open={historyOpen}>
+      <CollapsibleSection title="Historial de informes" detail={String(reports.length)}>
         <ReportHistory reports={reports} onOpen={openReport} />
       </CollapsibleSection>
-      <AssistantPanel patientId={patient.id} patientName={patient.name} />
     </Flex>
   );
 }

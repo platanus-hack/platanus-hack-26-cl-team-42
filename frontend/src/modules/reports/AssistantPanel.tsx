@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Button, Callout, Flex, Text, TextField } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
-import { CollapsibleSection } from "../../components/CollapsibleSection";
 import { professionLabel } from "../recordings/professions";
 import { sectionLabel } from "../templates/recordFields";
 import { reportTitle } from "./format";
@@ -18,7 +17,7 @@ interface AssistantPanelProps {
   patientName?: string;
 }
 
-/** Consultas rápidas a los informes: cada respuesta cita el informe y la sección de donde sale. */
+/** Apartado propio de consultas a los informes: cada respuesta cita el informe y la sección de origen. */
 export function AssistantPanel({ patientId, patientName }: AssistantPanelProps) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Exchange[]>([]);
@@ -39,41 +38,43 @@ export function AssistantPanel({ patientId, patientName }: AssistantPanelProps) 
   };
 
   return (
-    <CollapsibleSection
-      title="Pregúntale a los informes"
-      detail={patientId !== undefined ? `Solo ${patientName ?? "este paciente"}` : "Todos tus pacientes"}
-      open={history.length > 0}
-    >
-      <Flex direction="column" gap="3">
+    <Flex direction="column" gap="3">
+      <Flex direction="column">
+        <Heading size="3">Pregúntale a los informes</Heading>
         <Text size="1" color="gray">
-          Responde con los informes guardados y cada dato trae su referencia.
+          {patientId !== undefined ? `Solo ${patientName ?? "este paciente"}` : "Todos tus pacientes"} · responde con los
+          informes guardados y cada dato trae su referencia.
         </Text>
-        <Flex gap="2">
-          <TextField.Root
-            style={{ flex: 1 }}
-            placeholder="Ej.: ¿Qué drogas vasoactivas usa y en qué dosis?"
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-          />
-          <Button loading={ask.isPending} disabled={!question.trim()} onClick={submit}>
-            Preguntar
-          </Button>
-        </Flex>
-
-        {ask.isError && (
-          <Callout.Root color="red" size="1">
-            <Callout.Text>{ask.error.message}</Callout.Text>
-          </Callout.Root>
-        )}
-
-        {history.map((exchange, index) => (
-          <Answer key={`${exchange.question}-${index}`} exchange={exchange} />
-        ))}
       </Flex>
-    </CollapsibleSection>
+      <Card variant="surface">
+        <Flex direction="column" gap="3">
+          <Flex gap="2">
+            <TextField.Root
+              style={{ flex: 1 }}
+              placeholder="Ej.: ¿Qué drogas vasoactivas usa y en qué dosis?"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit();
+              }}
+            />
+            <Button loading={ask.isPending} disabled={!question.trim()} onClick={submit}>
+              Preguntar
+            </Button>
+          </Flex>
+
+          {ask.isError && (
+            <Callout.Root color="red" size="1">
+              <Callout.Text>{ask.error.message}</Callout.Text>
+            </Callout.Root>
+          )}
+
+          {history.map((exchange, index) => (
+            <Answer key={`${exchange.question}-${index}`} exchange={exchange} />
+          ))}
+        </Flex>
+      </Card>
+    </Flex>
   );
 }
 

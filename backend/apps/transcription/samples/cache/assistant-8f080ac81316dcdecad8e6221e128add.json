@@ -1,0 +1,50 @@
+{
+  "respuesta": "Según el informe médico, el paciente tiene estos medicamentos indicados:\n- Antibiótico: piperacilina/tazobactam 4,5 g EV cada 6 h. Hay una discrepancia, porque el mismo informe dice «Completar ceftriaxona» y enfermería registra que recibe ceftriaxona.\n- Vasoactivo: noradrenalina en infusión, 0,15 mcg/kg/min a las 08:00, con indicación de disminuir 0,02 cada hora manteniendo PAM ≥ 65. A las 11:00, enfermería registra 0,3 mcg/kg/min en aumento.\n- Sedación: propofol, con plan de disminuir hoy. La dosis no está registrada.\n- Tromboprofilaxis: enoxaparina 40 mg SC.\n- Control glicémico: insulina según esquema, con meta de 140-180.\n- Protección gástrica: omeprazol 40 mg EV.\n\nAlerta: la familia refiere alergia a penicilina (rash cutáneo). Piperacilina/tazobactam pertenece a ese grupo y la ceftriaxona motivó una alerta de severidad alta. Enfermería tiene pendiente informar al médico de forma inmediata.",
+  "referencias": [
+    {
+      "informe": 13,
+      "seccion": "medicamentos",
+      "detalle": "Piperacilina/tazobactam 4.5 g Endovenosa cada 6 h, indicado"
+    },
+    {
+      "informe": 13,
+      "seccion": "valoracion_por_sistemas",
+      "detalle": "infeccioso plan: Completar ceftriaxona; neurológico plan: Disminuir propofol"
+    },
+    {
+      "informe": 14,
+      "seccion": "alertas",
+      "detalle": "Hija refiere alergia a penicilina y el paciente recibe ceftriaxona (severidad alta)"
+    },
+    {
+      "informe": 13,
+      "seccion": "drogas_infusion",
+      "detalle": "Noradrenalina 0.15 mcg/kg/min, sin_cambio"
+    },
+    {
+      "informe": 13,
+      "seccion": "indicaciones",
+      "detalle": "Disminuir noradrenalina 0,02 mcg/kg/min cada hora manteniendo PAM >= 65"
+    },
+    {
+      "informe": 14,
+      "seccion": "drogas_infusion",
+      "detalle": "Noradrenalina 0.3 mcg/kg/min, tendencia aumento"
+    },
+    {
+      "informe": 13,
+      "seccion": "profilaxis",
+      "detalle": "enoxaparina 40 mg SC; insulina según esquema, meta 140-180; omeprazol 40 mg EV; se disminuirá propofol hoy"
+    },
+    {
+      "informe": 14,
+      "seccion": "alergias",
+      "detalle": "Penicilina, rash cutáneo"
+    },
+    {
+      "informe": 14,
+      "seccion": "pendientes",
+      "detalle": "Informar al médico alergia a penicilina referida por la familia (inmediato)"
+    }
+  ]
+}

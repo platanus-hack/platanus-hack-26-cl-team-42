@@ -17,7 +17,12 @@ from apps.transcription import evidence_services
 from apps.transcription.inbox_services import inbox_states
 from apps.transcription.models import ConsolidatedVersion
 from apps.transcription.reconciliation_services import open_conflict_counts
-from apps.transcription.summary_services import PatientSummary, patient_summary
+from apps.transcription.summary_services import (
+    PatientOverview,
+    PatientSummary,
+    patient_overview,
+    patient_summary,
+)
 from apps.transcription.triage_services import triage_for
 
 from . import services
@@ -109,6 +114,13 @@ def transfer_patient(request, patient_id: int, data: TransferIn):
 def get_patient_summary(request, patient_id: int):
     patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
     return patient_summary(request.user, patient)
+
+
+@router.get("/{patient_id}/overview", response=PatientOverview)
+def get_patient_overview(request, patient_id: int):
+    """Resumen global y síntesis por áreas de la versión oficial vigente del paciente."""
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    return patient_overview(request.user, patient)
 
 
 def patient_out(patient) -> PatientOut:

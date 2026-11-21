@@ -93,6 +93,35 @@ export interface PatientSummary {
   highlights: Highlight[];
 }
 
+/** Lo que dice el registro consolidado sobre un área clínica (hemodinamia, respiratorio…). */
+export interface AreaSummary {
+  area: string;
+  /** Síntesis de 1 a 3 frases; vacía si el área aún no tiene información. */
+  summary: string;
+  informed: boolean;
+  /** Secciones del registro que componen el área (para cruzarlas con los conflictos). */
+  sections: string[];
+  /** Profesiones (no personas) que aportaron datos a esta área. */
+  contributors: string[];
+}
+
+/** Una profesión que aportó informes del paciente; nunca se identifica a la persona. */
+export interface Contributor {
+  profession: string;
+  reportCount: number;
+  /** Algún informe suyo choca con la versión oficial y espera reconciliarse. */
+  inConflict: boolean;
+}
+
+export interface PatientOverview {
+  version: number;
+  /** Resumen global del caso: motivo de ingreso, evolución, situación actual y lo pendiente. */
+  globalSummary: string;
+  areas: AreaSummary[];
+  /** Qué profesiones aportaron informes, en orden clínico habitual. */
+  contributors: Contributor[];
+}
+
 export interface PatientVersion {
   version: number;
   /** `official` (primer informe), `merge` (sin conflictos) o `reconciliation` (conflictos resueltos). */
@@ -122,6 +151,15 @@ export function usePatientSummary(patientId: number | undefined) {
   return useQuery({
     queryKey: [...patientKeys, patientId, "summary"],
     queryFn: () => apiRequest<PatientSummary>(`/patients/${patientId}/summary`),
+    enabled: patientId !== undefined,
+  });
+}
+
+/** Resumen global y síntesis por áreas de la versión oficial vigente. */
+export function usePatientOverview(patientId: number | undefined) {
+  return useQuery({
+    queryKey: [...patientKeys, patientId, "overview"],
+    queryFn: () => apiRequest<PatientOverview>(`/patients/${patientId}/overview`),
     enabled: patientId !== undefined,
   });
 }
