@@ -1,5 +1,43 @@
 @import 'tailwindcss';
 
+/* Paleta de marca: el verde del logo (#006F60) reemplaza la escala `teal` de Radix, que es el
+   acento del tema (ver `__root.tsx`). El selector duplicado gana a la definición de Radix, también
+   a su variante para pantallas P3. */
+:root:root,
+.light.light,
+.light-theme.light-theme {
+  --teal-1: #fafdfc;
+  --teal-2: #f1faf8;
+  --teal-3: #dcf2ed;
+  --teal-4: #c6eae2;
+  --teal-5: #aee0d5;
+  --teal-6: #92d2c4;
+  --teal-7: #6dbfae;
+  --teal-8: #36a28d;
+  --teal-9: #006f60;
+  --teal-10: #005f52;
+  --teal-11: #006a5b;
+  --teal-12: #0b3a33;
+
+  --teal-a1: rgb(0 111 96 / 0.02);
+  --teal-a2: rgb(0 111 96 / 0.055);
+  --teal-a3: rgb(0 111 96 / 0.14);
+  --teal-a4: rgb(0 111 96 / 0.22);
+  --teal-a5: rgb(0 111 96 / 0.32);
+  --teal-a6: rgb(0 111 96 / 0.43);
+  --teal-a7: rgb(0 111 96 / 0.57);
+  --teal-a8: rgb(0 111 96 / 0.79);
+  --teal-a9: #006f60;
+  --teal-a10: #005f52;
+  --teal-a11: #006a5b;
+  --teal-a12: #0b3a33;
+
+  --teal-contrast: #ffffff;
+  --teal-surface: rgb(241 250 248 / 0.8);
+  --teal-indicator: var(--teal-9);
+  --teal-track: var(--teal-9);
+}
+
 /* Barra superior: marca, cuenta y (solo en pantallas anchas) la navegación. En teléfono y tablet
    vertical la navegación va abajo, en la barra de pestañas. */
 .app-header {
@@ -108,17 +146,12 @@
   }
 }
 
-/* Marca de la barra superior */
+/* Logo de la barra superior y del login */
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  color: white;
-  background: linear-gradient(135deg, var(--accent-9), var(--accent-11));
-  box-shadow: 0 6px 16px -6px var(--accent-a8);
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 }
 
 /* Ícono de paso, con fondo tintado del acento */

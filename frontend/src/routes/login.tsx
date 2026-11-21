@@ -2,7 +2,6 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Box, Flex, Heading, Button, Text } from "@radix-ui/themes";
 import { useAuth } from "../services/auth";
 import { useMemo, useState } from "react";
-import { HomeIcon } from "../components/icons";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -37,9 +36,7 @@ function Login() {
       >
         <Flex direction="column" gap="4">
           <Flex justify="center">
-            <span className="brand-mark" aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 14 }}>
-              <HomeIcon size={22} />
-            </span>
+            <img src="/logo.png" className="brand-mark" alt="" aria-hidden="true" style={{ width: 64, height: 64 }} />
           </Flex>
           <Heading size="6" weight="bold" align="center">
             Login

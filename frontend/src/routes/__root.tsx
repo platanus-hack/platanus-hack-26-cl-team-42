@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 function RootComponent() {
   return (
     <StrictMode>
-      <Theme accentColor="teal" grayColor="slate" radius="large" scaling="100%">
+      <Theme appearance="light" accentColor="teal" grayColor="slate" radius="large" scaling="100%">
         <QueryClientProvider client={queryClient}>
           <AllAuthProvider>
             <Outlet />

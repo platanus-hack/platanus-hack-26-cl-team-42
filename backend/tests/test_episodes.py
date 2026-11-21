@@ -112,6 +112,11 @@ def test_records_are_the_patients_assigned_to_the_active_user(doctor, nurse, pat
     records = episodes.episode_records(doctor)
 
     assert [r["episode"]["label"] for r in records] == ["Juan Pérez (1-9) · Box 7"]
+    assert records[0]["episode"]["patient"] == {
+        "name": "Juan Pérez",
+        "identifier": "1-9",
+        "bed": "Box 7",
+    }
     assert next(iter(episodes.episode_records(nurse)))["episode"]["label"].startswith("Ajeno")
     assert "isFictional" not in records[0]["episode"]
 

@@ -10,19 +10,17 @@ import {
   Heading,
   Select,
   Spinner,
-  Tabs,
+  Table,
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { useNavigate } from "@tanstack/react-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ModulePage } from "../../components/ModulePage";
-import type { HandoffSearch, HandoffTab } from "../../routes/_authenticated/handoff";
 import { useClosePending, useEpisodeRecords, useHandoffs, useSendHandoff, useTeam } from "../episode/api";
 import { SourceLink } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
 import { buildHandoffSnapshots, handoffReferenceAt } from "../episode/handoff";
-import type { EpisodeRecord, Handoff, HandoffSnapshot, OpenConflict, PendingTask } from "../episode/model";
+import type { EpisodePatient, EpisodeRecord, Handoff, HandoffSnapshot, OpenConflict, PendingTask } from "../episode/model";
 import { PRIORITY_THRESHOLDS, rankPatients } from "../episode/priority";
 import type { Team } from "../episode/gateway";
 import { authorLine, professionalById } from "../episode/record";
@@ -32,7 +30,7 @@ import { SnapshotView } from "./SnapshotView";
 
 type People = Pick<EpisodeRecord, "professionals">;
 
-export function HandoffPage({ search }: { search: HandoffSearch }) {
+export function HandoffPage() {
   const records = useEpisodeRecords();
   const team = useTeam();
 
@@ -46,58 +44,9 @@ export function HandoffPage({ search }: { search: HandoffSearch }) {
           description={(records.error ?? team.error)?.message ?? "Inténtalo de nuevo en unos segundos."}
         />
       ) : (
-        <HandoffWorkspace records={records.data} team={team.data} search={search} />
+        <SendHandoff records={records.data} team={team.data} actorId={team.data.meId} />
       )}
     </ModulePage>
-  );
-}
-
-function HandoffWorkspace({ records, team, search }: { records: EpisodeRecord[]; team: Team; search: HandoffSearch }) {
-  const navigate = useNavigate();
-  const actorId = team.meId;
-  const handoffs = useHandoffs();
-  const tab = search.tab ?? "send";
-  const received = handoffs.data?.filter(({ toId }) => toId === actorId) ?? [];
-  const sent = handoffs.data?.filter(({ fromId }) => fromId === actorId) ?? [];
-  const go = (patch: Partial<HandoffSearch>) => navigate({ to: "/handoff", search: { tab, ...patch } });
-
-  return (
-    <Flex direction="column" gap="4">
-      <Tabs.Root value={tab} onValueChange={(value) => go({ tab: value as HandoffTab, handoff: undefined })}>
-        <Tabs.List>
-          <Tabs.Trigger value="send">Nuevo traspaso</Tabs.Trigger>
-          <Tabs.Trigger value="received">Recibidos ({received.length})</Tabs.Trigger>
-          <Tabs.Trigger value="sent">Enviados ({sent.length})</Tabs.Trigger>
-        </Tabs.List>
-        <Tabs.Content value="send" mt="4">
-          <SendHandoff
-            records={records}
-            team={team}
-            actorId={actorId}
-            onOpenSent={(handoff) => go({ tab: "sent", handoff: handoff.id })}
-          />
-        </Tabs.Content>
-        {(tab === "received" || tab === "sent") && (
-          <Tabs.Content value={tab} mt="4">
-            {handoffs.isPending ? (
-              <Flex justify="center" py="6"><Spinner size="3" /></Flex>
-            ) : handoffs.error ? (
-              <EmptyState title="No se pudieron cargar las entregas" description={handoffs.error.message} />
-            ) : (
-              <HandoffInbox
-                records={records}
-                team={team}
-                actorId={actorId}
-                handoffs={tab === "received" ? received : sent}
-                direction={tab}
-                selectedId={search.handoff}
-                onSelect={(handoff) => go({ handoff })}
-              />
-            )}
-          </Tabs.Content>
-        )}
-      </Tabs.Root>
-    </Flex>
   );
 }
 
@@ -105,10 +54,9 @@ interface SendHandoffProps {
   records: EpisodeRecord[];
   team: Team;
   actorId: string;
-  onOpenSent: (handoff: Handoff) => void;
 }
 
-function SendHandoff({ records, team, actorId, onOpenSent }: SendHandoffProps) {
+function SendHandoff({ records, team, actorId }: SendHandoffProps) {
   const recipients = team.professionals.filter(({ id }) => team.recipientIds.includes(id));
   const [toId, setToId] = useState("");
   const [note, setNote] = useState("");
@@ -202,58 +150,63 @@ function SendHandoff({ records, team, actorId, onOpenSent }: SendHandoffProps) {
             </AlertDialog.Root>
           </Flex>
           <Flex direction="column" gap="2">
-            <Flex align="center" justify="between" gap="2" wrap="wrap">
-              <Text size="2" weight="medium">
-                Pacientes a entregar ({selected.length} de {snapshots.length}) · atendidos por {authorLine(team, actorId)}
-              </Text>
-              <Flex gap="2">
-                <Button size="1" variant="ghost" color="gray" onClick={() => setExcluded(new Set())}>
-                  Marcar todos
-                </Button>
-                <Button
-                  size="1"
-                  variant="ghost"
-                  color="gray"
-                  onClick={() => setExcluded(new Set(snapshots.map(({ episodeId }) => episodeId)))}
-                >
-                  Desmarcar todos
-                </Button>
-              </Flex>
-            </Flex>
-            <Flex direction="column" gap="1" role="group" aria-label="Pacientes a entregar">
-              {snapshots.map((snapshot) => (
-                <Text as="label" size="2" key={snapshot.episodeId}>
-                  <Flex align="center" gap="2">
+            <Text size="2" weight="medium">
+              Pacientes a entregar ({selected.length} de {snapshots.length}) · atendidos por {authorLine(team, actorId)}
+            </Text>
+            <Table.Root variant="surface" size="1" aria-label="Pacientes a entregar">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell width="40px">
                     <Checkbox
-                      checked={!excluded.has(snapshot.episodeId)}
-                      onCheckedChange={(checked) => toggle(snapshot.episodeId, checked === true)}
-                      aria-label={`Entregar a ${snapshot.episodeLabel}`}
+                      checked={selected.length === snapshots.length ? true : selected.length === 0 ? false : "indeterminate"}
+                      onCheckedChange={(checked) =>
+                        setExcluded(checked === true ? new Set() : new Set(snapshots.map(({ episodeId }) => episodeId)))
+                      }
+                      aria-label="Marcar o desmarcar todos los pacientes"
                     />
-                    <span>{snapshot.episodeLabel}</span>
-                    {sentTo.get(snapshot.episodeId) && (
-                      <Text size="1" color="gray">
-                        · ya entregado a {sentTo.get(snapshot.episodeId)}
-                      </Text>
-                    )}
-                  </Flex>
-                </Text>
-              ))}
-            </Flex>
+                  </Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Nombre</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>RUT</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Box</Table.ColumnHeaderCell>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {snapshots.map((snapshot) => {
+                  const patient = patientColumns(records, snapshot);
+                  return (
+                    <Table.Row key={snapshot.episodeId} align="center">
+                      <Table.Cell>
+                        <Checkbox
+                          checked={!excluded.has(snapshot.episodeId)}
+                          onCheckedChange={(checked) => toggle(snapshot.episodeId, checked === true)}
+                          aria-label={`Entregar a ${snapshot.episodeLabel}`}
+                        />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Flex direction="column">
+                          <Text size="2">{patient.name}</Text>
+                          {sentTo.get(snapshot.episodeId) && (
+                            <Text size="1" color="gray">Ya entregado a {sentTo.get(snapshot.episodeId)}</Text>
+                          )}
+                        </Flex>
+                      </Table.Cell>
+                      <Table.Cell>{patient.identifier || "—"}</Table.Cell>
+                      <Table.Cell>{patient.bed || "—"}</Table.Cell>
+                    </Table.Row>
+                  );
+                })}
+              </Table.Body>
+            </Table.Root>
           </Flex>
           {send.error && (
             <Callout.Root color="red"><Callout.Text>{send.error.message}</Callout.Text></Callout.Root>
           )}
           {send.data && !send.isPending && (
             <Callout.Root color="green">
-              <Flex align="center" justify="between" gap="2" wrap="wrap">
-                <Callout.Text>
-                  Traspaso de {patientCount(send.data.snapshots.length)} enviado a{" "}
-                  {professionalById(team, send.data.toId)?.name}.
-                </Callout.Text>
-                <Button size="1" variant="soft" onClick={() => onOpenSent(send.data)}>
-                  Ver en enviados
-                </Button>
-              </Flex>
+              <Callout.Text>
+                Traspaso de {patientCount(send.data.snapshots.length)} enviado a{" "}
+                {professionalById(team, send.data.toId)?.name}.
+              </Callout.Text>
             </Callout.Root>
           )}
         </Flex>
@@ -278,63 +231,10 @@ function recipientsByPatient(handoffs: Handoff[], actorId: string, team: People)
   return new Map([...names].map(([episodeId, people]) => [episodeId, [...people].join(", ")]));
 }
 
-interface InboxProps {
-  records: EpisodeRecord[];
-  team: People;
-  actorId: string;
-  handoffs: Handoff[];
-  direction: "received" | "sent";
-  selectedId: string | undefined;
-  onSelect: (handoffId: string) => void;
-}
-
-function HandoffInbox({ records, team, actorId, handoffs, direction, selectedId, onSelect }: InboxProps) {
-  if (handoffs.length === 0) {
-    return (
-      <EmptyState
-        title={direction === "received" ? "Sin traspasos recibidos" : "Sin traspasos enviados"}
-        description="Prepara una entrega desde «Nuevo traspaso»."
-      />
-    );
-  }
-  const selected = handoffs.find((handoff) => handoff.id === selectedId) ?? handoffs[0];
-
-  return (
-    <Flex direction="column" gap="4">
-      {handoffs.length > 1 && (
-        <Flex gap="2" wrap="wrap" role="group" aria-label="Entregas">
-          {handoffs.map((handoff) => (
-            <Button
-              key={handoff.id}
-              size="1"
-              color="gray"
-              variant={handoff.id === selected.id ? "soft" : "ghost"}
-              aria-pressed={handoff.id === selected.id}
-              onClick={() => onSelect(handoff.id)}
-            >
-              {direction === "received" ? "De " : "Para "}
-              {professionalById(team, direction === "received" ? handoff.fromId : handoff.toId)?.name} ·{" "}
-              {formatClinicalTime(handoff.sentAt)}
-            </Button>
-          ))}
-        </Flex>
-      )}
-      <Flex direction="column" gap="1">
-        <Heading size="4">Traspaso de {patientCount(selected.snapshots.length)}</Heading>
-        <Text size="2" color="gray">
-          De {authorLine(team, selected.fromId)} para {authorLine(team, selected.toId)} · {formatClinicalTime(selected.sentAt)}
-        </Text>
-        {selected.note && <Text size="2">«{selected.note}»</Text>}
-      </Flex>
-      <PatientSnapshots
-        key={selected.id}
-        records={records}
-        team={team}
-        snapshots={selected.snapshots}
-        actorId={direction === "received" ? actorId : undefined}
-      />
-    </Flex>
-  );
+/** Nombre, RUT y box del paciente; si el registro no los trae por separado, el nombre es la etiqueta completa. */
+function patientColumns(records: EpisodeRecord[], snapshot: HandoffSnapshot): EpisodePatient {
+  const patient = records.find(({ episode }) => episode.id === snapshot.episodeId)?.episode.patient;
+  return patient ?? { name: snapshot.episodeLabel, identifier: "", bed: "" };
 }
 
 function PatientSnapshots({ records, team, snapshots, actorId }: {
