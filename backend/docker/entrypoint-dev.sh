@@ -25,6 +25,9 @@ email = os.environ['DJANGO_SUPERUSER_EMAIL']
 if not User.objects.filter(email=email).exists():
     User.objects.create_superuser(email=email, password=os.environ['DJANGO_SUPERUSER_PASSWORD'])
 "
+# Pacientes ficticios asignados a la cuenta de desarrollo, para probar dictados e informes.
+python manage.py load_demo_patients "$DJANGO_SUPERUSER_EMAIL" || echo "Warning: no se cargaron los pacientes demo"
+
 # No collectstatic here: with DEBUG, runserver serves static straight from the
 # staticfiles finders, and dev-user cannot write into the bind-mounted /app
 # (which fails collectstatic on Linux/CI and kills the container).

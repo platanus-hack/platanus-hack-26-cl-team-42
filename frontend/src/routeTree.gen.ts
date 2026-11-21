@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedTranscriptionRouteImport } from './routes/_authenticated/transcription'
 import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRecordingsRouteImport } from './routes/_authenticated/recordings'
 import { Route as AuthenticatedOfficialFormRouteImport } from './routes/_authenticated/official-form'
 import { Route as AuthenticatedHandoffRouteImport } from './routes/_authenticated/handoff'
@@ -51,6 +52,11 @@ const AuthenticatedTranscriptionRoute =
 const AuthenticatedTemplatesRoute = AuthenticatedTemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedRecordingsRoute = AuthenticatedRecordingsRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/handoff': typeof AuthenticatedHandoffRoute
   '/official-form': typeof AuthenticatedOfficialFormRoute
   '/recordings': typeof AuthenticatedRecordingsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/transcription': typeof AuthenticatedTranscriptionRoute
   '/': typeof AuthenticatedIndexRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/handoff': typeof AuthenticatedHandoffRoute
   '/official-form': typeof AuthenticatedOfficialFormRoute
   '/recordings': typeof AuthenticatedRecordingsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/transcription': typeof AuthenticatedTranscriptionRoute
   '/': typeof AuthenticatedIndexRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/_authenticated/handoff': typeof AuthenticatedHandoffRoute
   '/_authenticated/official-form': typeof AuthenticatedOfficialFormRoute
   '/_authenticated/recordings': typeof AuthenticatedRecordingsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/transcription': typeof AuthenticatedTranscriptionRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/handoff'
     | '/official-form'
     | '/recordings'
+    | '/reports'
     | '/templates'
     | '/transcription'
     | '/'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/handoff'
     | '/official-form'
     | '/recordings'
+    | '/reports'
     | '/templates'
     | '/transcription'
     | '/'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/handoff'
     | '/_authenticated/official-form'
     | '/_authenticated/recordings'
+    | '/_authenticated/reports'
     | '/_authenticated/templates'
     | '/_authenticated/transcription'
     | '/_authenticated/'
@@ -231,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/templates'
       fullPath: '/templates'
       preLoaderRoute: typeof AuthenticatedTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/recordings': {
@@ -292,6 +311,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHandoffRoute: typeof AuthenticatedHandoffRoute
   AuthenticatedOfficialFormRoute: typeof AuthenticatedOfficialFormRoute
   AuthenticatedRecordingsRoute: typeof AuthenticatedRecordingsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedTemplatesRoute: typeof AuthenticatedTemplatesRoute
   AuthenticatedTranscriptionRoute: typeof AuthenticatedTranscriptionRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -305,6 +325,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHandoffRoute: AuthenticatedHandoffRoute,
   AuthenticatedOfficialFormRoute: AuthenticatedOfficialFormRoute,
   AuthenticatedRecordingsRoute: AuthenticatedRecordingsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedTemplatesRoute: AuthenticatedTemplatesRoute,
   AuthenticatedTranscriptionRoute: AuthenticatedTranscriptionRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,

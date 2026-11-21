@@ -110,13 +110,21 @@ def build_template_schema(slug: str) -> BuiltTemplate:
     )
 
 
+def ensure_templates() -> None:
+    """Carga las plantillas de ``data/`` si la tabla aún no las tiene (primer uso)."""
+    if not ClinicalTemplate.objects.filter(is_active=True).exists():
+        sync_templates_from_files()
+
+
 def get_active_template(slug: str) -> ClinicalTemplate:
     """The active version of a template. Raises ``DoesNotExist`` if missing."""
+    ensure_templates()
     return ClinicalTemplate.objects.get(slug=slug, is_active=True)
 
 
 def get_active_template_for_profession(profession: str) -> ClinicalTemplate:
     """The active template of a profession. Raises ``DoesNotExist`` if missing."""
+    ensure_templates()
     return ClinicalTemplate.objects.get(profession=profession, is_active=True)
 
 

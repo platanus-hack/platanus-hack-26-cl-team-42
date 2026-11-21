@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge, Button, Flex, Heading, Text, Tooltip } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
-import { getWorkflowStep, WORKFLOW_STEPS, type WorkflowStepId } from "../config/workflow";
+import { getWorkflowStep, type WorkflowStep, type WorkflowStepId } from "../config/workflow";
 import { ArrowIcon, StepIcon } from "./icons";
 
 interface ModulePageProps {
@@ -13,12 +13,12 @@ interface ModulePageProps {
 
 /** Marco común de los módulos: encabezado del paso, contenido y navegación del flujo. */
 export function ModulePage({ stepId, children, connected = false }: ModulePageProps) {
-  const { index, step, previous, next } = getWorkflowStep(stepId);
+  const { steps, index, step, previous, next } = getWorkflowStep(stepId);
 
   return (
     <Flex direction="column" gap="6" p={{ initial: "4", md: "6" }} style={{ maxWidth: "1100px" }}>
       <Flex direction="column" gap="4">
-        <StepProgress currentIndex={index} />
+        <StepProgress steps={steps} currentIndex={index} />
 
         <Flex align="start" gap="4">
           <span className="step-icon">
@@ -26,7 +26,7 @@ export function ModulePage({ stepId, children, connected = false }: ModulePagePr
           </span>
           <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
             <Text size="2" color="gray" weight="medium">
-              Paso {index + 1} de {WORKFLOW_STEPS.length}
+              Paso {index + 1} de {steps.length}
             </Text>
             <Flex align="center" gap="3" wrap="wrap">
               <Heading size="7" style={{ letterSpacing: "-0.01em" }}>
@@ -83,10 +83,10 @@ export function ModulePage({ stepId, children, connected = false }: ModulePagePr
 }
 
 /** Barra de progreso: un segmento por paso, con los anteriores completados. */
-function StepProgress({ currentIndex }: { currentIndex: number }) {
+function StepProgress({ steps, currentIndex }: { steps: readonly WorkflowStep[]; currentIndex: number }) {
   return (
     <Flex gap="1" aria-hidden="true">
-      {WORKFLOW_STEPS.map((step, index) => (
+      {steps.map((step, index) => (
         <span
           key={step.id}
           className="progress-segment"

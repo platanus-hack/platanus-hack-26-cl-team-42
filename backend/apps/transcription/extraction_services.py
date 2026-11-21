@@ -11,6 +11,7 @@ o con otro audio (``request_section_update``).
 import json
 import logging
 import time
+import unicodedata
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
@@ -27,7 +28,8 @@ from apps.clinical_templates import services as template_services
 from apps.clinical_templates.models import ClinicalTemplate
 from apps.recordings.models import Recording
 
-from .models import ExtractedRecord, Transcription
+from . import pipeline_cache
+from .models import ExtractedRecord, Report, Transcription
 from .partial_json import parse_partial_json_object
 
 logger = logging.getLogger(__name__)
@@ -88,14 +90,25 @@ def request_extraction(
             "error": "",
         },
     )
+    _reset_report(record)
     transaction.on_commit(lambda: _enqueue(record.id))
     return record
 
 
 def request_automatic_extraction(transcription: Transcription) -> ExtractedRecord | None:
-    """Encola la extracción si el dictado indica su tipo de profesional; si no, no hace nada."""
-    if not transcription.recording.profession:
-        return None
+    """Encola el parseo con la plantilla del dictado, identificándola si no se indicó.
+
+    Si el dictado no trae el tipo de profesional, se deduce del contenido de la transcripción
+    (y se guarda en el dictado). Si no se logra identificar, no hace nada.
+    """
+    recording = transcription.recording
+    if not recording.profession:
+        profession = identify_profession(transcription)
+        if profession is None:
+            logger.warning("No se identificó la plantilla de la transcripción %s", transcription.id)
+            return None
+        recording.profession = profession
+        recording.save(update_fields=["profession"])
     try:
         return request_extraction(transcription)
     except ExtractionError:
@@ -125,6 +138,8 @@ def run_extraction(record_id: int) -> str:
         record.status = ExtractedRecord.Status.DONE
         record.error = ""
     record.save(update_fields=["status", "data", "error", "updated_at"])
+    if record.status == ExtractedRecord.Status.DONE:
+        _build_report(record)
     return record.status
 
 
@@ -134,6 +149,9 @@ def request_section_update(
     """Encola la incorporación de información nueva (escrita y/o en audio) a una sección."""
     if record.status != ExtractedRecord.Status.DONE or not record.data:
         raise ExtractionError("El registro aún no está listo para completarse.")
+    report = Report.objects.filter(extracted_record=record).first()
+    if report and report.status == Report.Status.DONE:
+        raise ExtractionError("El informe ya fue guardado y no se puede editar.")
     if section not in record.template.output_schema["properties"]:
         raise ExtractionError(f"La plantilla no tiene la sección '{section}'.")
     text = text.strip()
@@ -168,9 +186,46 @@ def run_section_update(record_id: int, section: str, text: str, audio_name: str)
     finally:
         if audio_name:
             default_storage.delete(audio_name)
+    # El registro sigue «en curso» hasta que el informe quedó rehomologado: así quien lo mira
+    # espera a que todo el flujo (transcribir, parsear, homologar) termine.
+    record.save(update_fields=["data", "error", "updated_at"])
+    _build_report(record, changed_section=section)
     record.status = ExtractedRecord.Status.DONE
-    record.save(update_fields=["status", "data", "error", "updated_at"])
+    record.save(update_fields=["status", "updated_at"])
     return record.status
+
+
+def identify_profession(transcription: Transcription) -> str | None:
+    """Tipo de profesional que dictó (``ClinicalTemplate.Profession``), deducido del texto.
+
+    Los audios de demo conocidos traen su profesional en `samples/transcripts.json`;
+    si no, lo decide el modelo y, si no responde bien, unas palabras clave. El resultado se cachea.
+    """
+    known = _known_profession(transcription.recording)
+    if known:
+        return known
+    key = pipeline_cache.cache_key(transcription.text)
+    cached = pipeline_cache.load("profession", key)
+    if cached is not None:
+        return cached.get("profession")
+
+    text = transcription.text
+    profession = _identify_with_model(text) or _identify_by_keywords(text)
+    if profession:
+        pipeline_cache.store("profession", key, {"profession": profession})
+    return profession
+
+
+def complete_json(messages: list[ChatMessage]) -> dict[str, Any]:
+    """Respuesta JSON del modelo de extracción a una conversación (una sola vuelta)."""
+    try:
+        reply = _extraction_model().complete(messages)
+    except ModelError as error:
+        raise ValueError(f"Error del modelo: {error}") from error
+    parsed = _parse_json_object(reply)
+    if parsed is None:
+        raise ValueError("El modelo no respondió un JSON válido.")
+    return parsed
 
 
 def list_extractions(professional) -> list[ExtractionOut]:
@@ -224,7 +279,15 @@ def _extract(
     def validate(record: dict[str, Any]) -> list[template_services.ValidationIssue]:
         return template_services.validate_record(template, record)
 
-    return _ask_for_json(messages, validate, on_progress)
+    # Mismo texto y plantilla => mismo registro: no se vuelve a llamar al modelo.
+    recording = transcription.recording
+    key = pipeline_cache.cache_key(template.slug, template.content_hash, transcription.text)
+    cached = pipeline_cache.load("extraction", key)
+    if cached is not None:
+        return _refresh_metadata(cached, recording)
+    record = _ask_for_json(messages, validate, on_progress)
+    pipeline_cache.store("extraction", key, record)
+    return record
 
 
 def _extract_section(record: ExtractedRecord, section: str, new_information: str) -> dict[str, Any]:
@@ -260,7 +323,16 @@ def _extract_section(record: ExtractedRecord, section: str, new_information: str
     def validate(payload: dict[str, Any]) -> list[template_services.ValidationIssue]:
         return template_services.validate_section(template, section, payload)
 
-    return _ask_for_json(messages, validate)
+    # Misma información nueva sobre el mismo valor actual => misma sección: sin llamar al modelo.
+    key = pipeline_cache.cache_key(
+        template.slug, template.content_hash, section, current, new_information
+    )
+    cached = pipeline_cache.load("section", key)
+    if cached is not None:
+        return cached
+    updated = _ask_for_json(messages, validate)
+    pipeline_cache.store("section", key, updated)
+    return updated
 
 
 def _ask_for_json(
@@ -381,6 +453,90 @@ def _parse_json_object(reply: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _refresh_metadata(record: dict[str, Any], recording: Recording) -> dict[str, Any]:
+    """Un registro cacheado conserva todo menos los datos de este dictado (hora y cama)."""
+    metadata = record.get("metadatos")
+    if not isinstance(metadata, dict):
+        return record
+    metadata = dict(metadata)
+    if "fecha_hora_registro" in metadata:
+        metadata["fecha_hora_registro"] = recording.recorded_at.isoformat()
+    if "cama" in metadata and recording.patient and recording.patient.bed:
+        metadata["cama"] = recording.patient.bed
+    return {**record, "metadatos": metadata}
+
+
+def _known_profession(recording: Recording) -> str | None:
+    # Import diferido: services importa este módulo.
+    from .services import known_profession
+
+    try:
+        return known_profession(recording)
+    except (OSError, ValueError):
+        return None
+
+
+def _identify_with_model(text: str) -> str | None:
+    choices = ClinicalTemplate.Profession.choices
+    options = "\n".join(f"- {value}: {label}" for value, label in choices)
+    messages = [
+        ChatMessage(
+            role="system",
+            content=(
+                "Eres un asistente clínico de una UCI chilena. Lees el dictado de un profesional "
+                "y decides quién lo dictó, según el contenido y el vocabulario que usa.\n"
+                f"Opciones:\n{options}\n"
+                'Responde ÚNICAMENTE con JSON: {"profesion": "<una de las opciones>"}.'
+            ),
+        ),
+        ChatMessage(role="user", content=f"Dictado:\n\n{text[:6000]}"),
+    ]
+    try:
+        profession = complete_json(messages).get("profesion")
+    except Exception:
+        logger.exception("El modelo no pudo identificar al profesional")
+        return None
+    valid = {value for value, _ in ClinicalTemplate.Profession.choices}
+    return profession if profession in valid else None
+
+
+# Palabras (sin tildes) que delatan a cada profesional; solo se usan si el modelo falla.
+PROFESSION_KEYWORDS = {
+    "kinesiologia": ("kinesi", "klgo", "vibropresion", "movilizacion", "ejercicio", "fisioterapia"),
+    "enfermeria": ("enfermera", "enfermeria", "curacion", "braden", "balance hidrico"),
+    "tens": ("tens", "tecnico en enfermeria", "aseo", "cambio de posicion", "bano en cama"),
+    "especialista": ("interconsulta", "especialista", "infectolog", "cardiolog", "nefrolog"),
+    "medico": ("diagnostico", "sepsis", "vasopresor", "sofa", "ventilacion mecanica"),
+}
+
+
+def _identify_by_keywords(text: str) -> str | None:
+    plain = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()
+    scores = {
+        profession: sum(plain.count(word) for word in words)
+        for profession, words in PROFESSION_KEYWORDS.items()
+    }
+    best = max(scores, key=lambda profession: scores[profession])
+    return best if scores[best] > 0 else None
+
+
+def _build_report(record: ExtractedRecord, changed_section: str | None = None) -> None:
+    # Import diferido: report_services importa este módulo.
+    from . import report_services
+
+    try:
+        report_services.generate_report(record, changed_section)
+    except Exception:
+        # El registro ya quedó listo: un fallo del informe no debe deshacerlo.
+        logger.exception("No se pudo generar el informe del registro %s", record.id)
+
+
+def _reset_report(record: ExtractedRecord) -> None:
+    from . import report_services
+
+    report_services.reset_report(record)
 
 
 def _enqueue(record_id: int) -> None:

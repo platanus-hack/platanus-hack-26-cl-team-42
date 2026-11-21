@@ -1,0 +1,77 @@
+"""API de pacientes, montada en ``/-/api/patients``.
+
+Cada profesional ve los pacientes que tiene asignados. Los pacientes vienen de otro sistema:
+aquí no se crean, solo se listan y se traspasan a otro usuario.
+"""
+
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
+from ninja import Router, Schema
+from ninja.errors import HttpError
+
+from apps.transcription.summary_services import PatientSummary, patient_summary
+
+from . import services
+from .api import PatientOut
+
+router = Router(tags=["patients"])
+
+
+class TransferIn(Schema):
+    to_email: str
+
+
+class PatientListOut(PatientOut):
+    reportCount: int
+
+
+@router.get("", response=list[PatientListOut])
+def list_patients(request):
+    """Pacientes asignados al profesional, con su número de informes."""
+    patients = services.patients_of(request.user).annotate(
+        report_count=Count("reports", filter=Q(reports__status="done"), distinct=True)
+    )
+    return [
+        PatientListOut(
+            id=p.id,
+            name=p.name,
+            identifier=p.identifier,
+            bed=p.bed,
+            reference=p.reference,
+            reportCount=p.report_count,
+        )
+        for p in patients
+    ]
+
+
+@router.post("/{patient_id}/transfer", response=PatientOut)
+def transfer_patient(request, patient_id: int, data: TransferIn):
+    """Traspasa uno de tus pacientes a otro usuario (los pacientes no se crean desde la app)."""
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    target = (
+        get_user_model().objects.filter(email__iexact=data.to_email.strip(), is_active=True).first()
+    )
+    if target is None:
+        raise HttpError(404, "No existe una cuenta activa con ese correo.")
+    try:
+        services.transfer_patient(patient, from_professional=request.user, to_professional=target)
+    except services.PatientError as error:
+        raise HttpError(409, str(error)) from error
+    return patient_out(patient)
+
+
+@router.get("/{patient_id}/summary", response=PatientSummary)
+def get_patient_summary(request, patient_id: int):
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    return patient_summary(request.user, patient)
+
+
+def patient_out(patient) -> PatientOut:
+    return PatientOut(
+        id=patient.id,
+        name=patient.name,
+        identifier=patient.identifier,
+        bed=patient.bed,
+        reference=patient.reference,
+    )

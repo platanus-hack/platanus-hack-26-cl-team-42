@@ -24,6 +24,31 @@ def recording_upload_path(instance: "Recording", filename: str) -> str:
     return f"recordings/{instance.professional_id}/{instance.id}.{extension}"
 
 
+class Patient(models.Model):
+    """Paciente al que se asocian dictados e informes; lo ven los profesionales asignados."""
+
+    name = models.CharField(max_length=100)
+    # RUT, ficha u otro identificador institucional (opcional; si existe, es único de hecho).
+    identifier = models.CharField(max_length=40, blank=True, db_index=True)
+    bed = models.CharField(max_length=60, blank=True)
+    assigned_to = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name="patients", blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.reference
+
+    @property
+    def reference(self) -> str:
+        """«Juan Pérez (12.345.678-9) · Cama 7»: identifica al paciente en dictados e informes."""
+        identified = f"{self.name} ({self.identifier})" if self.identifier else self.name
+        return f"{identified} · {self.bed}" if self.bed else identified
+
+
 class Recording(models.Model):
     """Un dictado de audio, asociado al profesional que lo grabó."""
 
@@ -37,8 +62,12 @@ class Recording(models.Model):
         on_delete=models.PROTECT,
         related_name="recordings",
     )
-    # Referencia libre al paciente/cama elegido antes de grabar. Se reemplazará
-    # por una FK a Episodio cuando ese modelo exista.
+    # Nombre automático: cuenta · tipo de profesional · fecha y hora de la grabación.
+    name = models.CharField(max_length=255, blank=True)
+    patient = models.ForeignKey(
+        Patient, on_delete=models.PROTECT, null=True, blank=True, related_name="recordings"
+    )
+    # Texto que identifica al paciente (copia de ``Patient.reference`` o referencia libre antigua).
     patient_reference = models.CharField(max_length=120, blank=True)
     note = models.CharField(max_length=255, blank=True)
     # Tipo de profesional que dicta: define la plantilla clínica con que se

@@ -11,67 +11,101 @@ export interface WorkflowStep {
   label: string;
   summary: string;
   path: string;
+  /** Fuera de la navegación por ahora: la ruta sigue existiendo, pero no se ofrece en el flujo. */
+  hidden: boolean;
+  /** El paso ya habla con su backend. */
+  connected: boolean;
 }
 
 export const WORKFLOW_STEPS = [
   {
     id: "recordings",
     label: "Grabar audio",
-    summary: "Captura el dictado o la consulta de cada profesional.",
+    summary: "Graba o sube el dictado: se transcribe, se parsea a su plantilla y se homologa solo.",
     path: "/recordings",
+    hidden: false,
+    connected: true,
   },
   {
-    id: "transcription",
-    label: "Transcribir",
-    summary: "Convierte los audios grabados en texto.",
-    path: "/transcription",
-  },
-  {
-    id: "templates",
-    label: "Parseo a plantillas",
-    summary: "Estructura el texto según la plantilla del informe.",
-    path: "/templates",
-  },
-  {
-    id: "concepts",
-    label: "Homologar conceptos",
-    summary: "Unifica términos distintos que significan lo mismo.",
-    path: "/concepts",
-  },
-  {
-    id: "consolidation",
-    label: "Consolidar informes",
-    summary: "Reúne los informes de todos los profesionales en uno.",
-    path: "/consolidation",
-  },
-  {
-    id: "actionables",
-    label: "Activar accionables",
-    summary: "Convierte hallazgos en tareas o recomendaciones concretas.",
-    path: "/actionables",
+    id: "reports",
+    label: "Informes",
+    summary: "Informes de tus pacientes: resumen, detalle por profesional y consultas con IA.",
+    path: "/reports",
+    hidden: false,
+    connected: true,
   },
   {
     id: "official-form",
     label: "Registro clínico",
     summary: "Registro prellenado por atención, listo para copiar a la ficha institucional.",
     path: "/official-form",
+    hidden: false,
+    connected: false,
   },
   {
     id: "handoff",
     label: "Traspaso",
     summary: "Entrega en conjunto los pacientes que atendiste a otra persona del equipo.",
     path: "/handoff",
+    hidden: false,
+    connected: false,
+  },
+  {
+    id: "transcription",
+    label: "Transcribir",
+    summary: "Convierte los audios grabados en texto.",
+    path: "/transcription",
+    hidden: true,
+    connected: false,
+  },
+  {
+    id: "templates",
+    label: "Parseo a plantillas",
+    summary: "Estructura el texto según la plantilla del informe.",
+    path: "/templates",
+    hidden: true,
+    connected: false,
+  },
+  {
+    id: "concepts",
+    label: "Homologar conceptos",
+    summary: "Unifica términos distintos que significan lo mismo.",
+    path: "/concepts",
+    hidden: true,
+    connected: false,
+  },
+  {
+    id: "consolidation",
+    label: "Consolidar informes",
+    summary: "Reúne los informes de todos los profesionales en uno.",
+    path: "/consolidation",
+    hidden: true,
+    connected: false,
+  },
+  {
+    id: "actionables",
+    label: "Activar accionables",
+    summary: "Convierte hallazgos en tareas o recomendaciones concretas.",
+    path: "/actionables",
+    hidden: true,
+    connected: false,
   },
 ] as const satisfies readonly WorkflowStep[];
 
 export type WorkflowStepId = (typeof WORKFLOW_STEPS)[number]["id"];
 
+/** Los pasos que se ofrecen en la navegación, en orden. */
+export const VISIBLE_STEPS = WORKFLOW_STEPS.filter((step) => !step.hidden);
+
 export function getWorkflowStep(id: WorkflowStepId) {
-  const index = WORKFLOW_STEPS.findIndex((step) => step.id === id);
+  // Un paso oculto se ubica dentro del flujo completo; uno visible, dentro de los visibles.
+  const steps: readonly WorkflowStep[] = VISIBLE_STEPS.some((step) => step.id === id) ? VISIBLE_STEPS : WORKFLOW_STEPS;
+  const index = steps.findIndex((step) => step.id === id);
   return {
+    steps,
     index,
-    step: WORKFLOW_STEPS[index],
-    previous: WORKFLOW_STEPS[index - 1] as (typeof WORKFLOW_STEPS)[number] | undefined,
-    next: WORKFLOW_STEPS[index + 1] as (typeof WORKFLOW_STEPS)[number] | undefined,
+    step: steps[index],
+    previous: steps[index - 1] as WorkflowStep | undefined,
+    next: steps[index + 1] as WorkflowStep | undefined,
   };
 }

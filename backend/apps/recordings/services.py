@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from datetime import datetime, timedelta
 
 from django.core.files.uploadedfile import UploadedFile
@@ -10,8 +12,9 @@ from django.utils import timezone
 
 from apps.clinical_templates.models import ClinicalTemplate
 
-from .models import Recording
+from .models import Patient, Recording
 
+MAX_REFERENCE_LENGTH = 120
 MAX_AUDIO_BYTES = 100 * 1024 * 1024  # ~1 h de opus/aac a calidad de voz
 ALLOWED_MIME_TYPES = frozenset(
     {
@@ -28,6 +31,19 @@ ALLOWED_MIME_TYPES = frozenset(
         "video/webm",  # Algunos navegadores etiquetan el audio de MediaRecorder así
     }
 )
+
+
+PROFESSION_LABELS = {
+    "medico": "Médico UCI",
+    "especialista": "Especialista",
+    "enfermeria": "Enfermería",
+    "tens": "TENS",
+    "kinesiologia": "Kinesiología",
+}
+
+
+class PatientError(ValueError):
+    """No se pudo traspasar el paciente."""
 
 
 class RecordingError(ValueError):
@@ -47,6 +63,7 @@ def create_recording(
     recorded_at: datetime | None = None,
     duration_seconds: float | None = None,
     patient_reference: str = "",
+    patient: Patient | None = None,
     note: str = "",
     profession: str = "",
     specialty: str = "",
@@ -66,12 +83,22 @@ def create_recording(
     if profession and profession not in ClinicalTemplate.Profession.values:
         raise RecordingError(f"Tipo de profesional inválido: {profession}")
 
+    if patient is not None:
+        if not patient.assigned_to.filter(pk=professional.pk).exists():
+            raise RecordingError("El paciente no está asignado a tu cuenta.")
+        patient_reference = patient.reference[:MAX_REFERENCE_LENGTH]
+
     recorded_at = recorded_at or timezone.now()
     if recorded_at > timezone.now() + timedelta(minutes=5):
         raise RecordingError("La hora de grabación está en el futuro.")
+    # El tipo de profesional sale, en orden, de lo indicado, del nombre del archivo subido
+    # y de la cuenta; si no hay ninguno, se deduce luego del contenido del dictado.
+    profession = profession or profession_from_name(audio.name) or professional.profession
 
     recording = Recording(
         professional=professional,
+        name=recording_name(professional, profession, recorded_at),
+        patient=patient,
         patient_reference=patient_reference.strip(),
         note=note.strip(),
         profession=profession,
@@ -88,9 +115,55 @@ def create_recording(
     return recording
 
 
+def profession_from_name(filename: str | None) -> str:
+    """Tipo de profesional que nombra un archivo («Dr. Rojas - Médico UCI - 18-11-2026.wav»)."""
+    plain = _plain(filename or "")
+    for value, label in PROFESSION_LABELS.items():
+        if re.search(rf"\b{re.escape(_plain(label))}\b", plain):
+            return value
+    return ""
+
+
+def _plain(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(char for char in decomposed if not unicodedata.combining(char))
+
+
+def recording_name(professional, profession: str, recorded_at: datetime) -> str:
+    """«Dra. Soto · Kinesiología · 21-11-2026 10:30»: cuenta, tipo de profesional y hora."""
+    account = professional.name or professional.email
+    parts = [
+        account,
+        PROFESSION_LABELS.get(profession, ""),
+        timezone.localtime(recorded_at).strftime("%d-%m-%Y %H:%M"),
+    ]
+    return " · ".join(part for part in parts if part)
+
+
 def delete_recording(recording: Recording) -> None:
     """Delete the row and its stored audio file."""
     storage, name = recording.audio.storage, recording.audio.name
     recording.delete()
     if name:
         transaction.on_commit(lambda: storage.delete(name))
+
+
+def transfer_patient(patient: Patient, *, from_professional, to_professional) -> Patient:
+    """Traspasa un paciente asignado a ``from_professional`` a otro profesional.
+
+    Los pacientes vienen de otro sistema: la app no los crea, solo los asigna y los traspasa.
+    Quien lo recibe lo ve (con sus informes validados) y quien lo entrega deja de tenerlo.
+    """
+    if from_professional.pk == to_professional.pk:
+        raise PatientError("El paciente ya está asignado a esa cuenta.")
+    if not patient.assigned_to.filter(pk=from_professional.pk).exists():
+        raise PatientError("El paciente no está asignado a tu cuenta.")
+    with transaction.atomic():
+        patient.assigned_to.add(to_professional)
+        patient.assigned_to.remove(from_professional)
+    return patient
+
+
+def patients_of(professional):
+    """Pacientes asignados al profesional."""
+    return Patient.objects.filter(assigned_to=professional)

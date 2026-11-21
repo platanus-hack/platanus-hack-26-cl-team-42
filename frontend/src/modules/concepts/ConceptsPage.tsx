@@ -1,6 +1,7 @@
 import { Badge, Button, Flex, Table, Text } from "@radix-ui/themes";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
+import { professionLabel } from "../recordings/professions";
 import { useConceptMappings, type ConceptStatus } from "./api";
 
 const STATUS_LABEL: Record<ConceptStatus, { label: string; color: "gray" | "green" | "red" }> = {
@@ -13,7 +14,7 @@ export function ConceptsPage() {
   const { data: mappings = [], isPending } = useConceptMappings();
 
   return (
-    <ModulePage stepId="concepts">
+    <ModulePage stepId="concepts" connected>
       <Text size="2" color="gray">
         Cada término de un profesional se propone como concepto canónico. Confirme o corrija la propuesta para que
         todos los informes usen el mismo vocabulario.
@@ -39,7 +40,7 @@ export function ConceptsPage() {
             {mappings.map((mapping) => (
               <Table.Row key={mapping.id}>
                 <Table.Cell>{mapping.sourceTerm}</Table.Cell>
-                <Table.Cell>{mapping.sourceProfessional}</Table.Cell>
+                <Table.Cell>{mapping.sourceProfessional ? professionLabel(mapping.sourceProfessional) : "Diccionario base"}</Table.Cell>
                 <Table.Cell>{mapping.approvedConcept ?? mapping.suggestedConcept ?? "—"}</Table.Cell>
                 <Table.Cell>
                   <Badge color={STATUS_LABEL[mapping.status].color} variant="soft">

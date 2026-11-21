@@ -157,7 +157,7 @@ def to_out(transcription: Transcription) -> TranscriptionOut:
     return TranscriptionOut(
         id=str(transcription.id),
         recordingId=str(recording.id),
-        name=recording.patient_reference or "Dictado sin paciente",
+        name=recording.name or recording.patient_reference or "Dictado sin paciente",
         patientReference=recording.patient_reference,
         profession=recording.profession,
         specialty=recording.specialty,
@@ -184,11 +184,22 @@ def _user_message(error: Exception) -> str:
     return "No se pudo transcribir el audio. Intenta nuevamente."
 
 
-def _cached_transcript(data: bytes) -> str | None:
+def known_profession(recording: Recording) -> str | None:
+    """Tipo de profesional de un audio de demo conocido (por el hash de su contenido)."""
+    with recording.audio.open("rb") as audio_file:
+        entry = _cache_entry(audio_file.read())
+    return str(entry["profession"]) if entry and entry.get("profession") else None
+
+
+def _cache_entry(data: bytes) -> dict[str, Any] | None:
     if not TRANSCRIPT_CACHE_PATH.exists():
         return None
     entries = json.loads(TRANSCRIPT_CACHE_PATH.read_text(encoding="utf-8"))
-    entry = entries.get(hashlib.sha256(data).hexdigest())
+    return entries.get(hashlib.sha256(data).hexdigest())
+
+
+def _cached_transcript(data: bytes) -> str | None:
+    entry = _cache_entry(data)
     return str(entry["text"]) if entry else None
 
 

@@ -198,7 +198,8 @@ def test_request_without_profession_or_template_fails(transcription):
         extraction.request_extraction(transcription)
 
 
-def test_automatic_extraction_needs_a_profession(transcription):
+def test_automatic_extraction_needs_an_identifiable_profession(monkeypatch, transcription):
+    _use_model(monkeypatch, ["no sé"])
     transcription.recording.profession = ""
     transcription.recording.save()
 

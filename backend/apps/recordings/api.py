@@ -23,14 +23,24 @@ from .models import Recording
 router = Router(tags=["recordings"])
 
 
+class PatientOut(Schema):
+    id: int
+    name: str
+    identifier: str
+    bed: str
+    reference: str
+
+
 class RecordingOut(ModelSchema):
     professional_name: str
     audio_path: str
+    patient: PatientOut | None
 
     class Meta:
         model = Recording
         fields = [
             "id",
+            "name",
             "patient_reference",
             "note",
             "profession",
@@ -56,6 +66,7 @@ class RecordingIn(Schema):
     source: Recording.Source = Recording.Source.IN_APP
     recorded_at: datetime | None = None
     duration_seconds: float | None = None
+    patient_id: int | None = None
     patient_reference: str = ""
     note: str = ""
     profession: str = ""
@@ -65,11 +76,16 @@ class RecordingIn(Schema):
 @router.get("", response=list[RecordingOut])
 def list_recordings(request):
     """Dictados del profesional autenticado, más recientes primero."""
-    return Recording.objects.filter(professional=request.user).select_related("professional")
+    return Recording.objects.filter(professional=request.user).select_related(
+        "professional", "patient"
+    )
 
 
 @router.post("", response={201: RecordingOut})
 def create_recording(request, audio: File[UploadedFile], data: Form[RecordingIn]):
+    patient = None
+    if data.patient_id is not None:
+        patient = get_object_or_404(services.patients_of(request.user), pk=data.patient_id)
     try:
         recording = services.create_recording(
             professional=request.user,
@@ -78,6 +94,7 @@ def create_recording(request, audio: File[UploadedFile], data: Form[RecordingIn]
             recorded_at=data.recorded_at,
             duration_seconds=data.duration_seconds,
             patient_reference=data.patient_reference,
+            patient=patient,
             note=data.note,
             profession=data.profession,
             specialty=data.specialty,
@@ -110,7 +127,7 @@ def delete_recording(request, recording_id: UUID):
 
 def _own_recording(request, recording_id: UUID) -> Recording:
     return get_object_or_404(
-        Recording.objects.select_related("professional"),
+        Recording.objects.select_related("professional", "patient"),
         pk=recording_id,
         professional=request.user,
     )

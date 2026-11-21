@@ -209,3 +209,12 @@ def _object_nodes(node, path="$"):
 def _example(slug):
     path = services.examples_dir / f"{slug}.json"
     return copy.deepcopy(json.loads(path.read_text(encoding="utf-8")))
+
+
+@pytest.mark.django_db
+def test_templates_load_themselves_on_first_use():
+    assert not ClinicalTemplate.objects.exists()
+
+    template = services.get_active_template_for_profession("kinesiologia")
+
+    assert template.slug == "kinesiologia_uci"

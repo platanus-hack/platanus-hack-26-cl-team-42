@@ -11,7 +11,7 @@ import {
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useAuth } from "../services/auth";
-import { WORKFLOW_STEPS } from "../config/workflow";
+import { VISIBLE_STEPS } from "../config/workflow";
 import { HomeIcon, StepIcon } from "./icons";
 
 interface SidebarProps {
@@ -64,7 +64,7 @@ export function Sidebar({ userEmail }: SidebarProps) {
           <Flex direction="column" gap="2" p="3">
             <NavLinkButton to="/" label="Inicio" icon={<HomeIcon />} />
             <NavSection label="Flujo">
-              {WORKFLOW_STEPS.map((step, index) => (
+              {VISIBLE_STEPS.map((step, index) => (
                 <NavLinkButton
                   key={step.id}
                   to={step.path}

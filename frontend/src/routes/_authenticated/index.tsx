@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Box, Flex, Heading, Text } from "@radix-ui/themes";
 import { useAuth } from "../../services/auth";
 import { PipelineOverview } from "../../components/PipelineOverview";
-import { WORKFLOW_STEPS } from "../../config/workflow";
+import { VISIBLE_STEPS } from "../../config/workflow";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: HomePage,
@@ -27,8 +27,8 @@ function HomePage() {
             listo.
           </Text>
           <Flex gap="4" mt="2" wrap="wrap">
-            <Stat label="Pasos en el flujo" value={String(WORKFLOW_STEPS.length)} />
-            <Stat label="Módulos conectados" value="0" />
+            <Stat label="Pasos en el flujo" value={String(VISIBLE_STEPS.length)} />
+            <Stat label="Módulos conectados" value={String(VISIBLE_STEPS.filter((step) => step.connected).length)} />
           </Flex>
         </Flex>
       </Box>
