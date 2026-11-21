@@ -26,6 +26,7 @@ class DjangoConfig(Config):
     """Django general configuration"""
 
     DEBUG: bool = False
+    DEMO_ACCOUNT_SWITCH_ENABLED: bool = False
     SECRET_KEY: str = InsecureDefault("insecure-development-key")
     ALLOWED_HOSTS: StringList = ["*"]
     # Origins trusted for unsafe (POST/…) requests. Required for the admin over
@@ -92,6 +93,7 @@ project_config = ProjectConfig.load(prefix="PROJECT")
 # GENERAL
 #############################
 DEBUG = django_config.DEBUG
+DEMO_ACCOUNT_SWITCH_ENABLED = django_config.DEMO_ACCOUNT_SWITCH_ENABLED
 SECRET_KEY = django_config.SECRET_KEY
 ALLOWED_HOSTS = django_config.ALLOWED_HOSTS
 

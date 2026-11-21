@@ -15,11 +15,14 @@ def accounts(db):
         User.objects.create_user(email="test@localhost", password="pw"),
         User.objects.create_user(email="enfermeria@localhost", password="pw", name="EU Soto"),
         User.objects.create_user(email="real@clinic.cl", password="pw"),
+        User.objects.create_user(email="staff@localhost", password="pw", is_staff=True),
+        User.objects.create_superuser(email="admin@localhost", password="pw"),
     )
 
 
 def test_switch_lists_only_demo_accounts_and_changes_the_session(settings, accounts):
     settings.DEBUG = True
+    settings.DEMO_ACCOUNT_SWITCH_ENABLED = True
     client = Client()
     client.force_login(accounts[0])
 
@@ -34,18 +37,31 @@ def test_switch_lists_only_demo_accounts_and_changes_the_session(settings, accou
     assert client.get(f"{API}/accounts").json()[1]["current"] is True
 
 
-def test_switch_refuses_real_accounts_and_production(settings, accounts):
+@pytest.mark.parametrize("target", ["real@clinic.cl", "staff@localhost", "admin@localhost"])
+def test_switch_refuses_real_and_privileged_accounts(settings, accounts, target):
+    settings.DEBUG = True
+    settings.DEMO_ACCOUNT_SWITCH_ENABLED = True
     client = Client()
     client.force_login(accounts[0])
-    settings.DEBUG = True
-    as_real = client.post(
-        f"{API}/switch", {"email": "real@clinic.cl"}, content_type="application/json"
-    )
-    settings.DEBUG = False
-    in_prod = client.post(
+
+    response = client.post(f"{API}/switch", {"email": target}, content_type="application/json")
+
+    assert response.status_code == 404
+    assert client.session["_auth_user_id"] == str(accounts[0].pk)
+
+
+@pytest.mark.parametrize(
+    ("debug", "enabled", "account"), [(False, True, 0), (True, False, 0), (True, True, 2)]
+)
+def test_switch_requires_an_opted_in_demo_session(settings, accounts, debug, enabled, account):
+    settings.DEBUG = debug
+    settings.DEMO_ACCOUNT_SWITCH_ENABLED = enabled
+    client = Client()
+    client.force_login(accounts[account])
+
+    response = client.post(
         f"{API}/switch", {"email": "enfermeria@localhost"}, content_type="application/json"
     )
 
-    assert as_real.status_code == 404
-    assert in_prod.status_code == 404
+    assert response.status_code == 404
     assert client.get(f"{API}/accounts").json() == []

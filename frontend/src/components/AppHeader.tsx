@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import { Avatar, Badge, Button, Flex, IconButton, Popover, Separator, Text } from "@radix-ui/themes";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { VISIBLE_STEPS } from "../config/workflow";
+import { accountTypeLabel, useAccountProfile } from "../modules/account/api";
 import { useOpenConflictCount } from "../modules/reconciliation/api";
+import { professionLabel } from "../modules/recordings/professions";
 import { useAuth } from "../services/auth";
 import { DemoAccountSwitcher } from "./DemoAccountSwitcher";
 import { HomeIcon, StepIcon } from "./icons";
@@ -81,6 +83,7 @@ function NavPill({
 
 function AccountMenu({ userEmail }: { userEmail: string }) {
   const { logout } = useAuth();
+  const { data: profile } = useAccountProfile();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -102,16 +105,27 @@ function AccountMenu({ userEmail }: { userEmail: string }) {
       <Popover.Content style={{ width: "min(280px, 90vw)" }}>
         <Flex direction="column" gap="2">
           <Text size="2" weight="medium" truncate>
-            {userEmail}
+            {profile?.name || profile?.email || userEmail}
           </Text>
+          {profile && (
+            <Flex gap="2" wrap="wrap">
+              <Badge color={profile.admin_url ? "indigo" : "gray"}>{accountTypeLabel(profile)}</Badge>
+              {profile.profession && <Badge color="gray">{professionLabel(profile.profession)}</Badge>}
+            </Flex>
+          )}
           <Separator size="4" />
-          <DemoAccountSwitcher />
+          <Popover.Close>
+            <Button asChild variant="ghost" color="gray" size="3" style={{ justifyContent: "flex-start" }}>
+              <Link to="/profile">Mi perfil</Link>
+            </Button>
+          </Popover.Close>
           <ExternalLink href="/-docs/" label="Documentación" />
-          <ExternalLink href="/-/admin/" label="Administración" />
+          {profile?.admin_url && <ExternalLink href={profile.admin_url} label="Administración" />}
           <Separator size="4" />
           <Button variant="soft" color="red" size="3" onClick={handleLogout}>
             Cerrar sesión
           </Button>
+          <DemoAccountSwitcher />
         </Flex>
       </Popover.Content>
     </Popover.Root>
