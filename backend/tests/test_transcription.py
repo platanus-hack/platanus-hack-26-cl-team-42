@@ -29,13 +29,13 @@ class FakeTranscriber:
         self.text = text
         self.calls: list[tuple[dict, dict]] = []
 
-    def __call__(self, audio: dict, generate_kwargs: dict) -> dict:
+    def __call__(self, audio: dict, generate_kwargs: dict, **options) -> dict:
         self.calls.append((audio, generate_kwargs))
         return {"text": f"  {self.text}  "}
 
 
 class FailingTranscriber:
-    def __call__(self, audio: dict, generate_kwargs: dict) -> dict:
+    def __call__(self, audio: dict, generate_kwargs: dict, **options) -> dict:
         raise RuntimeError("modelo caído")
 
 

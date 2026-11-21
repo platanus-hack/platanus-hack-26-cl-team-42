@@ -3,6 +3,7 @@ import { Badge, Button, Callout, Card, Flex, Grid, Heading, Select, Spinner, Tex
 import { Link } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
+import { professionLabel } from "../recordings/professions";
 import { useTranscripts } from "../transcription/api";
 import {
   isExtractionInProgress,
@@ -63,13 +64,14 @@ export function TemplatesPage() {
               <Flex direction="column" gap="1">
                 <Heading size="4">{selected.name}</Heading>
                 <Text size="2" color="gray">
-                  Elige la plantilla del profesional y Qwen completará sus campos con el texto transcrito. Revisa los
-                  valores antes de continuar.
+                  La plantilla se elige según el tipo de profesional del dictado y Qwen completa sus campos con el texto
+                  transcrito. Revisa los valores antes de continuar.
                 </Text>
               </Flex>
               <ExtractControls
                 key={selected.id}
                 transcriptId={selected.id}
+                profession={selected.profession}
                 templates={templates}
                 current={extraction}
               />
@@ -104,19 +106,27 @@ function ExtractionBadge({ status }: { status: ExtractionStatus }) {
 
 interface ExtractControlsProps {
   transcriptId: string;
+  profession: string;
   templates: ReportTemplate[];
   current: Extraction | undefined;
 }
 
-function ExtractControls({ transcriptId, templates, current }: ExtractControlsProps) {
+function ExtractControls({ transcriptId, profession, templates, current }: ExtractControlsProps) {
   const extract = useExtractRecord();
-  const [templateSlug, setTemplateSlug] = useState<string | undefined>(current?.templateSlug);
+  const [chosenSlug, setChosenSlug] = useState<string | undefined>();
+  const automaticSlug = templates.find((template) => template.profession === profession)?.slug;
+  const templateSlug = chosenSlug ?? current?.templateSlug ?? automaticSlug;
   const busy = extract.isPending || (current !== undefined && isExtractionInProgress(current));
 
   return (
     <Flex direction="column" gap="2">
+      <Text size="2" color="gray">
+        {profession
+          ? `Tipo de profesional del dictado: ${professionLabel(profession)}.`
+          : "Este dictado no indica el tipo de profesional: elige la plantilla manualmente."}
+      </Text>
       <Flex gap="3" align="center" wrap="wrap">
-        <Select.Root value={templateSlug} onValueChange={setTemplateSlug}>
+        <Select.Root value={templateSlug} onValueChange={setChosenSlug}>
           <Select.Trigger placeholder="Plantilla" style={{ minWidth: 260 }} />
           <Select.Content>
             {templates.map((template) => (

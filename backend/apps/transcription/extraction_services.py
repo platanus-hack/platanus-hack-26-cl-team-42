@@ -17,6 +17,7 @@ from apps.agent.llm import ChatMessage, ChatModel, ModelError
 from apps.agent.registry import available_models, get_chat_model
 from apps.clinical_templates import services as template_services
 from apps.clinical_templates.models import ClinicalTemplate
+from apps.recordings.models import Recording
 
 from .models import ExtractedRecord, Transcription
 
@@ -46,17 +47,17 @@ class ExtractionError(ValueError):
     """No se pudo pedir la extracción (transcripción no lista o plantilla inexistente)."""
 
 
-def request_extraction(transcription: Transcription, template_slug: str) -> ExtractedRecord:
+def request_extraction(
+    transcription: Transcription, template_slug: str | None = None
+) -> ExtractedRecord:
     """Deja el registro en *pendiente* y lo encola al confirmar la transacción.
 
-    Sirve tanto para la primera extracción como para repetirla con otra plantilla.
+    Sin ``template_slug`` la plantilla se elige según el tipo de profesional del
+    dictado. Sirve para la primera extracción y para repetirla con otra plantilla.
     """
     if transcription.status != Transcription.Status.DONE or not transcription.text.strip():
         raise ExtractionError("La transcripción aún no está lista.")
-    try:
-        template = template_services.get_active_template(template_slug)
-    except ClinicalTemplate.DoesNotExist as error:
-        raise ExtractionError(f"No existe la plantilla '{template_slug}'.") from error
+    template = _resolve_template(transcription.recording, template_slug)
 
     record, _ = ExtractedRecord.objects.update_or_create(
         transcription=transcription,
@@ -71,6 +72,17 @@ def request_extraction(transcription: Transcription, template_slug: str) -> Extr
     return record
 
 
+def request_automatic_extraction(transcription: Transcription) -> ExtractedRecord | None:
+    """Encola la extracción si el dictado indica su tipo de profesional; si no, no hace nada."""
+    if not transcription.recording.profession:
+        return None
+    try:
+        return request_extraction(transcription)
+    except ExtractionError:
+        logger.warning("Sin extracción automática para la transcripción %s", transcription.id)
+        return None
+
+
 def run_extraction(record_id: int) -> str:
     """Extrae el registro estructurado de la transcripción (lo ejecuta el worker)."""
     record = ExtractedRecord.objects.select_related("transcription", "template").get(pk=record_id)
@@ -79,7 +91,7 @@ def run_extraction(record_id: int) -> str:
     record.status = ExtractedRecord.Status.PROCESSING
     record.save(update_fields=["status", "updated_at"])
     try:
-        record.data = _extract(record.transcription.text, record.template)
+        record.data = _extract(record.transcription, record.template)
     except Exception as error:
         logger.exception("Falló la extracción %s", record_id)
         record.status = ExtractedRecord.Status.FAILED
@@ -115,11 +127,22 @@ def to_out(record: ExtractedRecord) -> ExtractionOut:
     )
 
 
-def _extract(transcript: str, template: ClinicalTemplate) -> dict[str, Any]:
+def _resolve_template(recording: Recording, template_slug: str | None) -> ClinicalTemplate:
+    try:
+        if template_slug:
+            return template_services.get_active_template(template_slug)
+        if not recording.profession:
+            raise ExtractionError("El dictado no indica el tipo de profesional: elige una plantilla.")
+        return template_services.get_active_template_for_profession(recording.profession)
+    except ClinicalTemplate.DoesNotExist as error:
+        raise ExtractionError("No existe la plantilla pedida.") from error
+
+
+def _extract(transcription: Transcription, template: ClinicalTemplate) -> dict[str, Any]:
     model = _extraction_model()
     messages = [
         ChatMessage(role="system", content=_system_prompt(template)),
-        ChatMessage(role="user", content=f"Transcripción del dictado:\n\n{transcript}"),
+        ChatMessage(role="user", content=_user_prompt(transcription)),
     ]
     issues: list[template_services.ValidationIssue] = []
     for _ in range(MAX_ATTEMPTS):
@@ -162,6 +185,21 @@ def _system_prompt(template: ClinicalTemplate) -> str:
         f"{template.llm_instructions}\n\n"
         "Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional ni bloques de código) "
         f"que cumpla exactamente este JSON Schema:\n{schema}"
+    )
+
+
+def _user_prompt(transcription: Transcription) -> str:
+    recording = transcription.recording
+    known = {
+        "Paciente / cama": recording.patient_reference,
+        "Especialidad": recording.specialty,
+        "Fecha y hora del dictado": recording.recorded_at.isoformat(),
+        "Nota": recording.note,
+    }
+    metadata = "\n".join(f"- {label}: {value}" for label, value in known.items() if value)
+    return (
+        f"Datos del dictado (úsalos para los metadatos del registro):\n{metadata}\n\n"
+        f"Transcripción del dictado:\n\n{transcription.text}"
     )
 
 

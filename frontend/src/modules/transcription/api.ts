@@ -12,6 +12,9 @@ export interface Transcript {
   recordingId: string;
   name: string;
   patientReference: string;
+  /** Tipo de profesional del dictado; decide la plantilla clínica. */
+  profession: string;
+  specialty: string;
   recordedAt: string;
   durationSeconds: number | null;
   status: TranscriptStatus;

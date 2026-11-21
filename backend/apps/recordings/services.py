@@ -8,6 +8,8 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.utils import timezone
 
+from apps.clinical_templates.models import ClinicalTemplate
+
 from .models import Recording
 
 MAX_AUDIO_BYTES = 100 * 1024 * 1024  # ~1 h de opus/aac a calidad de voz
@@ -46,6 +48,8 @@ def create_recording(
     duration_seconds: float | None = None,
     patient_reference: str = "",
     note: str = "",
+    profession: str = "",
+    specialty: str = "",
 ) -> Recording:
     mime_type = base_mime_type(audio.content_type)
     if mime_type not in ALLOWED_MIME_TYPES:
@@ -59,6 +63,9 @@ def create_recording(
     if duration_seconds is not None and duration_seconds < 0:
         raise RecordingError("La duración no puede ser negativa.")
 
+    if profession and profession not in ClinicalTemplate.Profession.values:
+        raise RecordingError(f"Tipo de profesional inválido: {profession}")
+
     recorded_at = recorded_at or timezone.now()
     if recorded_at > timezone.now() + timedelta(minutes=5):
         raise RecordingError("La hora de grabación está en el futuro.")
@@ -67,6 +74,8 @@ def create_recording(
         professional=professional,
         patient_reference=patient_reference.strip(),
         note=note.strip(),
+        profession=profession,
+        specialty=specialty.strip(),
         mime_type=mime_type,
         size_bytes=audio.size,
         duration_seconds=duration_seconds,

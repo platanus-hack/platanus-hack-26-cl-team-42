@@ -27,7 +27,8 @@ router = Router(tags=["transcription"])
 
 
 class ExtractIn(Schema):
-    template_slug: str
+    # Sin plantilla se elige la del tipo de profesional del dictado.
+    template_slug: str | None = None
 
 
 @router.get("/transcripts", response=list[TranscriptionOut])

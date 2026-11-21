@@ -53,6 +53,8 @@ def transcription(user):
         size_bytes=1,
         source=Recording.Source.UPLOAD,
         recorded_at="2026-11-21T10:00:00Z",
+        patient_reference="Box 7",
+        profession="kinesiologia",
     )
     return Transcription.objects.create(
         recording=recording,
@@ -174,3 +176,66 @@ def test_api_extract_hides_other_professionals_transcripts(client, transcription
     )
 
     assert response.status_code == 404
+
+
+def test_template_is_chosen_from_the_recording_profession(transcription):
+    record = extraction.request_extraction(transcription)
+
+    assert record.template.slug == "kinesiologia_uci"
+
+
+def test_template_can_be_overridden_explicitly(transcription):
+    record = extraction.request_extraction(transcription, "medico_uci")
+
+    assert record.template.slug == "medico_uci"
+
+
+def test_request_without_profession_or_template_fails(transcription):
+    transcription.recording.profession = ""
+    transcription.recording.save()
+
+    with pytest.raises(extraction.ExtractionError):
+        extraction.request_extraction(transcription)
+
+
+def test_automatic_extraction_needs_a_profession(transcription):
+    transcription.recording.profession = ""
+    transcription.recording.save()
+
+    assert extraction.request_automatic_extraction(transcription) is None
+    assert not ExtractedRecord.objects.exists()
+
+
+def test_finishing_a_transcription_queues_the_extraction(monkeypatch, transcription):
+    from apps.transcription import services
+
+    transcription.status = Transcription.Status.PENDING
+    transcription.text = ""
+    transcription.save()
+    monkeypatch.setattr(services, "transcribe", lambda audio: "Kinesiología: movilización pasiva.")
+
+    services.run_transcription(transcription.id)
+
+    assert ExtractedRecord.objects.get().template.slug == "kinesiologia_uci"
+
+
+def test_extraction_prompt_includes_recording_metadata(monkeypatch, transcription):
+    model = _use_model(monkeypatch, [json.dumps(_valid_record())])
+    record = extraction.request_extraction(transcription, "medico_uci")
+
+    extraction.run_extraction(record.id)
+
+    prompt = model.calls[0][1].content
+    assert "Paciente / cama: Box 7" in prompt
+    assert "Kinesiología" not in prompt
+
+
+def test_api_extract_uses_the_recording_profession(monkeypatch, client, transcription):
+    response = client.post(
+        f"{API_URL}/transcripts/{transcription.id}/extract",
+        data={},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 202
+    assert response.json()["templateSlug"] == "kinesiologia_uci"

@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from apps.recordings.models import Recording
 from apps.recordings.services import create_recording
 
+from .extraction_services import request_automatic_extraction
 from .models import Transcription
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,8 @@ class TranscriptionOut(BaseModel):
     recordingId: str
     name: str
     patientReference: str
+    profession: str
+    specialty: str
     recordedAt: datetime
     durationSeconds: float | None
     status: str
@@ -94,6 +97,7 @@ def run_transcription(transcription_id: int) -> str:
     transcription.text = text
     transcription.error = ""
     transcription.save(update_fields=["status", "text", "error", "updated_at"])
+    request_automatic_extraction(transcription)
     return transcription.status
 
 
@@ -144,6 +148,8 @@ def to_out(transcription: Transcription) -> TranscriptionOut:
         recordingId=str(recording.id),
         name=recording.patient_reference or "Dictado sin paciente",
         patientReference=recording.patient_reference,
+        profession=recording.profession,
+        specialty=recording.specialty,
         recordedAt=recording.recorded_at,
         durationSeconds=recording.duration_seconds,
         status=transcription.status,

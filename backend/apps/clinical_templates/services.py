@@ -115,6 +115,11 @@ def get_active_template(slug: str) -> ClinicalTemplate:
     return ClinicalTemplate.objects.get(slug=slug, is_active=True)
 
 
+def get_active_template_for_profession(profession: str) -> ClinicalTemplate:
+    """The active template of a profession. Raises ``DoesNotExist`` if missing."""
+    return ClinicalTemplate.objects.get(profession=profession, is_active=True)
+
+
 def validate_record(template: ClinicalTemplate, payload: Any) -> list[ValidationIssue]:
     """Validate an extracted record against a template; empty list means valid."""
     validator = Draft202012Validator(template.output_schema)

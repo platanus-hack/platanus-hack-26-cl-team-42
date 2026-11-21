@@ -15,6 +15,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.clinical_templates.models import ClinicalTemplate
+
 
 def recording_upload_path(instance: "Recording", filename: str) -> str:
     """Store audio under an opaque name so the original filename never leaks."""
@@ -39,6 +41,12 @@ class Recording(models.Model):
     # por una FK a Episodio cuando ese modelo exista.
     patient_reference = models.CharField(max_length=120, blank=True)
     note = models.CharField(max_length=255, blank=True)
+    # Tipo de profesional que dicta: define la plantilla clínica con que se
+    # estructura la transcripción (ver ``ClinicalTemplate.profession``).
+    profession = models.CharField(
+        max_length=32, choices=ClinicalTemplate.Profession.choices, blank=True
+    )
+    specialty = models.CharField(max_length=120, blank=True)
 
     audio = models.FileField(upload_to=recording_upload_path)
     mime_type = models.CharField(max_length=100)

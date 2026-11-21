@@ -9,6 +9,7 @@ import {
   Flex,
   Heading,
   IconButton,
+  Select,
   Spinner,
   Table,
   Text,
@@ -20,11 +21,14 @@ import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
 import { useDeleteRecording, useRecordings, useUploadRecording, type Recording } from "./api";
+import { PROFESSIONS, professionLabel } from "./professions";
 import { formatBytes, formatDuration } from "./recorderFormat";
 import { isRecordingSupported, useAudioRecorder } from "./useAudioRecorder";
 
 export function RecordingsPage() {
   const [patientReference, setPatientReference] = useState("");
+  const [profession, setProfession] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const navigate = useNavigate();
   // Paso 2 del flujo: el dictado guardado ya está transcribiéndose; se pasa directo a verlo.
   const openTranscription = (recording: Recording) =>
@@ -35,7 +39,18 @@ export function RecordingsPage() {
       <Card size="3">
         <Flex direction="column" gap="5">
           <PatientField value={patientReference} onChange={setPatientReference} />
-          <Recorder patientReference={patientReference.trim()} onSaved={openTranscription} />
+          <ProfessionField
+            profession={profession}
+            specialty={specialty}
+            onProfessionChange={setProfession}
+            onSpecialtyChange={setSpecialty}
+          />
+          <Recorder
+            patientReference={patientReference.trim()}
+            profession={profession}
+            specialty={specialty.trim()}
+            onSaved={openTranscription}
+          />
         </Flex>
       </Card>
 
@@ -66,17 +81,60 @@ function PatientField({ value, onChange }: { value: string; onChange: (value: st
   );
 }
 
+interface ProfessionFieldProps {
+  profession: string;
+  specialty: string;
+  onProfessionChange: (value: string) => void;
+  onSpecialtyChange: (value: string) => void;
+}
+
+/** El tipo de profesional elige automáticamente la plantilla con que se estructura el dictado. */
+function ProfessionField({ profession, specialty, onProfessionChange, onSpecialtyChange }: ProfessionFieldProps) {
+  return (
+    <Flex direction="column" gap="1">
+      <Text as="label" size="2" weight="medium">
+        Tipo de profesional
+      </Text>
+      <Flex gap="3" wrap="wrap">
+        <Select.Root value={profession || undefined} onValueChange={onProfessionChange}>
+          <Select.Trigger placeholder="Selecciona quién dicta" style={{ minWidth: 260 }} />
+          <Select.Content>
+            {PROFESSIONS.map((item) => (
+              <Select.Item key={item.value} value={item.value}>
+                {item.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+        {profession === "especialista" && (
+          <TextField.Root
+            placeholder="Especialidad (ej.: Cardiología)"
+            value={specialty}
+            maxLength={120}
+            onChange={(event) => onSpecialtyChange(event.target.value)}
+          />
+        )}
+      </Flex>
+      <Text size="1" color="gray">
+        Define la plantilla clínica con que se estructurará el dictado.
+      </Text>
+    </Flex>
+  );
+}
+
 interface RecorderProps {
   patientReference: string;
+  profession: string;
+  specialty: string;
   onSaved: (recording: Recording) => void;
 }
 
-function Recorder({ patientReference, onSaved }: RecorderProps) {
+function Recorder({ patientReference, profession, specialty, onSaved }: RecorderProps) {
   const recorder = useAudioRecorder();
   const upload = useUploadRecording();
   const [note, setNote] = useState("");
   const { status, audio } = recorder;
-  const canStart = patientReference.length > 0;
+  const canStart = patientReference.length > 0 && profession.length > 0;
   const isLive = status === "recording" || status === "paused";
 
   const save = () => {
@@ -89,6 +147,8 @@ function Recorder({ patientReference, onSaved }: RecorderProps) {
         durationSeconds: audio.durationSeconds,
         patientReference,
         note,
+        profession,
+        specialty,
       },
       {
         onSuccess: (recording) => {
@@ -203,7 +263,13 @@ function Recorder({ patientReference, onSaved }: RecorderProps) {
       )}
 
       {!isLive && status !== "stopped" && (
-        <FileUpload patientReference={patientReference} onSaved={onSaved} prominent={!isRecordingSupported()} />
+        <FileUpload
+          patientReference={patientReference}
+          profession={profession}
+          specialty={specialty}
+          onSaved={onSaved}
+          prominent={!isRecordingSupported()}
+        />
       )}
     </Flex>
   );
@@ -220,7 +286,7 @@ function statusHint(status: ReturnType<typeof useAudioRecorder>["status"], canSt
     case "stopped":
       return "Escucha el dictado y guárdalo para transcribirlo.";
     default:
-      return canStart ? "Pulsa para comenzar a dictar." : "Indica el paciente para habilitar la grabación.";
+      return canStart ? "Pulsa para comenzar a dictar." : "Indica el paciente y el tipo de profesional para habilitar la grabación.";
   }
 }
 
@@ -229,7 +295,7 @@ function StopGlyph() {
 }
 
 /** Alternativa: subir un audio grabado con otra aplicación. */
-function FileUpload({ patientReference, onSaved, prominent }: RecorderProps & { prominent: boolean }) {
+function FileUpload({ patientReference, profession, specialty, onSaved, prominent }: RecorderProps & { prominent: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const upload = useUploadRecording();
 
@@ -245,6 +311,8 @@ function FileUpload({ patientReference, onSaved, prominent }: RecorderProps & { 
         recordedAt: new Date(file.lastModified),
         durationSeconds: await readAudioDuration(file),
         patientReference,
+        profession,
+        specialty,
       },
       { onSuccess: onSaved },
     );
@@ -257,7 +325,7 @@ function FileUpload({ patientReference, onSaved, prominent }: RecorderProps & { 
         variant={prominent ? "solid" : "ghost"}
         color={prominent ? undefined : "gray"}
         size="2"
-        disabled={!patientReference}
+        disabled={!patientReference || !profession}
         loading={upload.isPending}
         onClick={() => input.current?.click()}
       >
@@ -307,6 +375,7 @@ function RecordingsList() {
           <Table.Header>
             <Table.Row>
               <Table.ColumnHeaderCell>Paciente</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Profesional</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Duración</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Origen</Table.ColumnHeaderCell>
@@ -327,6 +396,16 @@ function RecordingsList() {
                     )}
                   </Flex>
                 </Table.RowHeaderCell>
+                <Table.Cell>
+                  <Flex direction="column">
+                    <Text>{recording.profession ? professionLabel(recording.profession) : "—"}</Text>
+                    {recording.specialty && (
+                      <Text size="1" color="gray">
+                        {recording.specialty}
+                      </Text>
+                    )}
+                  </Flex>
+                </Table.Cell>
                 <Table.Cell>{DATE_FORMAT.format(new Date(recording.recordedAt))}</Table.Cell>
                 <Table.Cell>
                   <Flex direction="column">
