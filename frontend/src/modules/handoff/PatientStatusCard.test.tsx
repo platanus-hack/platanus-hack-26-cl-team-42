@@ -52,10 +52,10 @@ it.each([false, true])("muestra la tarjeta en Recibidos con snapshot antiguo: %s
   const patients = await screen.findByRole("group", { name: "Pacientes del traspaso" });
   fireEvent.click(within(patients).getByRole("button", { name: /DEMO-001/ }));
   const card = within(screen.getByRole("region", { name: "Estado al corte" }));
-  const encounterText = legacy ? "Sin atención registrada" : /Última atención hace 2 h 50 min · Ana Morales/;
+  const encounterText = legacy ? "Sin atención registrada" : /Ana Morales \(Enfermera clínica\) · hace 2 h 50 min$/;
   expect(card.getByText(encounterText)).toBeInTheDocument();
   expect(card.getByText("SpO2")).toBeInTheDocument();
-  expect(card.getByText("95")).toHaveTextContent("95 %");
-  expect(card.getByText("Sobre el rango")).toBeInTheDocument();
-  if (!legacy) expect(card.getByText(/^Medición:/)).toBeInTheDocument();
+  expect(card.getByText("95 %")).toBeInTheDocument();
+  expect(card.getByText("↑ alto")).toBeInTheDocument();
+  if (!legacy) expect(card.getAllByText(/^· \d/).length).toBeGreaterThan(0);
 });

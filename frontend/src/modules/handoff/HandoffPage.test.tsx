@@ -76,6 +76,8 @@ it("envía los dos pacientes atendidos en una sola entrega y abre el origen corr
   expect(sourceLinks[0]).toHaveAttribute("href", "/official-form?episode=demo-episode-002&encounter=enc-demo-002-nurse");
 
   fireEvent.click(screen.getByRole("button", { name: "Cerrar pendiente: Coordinar la próxima movilización" }));
-  const closed = await screen.findByText("Ahora: cerrado");
-  expect(closed.parentElement).toHaveTextContent(/Abierto.*Coordinar la próxima movilización/);
+  const todo = screen.getByRole("region", { name: "Por hacer" });
+  expect(await within(todo).findByText(/Cerrado después del envío/)).toBeInTheDocument();
+  expect(within(todo).getByText("Coordinar la próxima movilización")).toHaveStyle({ textDecoration: "line-through" });
+  expect(within(todo).getByText(/Vencido · plazo/)).toBeInTheDocument();
 });

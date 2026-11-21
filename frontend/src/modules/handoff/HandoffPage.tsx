@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   AlertDialog,
-  Badge,
   Button,
   Callout,
   Card,
@@ -12,18 +11,18 @@ import {
   Spinner,
   Tabs,
   Text,
-  TextArea,
+  TextField,
 } from "@radix-ui/themes";
 import { useNavigate } from "@tanstack/react-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ModulePage } from "../../components/ModulePage";
 import type { HandoffSearch, HandoffTab } from "../../routes/_authenticated/handoff";
 import { useClosePending, useEpisodeRecords, useHandoffs, useResetDemo, useSendHandoff } from "../episode/api";
-import { PendingStatusBadge } from "../episode/components";
+import { SourceLink } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
 import { buildHandoffSnapshots, handoffReferenceAt } from "../episode/handoff";
-import type { EpisodeRecord, Handoff, HandoffSnapshot } from "../episode/model";
-import { rankPatients } from "../episode/priority";
+import type { EpisodeRecord, Handoff, HandoffSnapshot, OpenConflict, PendingTask } from "../episode/model";
+import { PRIORITY_THRESHOLDS, rankPatients } from "../episode/priority";
 import { authorLine, professionalById } from "../episode/record";
 import { PatientPriorityList } from "./PatientPriorityList";
 import { PatientStatusCard } from "./PatientStatusCard";
@@ -61,7 +60,7 @@ function HandoffWorkspace({ records, team, search }: { records: EpisodeRecord[];
 
   return (
     <Flex direction="column" gap="4">
-      <Callout.Root color="amber" variant="surface">
+      <Callout.Root color="gray" variant="surface">
         <Flex align="center" justify="between" gap="3" wrap="wrap">
           <Callout.Text>Profesionales y pacientes ficticios · datos de demostración.</Callout.Text>
           <Button variant="soft" color="gray" size="1" loading={reset.isPending}
@@ -145,43 +144,33 @@ function SendHandoff({ records, team, actorId, onOpenReceived }: SendHandoffProp
   }
 
   return (
-    <Grid columns={{ initial: "1", md: "2fr 3fr" }} gap="4" align="start">
+    <Flex direction="column" gap="4">
       <Card>
         <Flex direction="column" gap="3">
-          <Heading size="4">Destinatario y nota</Heading>
-          <Text size="2" color="gray">Entrega {authorLine(team, actorId)}</Text>
-          <Select.Root value={toId} onValueChange={setToId}>
-            <Select.Trigger placeholder="Persona destinataria" aria-label="Destinatario" style={{ width: "100%" }} />
-            <Select.Content>
-              {recipients.map((professional) => (
-                <Select.Item key={professional.id} value={professional.id}>
-                  {professional.name} · {professional.role}
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Root>
-          <TextArea
-            aria-label="Nota de la entrega"
-            placeholder="Nota para la persona que recibe el turno"
-            rows={4}
-            value={note}
-            maxLength={1000}
-            onChange={(event) => setNote(event.target.value)}
-          />
-          {send.error && (
-            <Callout.Root color="red"><Callout.Text>{send.error.message}</Callout.Text></Callout.Root>
-          )}
-          {send.data && !send.isPending && (
-            <Callout.Root color="green">
-              <Flex align="center" justify="between" gap="2" wrap="wrap">
-                <Callout.Text>Traspaso enviado a {professionalById(team, send.data.toId)?.name}.</Callout.Text>
-                <Button size="1" variant="soft" onClick={() => onOpenReceived(send.data)}>
-                  Abrir vista receptora
-                </Button>
-              </Flex>
-            </Callout.Root>
-          )}
-          <Flex justify="end">
+          <Flex gap="3" align="end" wrap="wrap">
+            <Flex direction="column" gap="1" style={{ flex: "1 1 220px" }}>
+              <Text size="1" color="gray">Entregar a</Text>
+              <Select.Root value={toId} onValueChange={setToId}>
+                <Select.Trigger placeholder="Persona destinataria" aria-label="Destinatario" style={{ width: "100%" }} />
+                <Select.Content>
+                  {recipients.map((professional) => (
+                    <Select.Item key={professional.id} value={professional.id}>
+                      {professional.name} · {professional.role}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+            <Flex direction="column" gap="1" style={{ flex: "3 1 280px" }}>
+              <Text size="1" color="gray">Nota (opcional)</Text>
+              <TextField.Root
+                aria-label="Nota de la entrega"
+                placeholder="Nota para la persona que recibe el turno"
+                value={note}
+                maxLength={1000}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            </Flex>
             <AlertDialog.Root>
               <AlertDialog.Trigger>
                 <Button disabled={!recipient} loading={send.isPending}>Enviar traspaso</Button>
@@ -202,15 +191,27 @@ function SendHandoff({ records, team, actorId, onOpenReceived }: SendHandoffProp
               </AlertDialog.Content>
             </AlertDialog.Root>
           </Flex>
+          <Text size="1" color="gray">
+            Incluye {snapshots.length === 1 ? "al paciente atendido" : `a los ${snapshots.length} pacientes atendidos`} por{" "}
+            {authorLine(team, actorId)}.
+          </Text>
+          {send.error && (
+            <Callout.Root color="red"><Callout.Text>{send.error.message}</Callout.Text></Callout.Root>
+          )}
+          {send.data && !send.isPending && (
+            <Callout.Root color="green">
+              <Flex align="center" justify="between" gap="2" wrap="wrap">
+                <Callout.Text>Traspaso enviado a {professionalById(team, send.data.toId)?.name}.</Callout.Text>
+                <Button size="1" variant="soft" onClick={() => onOpenReceived(send.data)}>
+                  Abrir vista receptora
+                </Button>
+              </Flex>
+            </Callout.Root>
+          )}
         </Flex>
       </Card>
-
-      <Flex direction="column" gap="2">
-        <Heading size="4">Pacientes que se incluirán</Heading>
-        <Text size="2" color="gray">Se incluyen todos los pacientes atendidos por quien entrega.</Text>
-        <PatientSnapshots records={records} team={team} snapshots={snapshots} actorId={actorId} />
-      </Flex>
-    </Grid>
+      <PatientSnapshots records={records} team={team} snapshots={snapshots} actorId={actorId} />
+    </Flex>
   );
 }
 
@@ -236,57 +237,47 @@ function HandoffInbox({ records, team, actorId, handoffs, direction, selectedId,
   const selected = handoffs.find((handoff) => handoff.id === selectedId) ?? handoffs[0];
 
   return (
-    <Grid columns={{ initial: "1", md: "1fr 2fr" }} gap="4" align="start">
-      <Flex direction="column" gap="2">
-        {handoffs.map((handoff) => {
-          const counterpart = direction === "received" ? handoff.fromId : handoff.toId;
-          return (
-            <Card key={handoff.id} asChild variant={handoff.id === selected.id ? "classic" : "surface"}
-              style={{ cursor: "pointer", textAlign: "left" }}
+    <Flex direction="column" gap="4">
+      {handoffs.length > 1 && (
+        <Flex gap="2" wrap="wrap" role="group" aria-label="Entregas">
+          {handoffs.map((handoff) => (
+            <Button
+              key={handoff.id}
+              size="1"
+              color="gray"
+              variant={handoff.id === selected.id ? "soft" : "ghost"}
+              aria-pressed={handoff.id === selected.id}
+              onClick={() => onSelect(handoff.id)}
             >
-              <button type="button" onClick={() => onSelect(handoff.id)} aria-pressed={handoff.id === selected.id}>
-                <Flex as="span" direction="column" gap="1">
-                  <Text weight="medium">
-                    {direction === "received" ? "De " : "Para "}{authorLine(team, counterpart)}
-                  </Text>
-                  <Text size="1" color="gray">
-                    {patientCount(handoff.snapshots.length)} · {formatClinicalTime(handoff.sentAt)}
-                  </Text>
-                </Flex>
-              </button>
-            </Card>
-          );
-        })}
+              {direction === "received" ? "De " : "Para "}
+              {professionalById(team, direction === "received" ? handoff.fromId : handoff.toId)?.name} ·{" "}
+              {formatClinicalTime(handoff.sentAt)}
+            </Button>
+          ))}
+        </Flex>
+      )}
+      <Flex direction="column" gap="1">
+        <Heading size="4">Traspaso de {patientCount(selected.snapshots.length)}</Heading>
+        <Text size="2" color="gray">
+          De {authorLine(team, selected.fromId)} para {authorLine(team, selected.toId)} · {formatClinicalTime(selected.sentAt)}
+        </Text>
+        {selected.note && <Text size="2">«{selected.note}»</Text>}
       </Flex>
-      <Flex direction="column" gap="3">
-        <Card>
-          <Flex direction="column" gap="2">
-            <Flex align="center" justify="between" gap="2" wrap="wrap">
-              <Heading size="4">Traspaso de {patientCount(selected.snapshots.length)}</Heading>
-              <Badge color="gray" variant="soft">{formatClinicalTime(selected.sentAt)}</Badge>
-            </Flex>
-            <Text size="2">De {authorLine(team, selected.fromId)} para {authorLine(team, selected.toId)}</Text>
-            {selected.note && <Text size="2">{selected.note}</Text>}
-          </Flex>
-        </Card>
-        <PatientSnapshots
-          key={selected.id}
-          records={records}
-          team={team}
-          snapshots={selected.snapshots}
-          sent
-          actorId={direction === "received" ? actorId : undefined}
-        />
-      </Flex>
-    </Grid>
+      <PatientSnapshots
+        key={selected.id}
+        records={records}
+        team={team}
+        snapshots={selected.snapshots}
+        actorId={direction === "received" ? actorId : undefined}
+      />
+    </Flex>
   );
 }
 
-function PatientSnapshots({ records, team, snapshots, sent = false, actorId }: {
+function PatientSnapshots({ records, team, snapshots, actorId }: {
   records: EpisodeRecord[];
   team: Team;
   snapshots: HandoffSnapshot[];
-  sent?: boolean;
   actorId?: string;
 }) {
   const [episodeId, setEpisodeId] = useState<string>();
@@ -298,48 +289,102 @@ function PatientSnapshots({ records, team, snapshots, sent = false, actorId }: {
   const record = records.find(({ episode }) => episode.id === snapshot.episodeId);
 
   return (
-    <Flex direction="column" gap="3">
+    <Grid columns={{ initial: "1", md: "minmax(240px, 1fr) 2fr" }} gap="4" align="start">
       <PatientPriorityList
         patients={patients}
         referenceAt={referenceAt}
         selectedId={snapshot.episodeId}
         onSelect={setEpisodeId}
       />
-      <Text size="1" color="gray">Datos al {formatClinicalTime(snapshot.cutoffAt)}</Text>
-      <PatientStatusCard team={team} snapshot={snapshot} referenceAt={referenceAt} />
-      {actorId && record && <EpisodePendings key={record.episode.id} record={record} actorId={actorId} />}
-      <SnapshotView record={team} snapshot={snapshot} currentPendings={sent ? record?.pendings : undefined} />
+      <Card size="3">
+        <Flex direction="column" gap="4">
+          <PatientStatusCard team={team} snapshot={snapshot} referenceAt={referenceAt} />
+          <ConflictNotes episodeId={snapshot.episodeId} conflicts={snapshot.openConflicts ?? []} />
+          <PatientTodo
+            key={snapshot.episodeId}
+            team={team}
+            snapshot={snapshot}
+            record={record}
+            referenceAt={referenceAt}
+            actorId={actorId}
+          />
+          <SnapshotView record={team} snapshot={snapshot} />
+        </Flex>
+      </Card>
+    </Grid>
+  );
+}
+
+/** Conflictos como notas sobrias: franja ámbar y texto normal, sin bloque de color. */
+function ConflictNotes({ episodeId, conflicts }: { episodeId: string; conflicts: OpenConflict[] }) {
+  if (conflicts.length === 0) return null;
+
+  return (
+    <Flex direction="column" gap="2" role="region" aria-label="Conflictos por revisar">
+      {conflicts.map((conflict) => (
+        <Flex key={conflict.id} direction="column" gap="1" pl="3" style={{ borderLeft: "3px solid var(--amber-9)" }}>
+          <Text size="1" color="amber" weight="medium">Conflicto por revisar</Text>
+          <Text size="2">{conflict.description}</Text>
+          <Text size="1" color="gray">
+            {conflict.sourceEncounterIds.map((id, index) => (
+              <span key={id}>
+                {index > 0 && " · "}
+                <SourceLink episodeId={episodeId} encounterId={id}>
+                  {conflict.sourceEncounterIds.length === 1 ? "ver atención de origen" : `ver atención ${index + 1}`}
+                </SourceLink>
+              </span>
+            ))}
+          </Text>
+        </Flex>
+      ))}
     </Flex>
   );
 }
 
-function EpisodePendings({ record, actorId }: { record: EpisodeRecord; actorId: string }) {
+/**
+ * Pendientes abiertos al enviar, del más urgente al menos urgente. Solo lo
+ * vencido o por vencer lleva color; el estado vivo se superpone (cerrado
+ * después del envío) y quien recibe puede cerrarlos aquí mismo.
+ */
+function PatientTodo({ team, snapshot, record, referenceAt, actorId }: {
+  team: Team;
+  snapshot: HandoffSnapshot;
+  record: EpisodeRecord | undefined;
+  referenceAt: string;
+  actorId?: string;
+}) {
   const close = useClosePending();
-  if (record.pendings.length === 0) return null;
+  const pendings = snapshot.pendings
+    .filter(({ status }) => status === "open")
+    .sort((a, b) => dueTime(a) - dueTime(b));
 
   return (
-    <Card>
-      <Flex direction="column" gap="3">
-        <Heading size="3">Pendientes del paciente (estado actual)</Heading>
-        {close.error && (
-          <Callout.Root color="red"><Callout.Text>{close.error.message}</Callout.Text></Callout.Root>
-        )}
-        {record.pendings.map((pending) => (
-          <Flex key={pending.id} align="center" justify="between" gap="2">
+    <Flex direction="column" gap="2" role="region" aria-label="Por hacer">
+      <Heading size="3">Por hacer</Heading>
+      {close.error && (
+        <Callout.Root color="red"><Callout.Text>{close.error.message}</Callout.Text></Callout.Root>
+      )}
+      {pendings.length === 0 && <Text size="2" color="gray">Sin pendientes abiertos al corte.</Text>}
+      {pendings.map((pending) => {
+        const live = record?.pendings.find(({ id }) => id === pending.id);
+        const closedNow = live?.status === "done";
+        return (
+          <Flex key={pending.id} align="center" justify="between" gap="3">
             <Flex direction="column" gap="1">
-              <Flex gap="2" align="center">
-                <PendingStatusBadge status={pending.status} />
-                <Text size="2">{pending.title}</Text>
-              </Flex>
+              <Text size="2" color={closedNow ? "gray" : undefined} style={closedNow ? { textDecoration: "line-through" } : undefined}>
+                {pending.title}
+              </Text>
               <Text size="1" color="gray">
-                {authorLine(record, pending.ownerId)}
-                {pending.dueAt ? ` · plazo ${formatClinicalTime(pending.dueAt)}` : ""}
+                {closedNow ? "Cerrado después del envío" : <DueLabel dueAt={pending.dueAt} referenceAt={referenceAt} />}
+                {" · "}{authorLine(team, pending.ownerId)} ·{" "}
+                <SourceLink episodeId={snapshot.episodeId} encounterId={pending.sourceEncounterId}>origen</SourceLink>
               </Text>
             </Flex>
-            {pending.status === "open" && (
+            {actorId && record && live?.status === "open" && (
               <Button
                 size="1"
-                variant="soft"
+                variant="ghost"
+                color="gray"
                 aria-label={`Cerrar pendiente: ${pending.title}`}
                 disabled={close.isPending}
                 loading={close.isPending && close.variables?.pendingId === pending.id}
@@ -349,10 +394,23 @@ function EpisodePendings({ record, actorId }: { record: EpisodeRecord; actorId: 
               </Button>
             )}
           </Flex>
-        ))}
-      </Flex>
-    </Card>
+        );
+      })}
+    </Flex>
   );
+}
+
+function dueTime({ dueAt }: PendingTask): number {
+  return dueAt ? Date.parse(dueAt) : Number.POSITIVE_INFINITY;
+}
+
+function DueLabel({ dueAt, referenceAt }: { dueAt: string | null; referenceAt: string }) {
+  if (!dueAt) return <>Sin plazo</>;
+  const hoursLeft = (Date.parse(dueAt) - Date.parse(referenceAt)) / 3_600_000;
+  const time = formatClinicalTime(dueAt);
+  if (hoursLeft <= 0) return <Text color="red" weight="medium">Vencido · plazo {time}</Text>;
+  if (hoursLeft <= PRIORITY_THRESHOLDS.upcomingDueHours) return <Text color="amber" weight="medium">Vence {time}</Text>;
+  return <>Plazo {time}</>;
 }
 
 function patientCount(count: number): string {
