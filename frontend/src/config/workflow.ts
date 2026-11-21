@@ -52,8 +52,8 @@ export const WORKFLOW_STEPS = [
   },
   {
     id: "official-form",
-    label: "Ficha oficial",
-    summary: "Rellena la ficha oficial con la información consolidada.",
+    label: "Registro clínico",
+    summary: "Registro prellenado por atención, listo para copiar a la ficha institucional.",
     path: "/official-form",
   },
   {
