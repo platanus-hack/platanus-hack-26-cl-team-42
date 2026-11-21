@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, apiUrl } from "../../services/api/client";
+import { transcriptKeys } from "../transcription/api";
 import { extensionFor } from "./recorderFormat";
 
 // Módulo 1 · Obtención de datos: dictados de audio por profesional.
@@ -59,7 +60,11 @@ export function useUploadRecording() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (recording: NewRecording) => recordingsGateway.upload(recording),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: recordingKeys }),
+    onSuccess: () => {
+      // Guardar un dictado encola su transcripción en el backend.
+      void queryClient.invalidateQueries({ queryKey: recordingKeys });
+      void queryClient.invalidateQueries({ queryKey: transcriptKeys });
+    },
   });
 }
 

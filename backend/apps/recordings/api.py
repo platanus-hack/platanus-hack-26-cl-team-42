@@ -15,6 +15,8 @@ from ninja import File, Form, ModelSchema, Router, Schema
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
+from apps.transcription.services import request_transcription
+
 from . import services
 from .models import Recording
 
@@ -76,6 +78,8 @@ def create_recording(request, audio: File[UploadedFile], data: Form[RecordingIn]
         )
     except services.RecordingError as error:
         raise HttpError(400, str(error)) from error
+    # Paso 2 del flujo: el dictado pasa de inmediato a transcribirse en segundo plano.
+    request_transcription(recording)
     return 201, recording
 
 

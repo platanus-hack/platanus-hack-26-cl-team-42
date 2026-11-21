@@ -15,7 +15,7 @@ import {
   TextArea,
   TextField,
 } from "@radix-ui/themes";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
@@ -25,18 +25,19 @@ import { isRecordingSupported, useAudioRecorder } from "./useAudioRecorder";
 
 export function RecordingsPage() {
   const [patientReference, setPatientReference] = useState("");
-  const [lastSaved, setLastSaved] = useState<Recording | null>(null);
+  const navigate = useNavigate();
+  // Paso 2 del flujo: el dictado guardado ya está transcribiéndose; se pasa directo a verlo.
+  const openTranscription = (recording: Recording) =>
+    navigate({ to: "/transcription", search: { recording: recording.id } });
 
   return (
     <ModulePage stepId="recordings" connected>
       <Card size="3">
         <Flex direction="column" gap="5">
           <PatientField value={patientReference} onChange={setPatientReference} />
-          <Recorder patientReference={patientReference.trim()} onSaved={setLastSaved} />
+          <Recorder patientReference={patientReference.trim()} onSaved={openTranscription} />
         </Flex>
       </Card>
-
-      {lastSaved && <SavedNotice recording={lastSaved} onDismiss={() => setLastSaved(null)} />}
 
       <RecordingsList />
     </ModulePage>
@@ -189,7 +190,7 @@ function Recorder({ patientReference, onSaved }: RecorderProps) {
               Descartar
             </Button>
             <Button onClick={save} loading={upload.isPending} disabled={!canStart}>
-              Guardar dictado
+              Guardar y transcribir
             </Button>
           </Flex>
         </Flex>
@@ -285,28 +286,6 @@ function readAudioDuration(file: Blob): Promise<number | null> {
     element.onerror = () => done(null);
     element.src = url;
   });
-}
-
-function SavedNotice({ recording, onDismiss }: { recording: Recording; onDismiss: () => void }) {
-  return (
-    <Callout.Root color="green">
-      <Flex justify="between" align="center" gap="3" wrap="wrap" style={{ width: "100%" }}>
-        <Callout.Text>
-          Dictado de {recording.patientReference || "paciente sin indicar"} guardado ({formatDuration(recording.durationSeconds)}).
-        </Callout.Text>
-        <Flex gap="2">
-          <Button size="1" variant="ghost" color="gray" onClick={onDismiss}>
-            Cerrar
-          </Button>
-          <Link to="/transcription" style={{ textDecoration: "none" }}>
-            <Button size="1" variant="soft" color="green">
-              Ir a transcribir
-            </Button>
-          </Link>
-        </Flex>
-      </Flex>
-    </Callout.Root>
-  );
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });

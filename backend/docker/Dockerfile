@@ -35,6 +35,8 @@ FROM build-base AS development
 RUN apt-get update && apt-get install --no-install-recommends -y \
     # Translations dependencies
     gettext \
+    # Audio decoding for transcription (webm/opus, mp4/aac → PCM)
+    ffmpeg \
     # Dev utils
     sudo git bash-completion nano ssh \
     # cleaning up unused files
@@ -96,6 +98,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev \
     # Translations dependencies
     gettext \
+    # Audio decoding for transcription (webm/opus, mp4/aac → PCM)
+    ffmpeg \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

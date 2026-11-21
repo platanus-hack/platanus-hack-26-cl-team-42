@@ -1,17 +1,27 @@
+"""Unit tests for the transcription module and its link with recordings."""
+
+import subprocess
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import Client
 
-from apps.transcription import services
-from apps.transcription.models import Audio, Transcription
-from apps.transcription.services import ingest_audio, list_transcriptions
+from apps.recordings.models import Recording
+from apps.recordings.services import create_recording
+from apps.transcription import services, tasks
+from apps.transcription.models import Transcription
+from apps.transcription.services import request_transcription, run_transcription
 
 SAMPLE_AUDIO = Path(services.__file__).parent / "samples" / "ejemplo.wav"
+API = f"/{settings.URL_PREFIX}/api"
+User = get_user_model()
 
 
 class FakeTranscriber:
@@ -29,20 +39,73 @@ class FailingTranscriber:
         raise RuntimeError("modelo caído")
 
 
+@pytest.fixture(autouse=True)
+def _media_root(settings, tmp_path):
+    settings.MEDIA_ROOT = str(tmp_path)
+
+
+@pytest.fixture()
+def doctor(db):
+    return User.objects.create_user(email="doctor@example.com", password="pw", name="Dra. Demo")
+
+
+@pytest.fixture()
+def client_for(db):
+    def make(user):
+        client = Client()
+        client.force_login(user)
+        return client
+
+    return make
+
+
+def _recording(professional, content=None, content_type="audio/wav", name="dictado.wav"):
+    data = SAMPLE_AUDIO.read_bytes() if content is None else content
+    return create_recording(
+        professional=professional,
+        audio=SimpleUploadedFile(name, data, content_type=content_type),
+        source=Recording.Source.IN_APP,
+        patient_reference="Cama 4",
+    )
+
+
+def _pending(professional, **kwargs) -> Transcription:
+    with patch.object(tasks.transcribe_recording, "delay"):
+        return request_transcription(_recording(professional, **kwargs))
+
+
 @pytest.mark.django_db
-def test_ingest_audio_transcribes_links_and_clears_audio_data():
+def test_saving_a_recording_queues_its_transcription(
+    doctor, client_for, django_capture_on_commit_callbacks
+):
+    upload = SimpleUploadedFile("dictado.webm", b"opus", content_type="audio/webm;codecs=opus")
+
+    with (
+        patch.object(tasks.transcribe_recording, "delay") as delay,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        response = client_for(doctor).post(
+            f"{API}/recordings", {"audio": upload, "source": "in_app"}
+        )
+
+    assert response.status_code == 201, response.content
+    transcription = Transcription.objects.get(recording_id=response.json()["id"])
+    assert transcription.status == Transcription.Status.PENDING
+    delay.assert_called_once_with(transcription.id)
+
+
+@pytest.mark.django_db
+def test_run_transcription_saves_text_and_keeps_audio(doctor):
+    transcription = _pending(doctor)
     fake = FakeTranscriber("Hola mundo")
 
     with patch.object(services, "_get_transcriber", return_value=fake):
-        item = ingest_audio("ejemplo.wav", "audio/wav", SAMPLE_AUDIO.read_bytes())
+        assert run_transcription(transcription.id) == Transcription.Status.DONE
 
-    assert item.text == "Hola mundo"
-    assert item.status == "done"
-    assert item.name == "ejemplo.wav"
-    audio = Audio.objects.get()
-    assert audio.data is None
-    assert audio.size_bytes == SAMPLE_AUDIO.stat().st_size
-    assert audio.transcription.text == "Hola mundo"
+    transcription.refresh_from_db()
+    assert transcription.text == "Hola mundo"
+    assert transcription.error == ""
+    assert transcription.recording.audio.storage.exists(transcription.recording.audio.name)
     [(sent_audio, generate_kwargs)] = fake.calls
     assert sent_audio["sampling_rate"] == 16000
     assert len(sent_audio["raw"]) > 0
@@ -50,83 +113,96 @@ def test_ingest_audio_transcribes_links_and_clears_audio_data():
 
 
 @pytest.mark.django_db
-def test_failed_transcription_keeps_audio_for_retry():
+def test_failed_transcription_is_marked_for_retry(doctor):
+    transcription = _pending(doctor)
+
     with patch.object(services, "_get_transcriber", return_value=FailingTranscriber()):
-        with pytest.raises(RuntimeError):
-            ingest_audio("ejemplo.wav", "audio/wav", SAMPLE_AUDIO.read_bytes())
+        assert run_transcription(transcription.id) == Transcription.Status.FAILED
 
-    audio = Audio.objects.get()
-    assert audio.data is not None
-    assert not Transcription.objects.exists()
+    transcription.refresh_from_db()
+    assert transcription.error == "No se pudo transcribir el audio. Intenta nuevamente."
 
 
 @pytest.mark.django_db
-def test_ingest_rejects_non_wav_audio():
-    with pytest.raises(ValueError):
-        ingest_audio("nota.mp3", "audio/mpeg", b"no es un wav")
+def test_browser_formats_are_decoded_with_ffmpeg(doctor):
+    transcription = _pending(doctor, content=b"opus", content_type="audio/webm", name="d.webm")
+    pcm = np.zeros(16000, dtype=np.int16).tobytes()
+    fake = FakeTranscriber("convertido")
+    ffmpeg_output = subprocess.CompletedProcess(args=[], returncode=0, stdout=pcm, stderr=b"")
+
+    with (
+        patch.object(services.shutil, "which", return_value="/usr/bin/ffmpeg"),
+        patch.object(services.subprocess, "run", return_value=ffmpeg_output) as run,
+        patch.object(services, "_get_transcriber", return_value=fake),
+    ):
+        run_transcription(transcription.id)
+
+    transcription.refresh_from_db()
+    assert transcription.text == "convertido"
+    assert run.call_args.kwargs["input"] == b"opus"
+    assert len(fake.calls[0][0]["raw"]) == 16000
 
 
 @pytest.mark.django_db
-def test_list_transcriptions_returns_metadata_and_text():
-    with patch.object(services, "_get_transcriber", return_value=FakeTranscriber("texto")):
-        ingest_audio("ejemplo.wav", "audio/wav", SAMPLE_AUDIO.read_bytes())
+def test_missing_ffmpeg_fails_with_a_clear_message(doctor):
+    transcription = _pending(doctor, content=b"opus", content_type="audio/webm", name="d.webm")
 
-    [item] = list_transcriptions()
+    with (
+        patch.object(services.shutil, "which", return_value=None),
+        patch.object(services, "_get_transcriber", return_value=FakeTranscriber("x")),
+    ):
+        run_transcription(transcription.id)
 
-    assert item.name == "ejemplo.wav"
-    assert item.recordingId == str(Audio.objects.get().id)
-    assert item.text == "texto"
-
-
-@pytest.mark.django_db
-def test_load_sample_audio_command_is_idempotent():
-    with patch.object(services, "_get_transcriber", return_value=FakeTranscriber("ejemplo")):
-        call_command("load_sample_audio", stdout=StringIO())
-        call_command("load_sample_audio", stdout=StringIO())
-
-    assert Transcription.objects.count() == 1
+    transcription.refresh_from_db()
+    assert transcription.status == Transcription.Status.FAILED
+    assert "ffmpeg" in transcription.error
 
 
 @pytest.mark.django_db
-def test_upload_endpoint_transcribes_audio(settings):
-    user = get_user_model().objects.create_user(email="test@example.com", password="pw")
-    client = Client()
-    client.force_login(user)
-    upload = SAMPLE_AUDIO.open("rb")
+def test_transcripts_are_scoped_to_their_professional(doctor, client_for):
+    other = User.objects.create_user(email="other@example.com", password="pw")
+    mine = _pending(doctor)
+    _pending(other)
 
-    with patch.object(services, "_get_transcriber", return_value=FakeTranscriber("subido")):
-        response = client.post(
-            f"/{settings.URL_PREFIX}/api/transcription/audios",
-            {"file": upload},
-        )
-
-    assert response.status_code == 201
-    assert response.json()["text"] == "subido"
-    assert response.json()["name"] == "ejemplo.wav"
-
-
-@pytest.mark.django_db
-def test_upload_endpoint_rejects_non_wav(settings):
-    user = get_user_model().objects.create_user(email="test2@example.com", password="pw")
-    client = Client()
-    client.force_login(user)
-    upload = StringIO("no es audio")
-    upload.name = "nota.wav"
-
-    response = client.post(f"/{settings.URL_PREFIX}/api/transcription/audios", {"file": upload})
-
-    assert response.status_code == 400
-
-
-@pytest.mark.django_db
-def test_transcripts_endpoint_lists_transcriptions(settings):
-    with patch.object(services, "_get_transcriber", return_value=FakeTranscriber("lista")):
-        ingest_audio("ejemplo.wav", "audio/wav", SAMPLE_AUDIO.read_bytes())
-    user = get_user_model().objects.create_user(email="test3@example.com", password="pw")
-    client = Client()
-    client.force_login(user)
-
-    response = client.get(f"/{settings.URL_PREFIX}/api/transcription/transcripts")
+    response = client_for(doctor).get(f"{API}/transcription/transcripts")
 
     assert response.status_code == 200
-    assert [item["text"] for item in response.json()] == ["lista"]
+    [item] = response.json()
+    assert item["id"] == str(mine.id)
+    assert item["recordingId"] == str(mine.recording_id)
+    assert item["patientReference"] == "Cama 4"
+    assert item["status"] == "pending"
+    assert (
+        client_for(other).get(f"{API}/transcription/recordings/{mine.recording_id}").status_code
+        == 404
+    )
+
+
+@pytest.mark.django_db
+def test_retry_requeues_only_failed_transcriptions(doctor, client_for):
+    transcription = _pending(doctor)
+    url = f"{API}/transcription/recordings/{transcription.recording_id}"
+    client = client_for(doctor)
+
+    assert client.post(url).status_code == 409
+
+    Transcription.objects.filter(pk=transcription.pk).update(
+        status=Transcription.Status.FAILED, error="falló"
+    )
+    with patch.object(tasks.transcribe_recording, "delay"):
+        response = client.post(url)
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "pending"
+    assert response.json()["error"] == ""
+
+
+@pytest.mark.django_db
+def test_load_sample_audio_command_transcribes_for_the_user(doctor):
+    stdout = StringIO()
+    with patch.object(services, "_get_transcriber", return_value=FakeTranscriber("ejemplo")):
+        call_command("load_sample_audio", doctor.email, stdout=stdout)
+
+    transcription = Transcription.objects.get(recording__professional=doctor)
+    assert transcription.status == Transcription.Status.DONE
+    assert "ejemplo" in stdout.getvalue()
