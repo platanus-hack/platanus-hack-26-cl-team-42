@@ -146,6 +146,18 @@ export interface HandoffSnapshot {
   cutoffData: CutoffDatum[];
   pendings: PendingTask[];
   openConflicts?: OpenConflict[];
+  /**
+   * Última atención registrada al corte (validada o en borrador: la visita
+   * ocurrió aunque su contenido siga reservado). Opcional porque los traspasos
+   * guardados antes de este campo no lo traen.
+   */
+  lastEncounter?: LastEncounter | null;
+}
+
+export interface LastEncounter {
+  encounterId: string;
+  authorId: string;
+  occurredAt: string;
 }
 
 export interface Handoff {

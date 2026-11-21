@@ -38,7 +38,13 @@ it("envía los dos pacientes atendidos en una sola entrega y abre el origen corr
   );
 
   const preview = await screen.findByRole("group", { name: "Pacientes del traspaso" });
-  expect(within(preview).getAllByRole("button")).toHaveLength(2);
+  const previewPatients = within(preview).getAllByRole("button");
+  expect(previewPatients).toHaveLength(2);
+  expect(previewPatients[0]).toHaveAccessibleName(/DEMO-002/);
+  expect(previewPatients[0]).toHaveAttribute("aria-pressed", "true");
+  expect(previewPatients[0]).toHaveTextContent("Prioridad alta");
+  expect(previewPatients[1]).toHaveAccessibleName(/DEMO-001/);
+  expect(previewPatients[1]).toHaveTextContent("Requiere atención");
   expect(within(preview).queryByRole("button", { name: /DEMO-003/ })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Enviar traspaso" }));
@@ -59,11 +65,19 @@ it("envía los dos pacientes atendidos en una sola entrega y abre el origen corr
   expect(screen.getByRole("tab", { name: /Recibidos \(1\)/, selected: true })).toBeInTheDocument();
 
   const patients = screen.getByRole("group", { name: "Pacientes del traspaso" });
-  fireEvent.click(within(patients).getByRole("button", { name: /DEMO-002/ }));
+  const highestPriority = within(patients).getAllByRole("button")[0];
+  expect(highestPriority).toHaveAccessibleName(/DEMO-002/);
+  expect(highestPriority).toHaveAttribute("aria-pressed", "true");
+  const secondPatient = within(patients).getByRole("button", { name: /DEMO-001/ });
+  fireEvent.click(secondPatient);
+  expect(secondPatient).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(highestPriority);
   const sourceLinks = screen.getAllByRole("link", { name: "ver atención de origen" });
   expect(sourceLinks[0]).toHaveAttribute("href", "/official-form?episode=demo-episode-002&encounter=enc-demo-002-nurse");
 
   fireEvent.click(screen.getByRole("button", { name: "Cerrar pendiente: Coordinar la próxima movilización" }));
-  expect(await screen.findByText("Ahora: cerrado")).toBeInTheDocument();
-  expect(screen.getByText("Abierto")).toBeInTheDocument();
+  const todo = screen.getByRole("region", { name: "Por hacer" });
+  expect(await within(todo).findByText(/Cerrado después del envío/)).toBeInTheDocument();
+  expect(within(todo).getByText("Coordinar la próxima movilización")).toHaveStyle({ textDecoration: "line-through" });
+  expect(within(todo).getByText(/Vencido · plazo/)).toBeInTheDocument();
 });
