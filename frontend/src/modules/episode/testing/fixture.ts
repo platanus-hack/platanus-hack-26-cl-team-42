@@ -1,8 +1,8 @@
-import type { EpisodeRecord } from "./model";
+import type { EpisodeRecord } from "../model";
 
 /**
- * Episodio ficticio de demostración. Ningún dato proviene de grabaciones
- * reales ni de `patient_reference`: todo se une por `episode.id`.
+ * Episodios de PRUEBA para los tests de la lógica del registro y del traspaso. No los usa la
+ * aplicación: los datos reales salen del backend (`/-/api/episodes`).
  */
 export const DEMO_EPISODE_ID = "demo-episode-001";
 export const DEMO_SECOND_EPISODE_ID = "demo-episode-002";
@@ -11,7 +11,6 @@ export const DEMO_OTHER_EPISODE_ID = "demo-episode-003";
 export const DEMO_EPISODE: EpisodeRecord = {
   episode: {
     id: DEMO_EPISODE_ID,
-    isFictional: true,
     label: "Paciente ficticio DEMO-001 · Cama 12",
     unit: "Intermedio adulto",
     admittedAt: "2026-11-19T18:10:00-03:00",

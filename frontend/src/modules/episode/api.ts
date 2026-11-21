@@ -1,31 +1,37 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEMO_EPISODE_ID } from "./fixture";
-import { browserStore, createDemoEpisodeGateway, type ClosePendingInput, type EpisodeGateway } from "./gateway";
+import { patientKeys } from "../patients/api";
+import { episodeGateway, type ClosePendingInput } from "./gateway";
 import type { SendHandoffInput } from "./model";
-
-const episodeGateway: EpisodeGateway = createDemoEpisodeGateway({
-  store: browserStore(`demo-episode-state:${DEMO_EPISODE_ID}`),
-});
 
 const recordKeys = ["episode-records"] as const;
 const handoffKeys = ["professional-handoffs"] as const;
+const teamKeys = ["episode-team"] as const;
 
+/** Los registros clínicos de los pacientes asignados al usuario activo. */
 export function useEpisodeRecords() {
   return useQuery({ queryKey: recordKeys, queryFn: () => episodeGateway.listRecords() });
 }
 
-export function useHandoffs(professionalId: string) {
-  return useQuery({
-    queryKey: [...handoffKeys, professionalId],
-    queryFn: () => episodeGateway.listHandoffs(professionalId),
-  });
+/** Quién eres y a quiénes puedes traspasar. */
+export function useTeam() {
+  return useQuery({ queryKey: teamKeys, queryFn: () => episodeGateway.getTeam() });
+}
+
+export function useHandoffs() {
+  return useQuery({ queryKey: handoffKeys, queryFn: () => episodeGateway.listHandoffs() });
 }
 
 export function useSendHandoff() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendHandoffInput) => episodeGateway.sendHandoff(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: handoffKeys }),
+    // Quien recibe pasa a tener a los pacientes: se refrescan sus listas.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: handoffKeys }),
+        queryClient.invalidateQueries({ queryKey: patientKeys }),
+        queryClient.invalidateQueries({ queryKey: recordKeys }),
+      ]),
   });
 }
 
@@ -34,16 +40,5 @@ export function useClosePending() {
   return useMutation({
     mutationFn: (input: ClosePendingInput) => episodeGateway.closePending(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: recordKeys }),
-  });
-}
-
-export function useResetDemo() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => episodeGateway.reset(),
-    onSuccess: () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: recordKeys }),
-      queryClient.invalidateQueries({ queryKey: handoffKeys }),
-    ]),
   });
 }

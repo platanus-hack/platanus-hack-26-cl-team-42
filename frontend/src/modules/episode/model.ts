@@ -6,8 +6,8 @@
  * (`ClinicalEntry`) por evento. Solo las entradas validadas alimentan el
  * registro, los datos de corte y los traspasos.
  *
- * El contrato es deliberadamente pequeño para que un backend real lo pueda
- * servir más adelante detrás de `EpisodeGateway` sin tocar las vistas.
+ * Lo sirve el backend (`/-/api/episodes`) detrás de `EpisodeGateway`: cada paciente
+ * asignado al usuario es un episodio y sus informes guardados son las atenciones.
  */
 
 export type Discipline = "nursing" | "medicine" | "kinesiology";
@@ -30,8 +30,6 @@ export interface Shift {
 export interface Episode {
   /** Identificador estable del episodio: es la única llave de unión de los datos. */
   id: string;
-  /** Siempre `true` en la demo: los datos son ficticios. */
-  isFictional: boolean;
   label: string;
   unit: string;
   admittedAt: string;
@@ -66,7 +64,7 @@ export interface Encounter {
   shiftId: string;
   /** Hora clínica de la atención (no la de carga del audio). */
   occurredAt: string;
-  /** Origen del evento: un dictado de audio. En la demo es ficticio. */
+  /** Origen del evento: un dictado de audio. */
   source: { type: "audio_dictation"; label: string };
   entries: ClinicalEntry[];
 }
@@ -173,4 +171,6 @@ export interface SendHandoffInput {
   fromId: string;
   toId: string;
   note: string;
+  /** Pacientes (episodios) que se entregan; los demás no se traspasan a esta persona. */
+  episodeIds: string[];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_EPISODE } from "./fixture";
+import { DEMO_EPISODE } from "./testing/fixture";
 import { renderRecordText, selectRecord, sourcedEntries } from "./record";
 
 describe("selectRecord · invariante de corte", () => {
@@ -66,10 +66,10 @@ describe("selectRecord · invariante de corte", () => {
     expect(selectRecord(DEMO_EPISODE, { shiftId: "shift-night-20" }).encounters).toEqual([]);
   });
 
-  it("el texto exportable se identifica como ficticio y respeta el filtro", () => {
+  it("el texto exportable identifica al paciente y respeta el filtro", () => {
     const text = renderRecordText(DEMO_EPISODE, selectRecord(DEMO_EPISODE, { professionalId: "prof-kine" }));
-    expect(text).toContain("EPISODIO FICTICIO");
-    expect(text).toContain("demo-episode-001");
+    expect(text).toContain("REGISTRO CLÍNICO");
+    expect(text).toContain(DEMO_EPISODE.episode.label);
     expect(text).toContain("Kinesioterapia respiratoria");
     expect(text).not.toContain("ceftriaxona");
     expect(text).not.toContain("sin validar");

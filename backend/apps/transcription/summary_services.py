@@ -98,7 +98,7 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
             )
             for profession, report in latest.items()
         ],
-        criticality=_criticality([data]),
+        criticality=criticality_of([data]),
         status=_status([data], highlights),
         brief=_brief(patient, reports, version),
         treatmentPending=[h for h in highlights if h.group in TREATMENT_GROUPS],
@@ -260,7 +260,7 @@ CRITICALITY_LABELS = {
 }
 
 
-def _criticality(datas: list[dict[str, Any]]) -> Criticality:
+def criticality_of(datas: list[dict[str, Any]]) -> Criticality:
     """Nivel de criticidad a partir de alertas, soporte vasoactivo, ventilación y SOFA."""
     points = 0
     reasons: list[str] = []

@@ -63,6 +63,8 @@ export interface Guidance {
   externalReason: string;
   /** Profesional de turno que el sistema eligió para la opinión externa (null si no hay nadie). */
   externalCandidate: { name: string; profession: string } | null;
+  /** Exámenes del paciente relacionados con el conflicto (p. ej. glicemia en uno de insulina). */
+  evidence: string[];
 }
 
 export interface Conflict {

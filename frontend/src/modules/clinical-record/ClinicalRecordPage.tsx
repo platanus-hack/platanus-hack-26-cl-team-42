@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
 import { useEpisodeRecords } from "../episode/api";
-import { CopyButton, DemoEpisodeBanner, OpenConflicts, PendingStatusBadge, SourceLink } from "../episode/components";
+import { CopyButton, EpisodeBanner, OpenConflicts, PendingStatusBadge, SourceLink } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
 import type { Encounter, EpisodeRecord, RecordFilter } from "../episode/model";
 import {
@@ -33,7 +33,10 @@ export function ClinicalRecordPage({ search }: { search: ClinicalRecordSearch })
           <Spinner size="3" />
         </Flex>
       ) : !record ? (
-        <EmptyState title="Sin episodio" description={error?.message ?? "No se encontró el episodio de demostración."} />
+        <EmptyState
+          title="Sin pacientes"
+          description={error?.message ?? "Aquí aparecen los pacientes asignados a tu cuenta, con sus informes guardados."}
+        />
       ) : (
         <Flex direction="column" gap="4">
           <Flex direction="column" gap="1">
@@ -72,13 +75,13 @@ function ClinicalRecord({ record, search }: { record: EpisodeRecord; search: Cli
 
   return (
     <Flex direction="column" gap="4">
-      <DemoEpisodeBanner episode={record.episode}>
+      <EpisodeBanner episode={record.episode}>
         <Button size="2" asChild>
-          <Link to="/handoff" search={{ as: filter.professionalId, tab: "send" }}>
+          <Link to="/handoff" search={{ tab: "send" }}>
             Preparar traspaso
           </Link>
         </Button>
-      </DemoEpisodeBanner>
+      </EpisodeBanner>
 
       <RecordFilters record={record} search={search} />
 

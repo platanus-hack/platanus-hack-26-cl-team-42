@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.utils import timezone
 from pydantic import BaseModel
 
-from . import consolidation_services, homologation_services, report_topics
+from . import consolidation_services, evidence_services, homologation_services, report_topics
 from .extraction_services import ExtractionOut
 from .extraction_services import to_out as extraction_to_out
 from .models import ExtractedRecord, Report, Transcription
@@ -53,6 +53,8 @@ class ReportOut(BaseModel):
     # Temas del informe (agrupan sus secciones) y cuáles validó ya el autor.
     topics: list[report_topics.Topic]
     validatedTopics: list[str]
+    # Contradicciones con los exámenes del paciente, para revisarlas al validar.
+    evidenceAlerts: list[dict[str, Any]]
     # Qué pasó al guardarse respecto de la versión oficial: official | merged | reconciling | …
     consolidation: str
     # Solo su autor puede completarlo y validarlo, y solo mientras está por validar.
@@ -101,6 +103,7 @@ def generate_report(record: ExtractedRecord, changed_section: str | None = None)
             for topic in topics
             if topic.id in report.validated_sections and topic.id != changed_topic
         ]
+        report.evidence_alerts = _evidence_alerts(report)
         # Queda por validar: el autor revisa lo que falta y lo acepta antes de darlo por generado.
         report.status = Report.Status.REVIEW
         report.validated_at = None
@@ -111,12 +114,22 @@ def generate_report(record: ExtractedRecord, changed_section: str | None = None)
             "data",
             "homologations",
             "validated_sections",
+            "evidence_alerts",
             "error",
             "validated_at",
             "updated_at",
         ]
     )
     return report
+
+
+def _evidence_alerts(report: Report) -> list[dict[str, Any]]:
+    """Contradicciones con los exámenes; un fallo aquí nunca impide generar el informe."""
+    try:
+        return evidence_services.check_report(report)
+    except Exception:
+        logger.exception("No se pudo revisar la evidencia del informe %s", report.id)
+        return report.evidence_alerts
 
 
 class ValidationError(ValueError):
@@ -156,6 +169,21 @@ def validate_report(report: Report) -> Report:
     report.save(update_fields=["status", "validated_at", "updated_at"])
     # Ya guardado: se compara con la versión oficial del paciente (o pasa a serlo).
     return consolidation_services.consolidate(report)
+
+
+def acknowledge_alert(report: Report, alert_id: str) -> Report:
+    """El autor da por revisada una alerta de evidencia (queda marcada, no se borra)."""
+    if report.status != Report.Status.REVIEW:
+        raise ValidationError("Solo se revisan las alertas de un informe por validar.")
+    found = False
+    for alert in report.evidence_alerts:
+        if alert["id"] == alert_id:
+            alert["acknowledged"] = True
+            found = True
+    if not found:
+        raise ValidationError("No existe esa alerta.")
+    report.save(update_fields=["evidence_alerts", "updated_at"])
+    return report
 
 
 def reset_report(record: ExtractedRecord) -> None:
@@ -257,6 +285,7 @@ def to_out(report: Report, viewer=None) -> ReportOut:
         homologations=report.homologations,
         error=report.error,
         extractionStatus=record.status,
+        evidenceAlerts=report.evidence_alerts,
         consolidation=report.consolidation,
         validatedAt=report.validated_at,
         topics=topics_of(report),

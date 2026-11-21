@@ -13,9 +13,12 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
+from apps.transcription import evidence_services
 from apps.transcription.inbox_services import inbox_states
 from apps.transcription.models import ConsolidatedVersion
+from apps.transcription.reconciliation_services import open_conflict_counts
 from apps.transcription.summary_services import PatientSummary, patient_summary
+from apps.transcription.triage_services import triage_for
 
 from . import services
 from .api import PatientOut
@@ -33,6 +36,19 @@ class PatientListOut(PatientOut):
     inboxStatus: str
     lastDictationAt: datetime | None
     retryRecordingId: UUID | None
+    # Triage según la versión oficial: criticidad, prioridad de visita y tareas pendientes.
+    criticality: str
+    criticalityLabel: str
+    pendingTasks: int
+    visitPriority: str
+    visitPriorityLabel: str
+    priorityScore: float
+    # Mientras se procesa un dictado propio: etapa (0 = en cola, 1 a 3) y su nombre.
+    processingStep: int | None
+    processingLabel: str | None
+    # Conflictos abiertos entre informes de este paciente y cuántos son tuyos.
+    openConflicts: int
+    myOpenConflicts: int
 
 
 @router.get("", response=list[PatientListOut])
@@ -43,7 +59,10 @@ def list_patients(request):
             report_count=Count("reports", filter=Q(reports__status="done"), distinct=True)
         )
     )
-    states = inbox_states(request.user, [p.id for p in patients])
+    ids = [p.id for p in patients]
+    states = inbox_states(request.user, ids)
+    conflicts = open_conflict_counts(request.user, ids)
+    triage = triage_for(ids, {pid: state.last_dictation_at for pid, state in states.items()})
     return [
         PatientListOut(
             id=p.id,
@@ -55,6 +74,16 @@ def list_patients(request):
             inboxStatus=states[p.id].status,
             lastDictationAt=states[p.id].last_dictation_at,
             retryRecordingId=states[p.id].retry_recording_id,
+            criticality=triage[p.id].criticality,
+            criticalityLabel=triage[p.id].criticality_label,
+            pendingTasks=triage[p.id].pending_tasks,
+            visitPriority=triage[p.id].visit_priority,
+            visitPriorityLabel=triage[p.id].visit_priority_label,
+            priorityScore=triage[p.id].priority_score,
+            processingStep=states[p.id].stage_step,
+            processingLabel=states[p.id].stage_label,
+            openConflicts=conflicts[p.id][0],
+            myOpenConflicts=conflicts[p.id][1],
         )
         for p in patients
     ]
@@ -131,3 +160,81 @@ def get_patient_version(request, patient_id: int, version: int):
     patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
     found = get_object_or_404(ConsolidatedVersion, patient=patient, version=version)
     return {"version": found.version, "reason": found.reason, "data": found.data}
+
+
+class EvidenceResultIn(Schema):
+    name: str
+    value: str = ""
+    unit: str = ""
+    ref_min: str | None = None
+    ref_max: str | None = None
+
+
+class EvidenceIn(Schema):
+    kind: str = "lab"
+    title: str
+    taken_at: datetime
+    results: list[EvidenceResultIn] = []
+    findings: str = ""
+
+
+class EvidenceResultOut(Schema):
+    name: str
+    value: str
+    unit: str
+    flag: str
+
+
+class EvidenceOut(Schema):
+    id: int
+    kind: str
+    title: str
+    takenAt: datetime
+    results: list[EvidenceResultOut]
+    findings: str
+    createdByName: str
+
+
+def _evidence_out(item) -> EvidenceOut:
+    return EvidenceOut(
+        id=item.id,
+        kind=item.kind,
+        title=item.title,
+        takenAt=item.taken_at,
+        results=[
+            EvidenceResultOut(name=r["name"], value=r["value"], unit=r["unit"], flag=r["flag"])
+            for r in item.results
+        ],
+        findings=item.findings,
+        createdByName=item.created_by.name or item.created_by.email,
+    )
+
+
+@router.get("/{patient_id}/evidence", response=list[EvidenceOut])
+def list_patient_evidence(request, patient_id: int):
+    """Exámenes y otra evidencia del paciente, además de los dictados."""
+    try:
+        return [
+            _evidence_out(item)
+            for item in evidence_services.list_evidence(request.user, patient_id)
+        ]
+    except evidence_services.EvidenceError as error:
+        raise HttpError(404, str(error)) from error
+
+
+@router.post("/{patient_id}/evidence", response={201: EvidenceOut})
+def add_patient_evidence(request, patient_id: int, data: EvidenceIn):
+    """Carga evidencia; los informes por validar del paciente se revisan de nuevo con ella."""
+    try:
+        item = evidence_services.add_evidence(
+            request.user,
+            patient_id,
+            kind=data.kind,
+            title=data.title,
+            taken_at=data.taken_at,
+            results=[r.dict() for r in data.results],
+            findings=data.findings,
+        )
+    except evidence_services.EvidenceError as error:
+        raise HttpError(400, str(error)) from error
+    return 201, _evidence_out(item)

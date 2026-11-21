@@ -34,6 +34,9 @@ class InboxState:
     last_dictation_at: datetime | None
     # Dictado propio cuya transcripción falló y se puede reintentar.
     retry_recording_id: UUID | None = None
+    # Mientras se procesa: en qué etapa va (1 a ``PROCESSING_STEPS``; 0 = en cola) y su nombre.
+    stage_step: int | None = None
+    stage_label: str | None = None
 
 
 def inbox_states(professional, patient_ids: list[int]) -> dict[int, InboxState]:
@@ -54,11 +57,18 @@ def inbox_states(professional, patient_ids: list[int]) -> dict[int, InboxState]:
     for patient_id in patient_ids:
         recordings = own.get(patient_id, [])
         status, retry_id = _status(patient_id in reviewing, recordings)
-        states[patient_id] = InboxState(status, last_dictations.get(patient_id), retry_id)
+        step, label = (
+            _processing_detail(recordings) if status == InboxStatus.PROCESSING else (None, None)
+        )
+        states[patient_id] = InboxState(
+            status, last_dictations.get(patient_id), retry_id, step, label
+        )
     return states
 
 
 IN_PROGRESS = {"pending", "processing"}
+# Etapas visibles de un dictado en proceso: transcribir, parsear a la plantilla, homologar.
+PROCESSING_STEPS = 3
 # Si tras este plazo el paso siguiente no existe, el proceso quedó detenido (p. ej. no se
 # reconoció la plantilla del dictado) y se informa como fallido.
 STALLED_AFTER = timedelta(minutes=2)
@@ -88,6 +98,25 @@ def _status(has_review: bool, recordings: list[Recording]) -> tuple[InboxStatus,
     if any(_stage(recording) == "processing" for recording in recordings):
         return InboxStatus.PROCESSING, None
     return InboxStatus.UP_TO_DATE, None
+
+
+def _processing_detail(recordings: list[Recording]) -> tuple[int | None, str | None]:
+    """Etapa del dictado propio más reciente que todavía se procesa."""
+    for recording in recordings:
+        if _stage(recording) != "processing":
+            continue
+        transcription = _transcription(recording)
+        if transcription is None or transcription.status == Transcription.Status.PENDING:
+            return 0, "En cola"
+        if transcription.status == Transcription.Status.PROCESSING:
+            return 1, "Transcribiendo el audio"
+        record = _related(transcription, "extracted_record")
+        if record is None:
+            return 2, "Identificando la plantilla"
+        if record.status in IN_PROGRESS:
+            return 2, "Parseando a la plantilla"
+        return 3, "Homologando los conceptos"
+    return None, None
 
 
 def _stage(recording: Recording) -> str:

@@ -1,4 +1,4 @@
-import type { InboxStatus, PatientWithCount } from "../patients/api";
+import type { InboxStatus, PatientCriticality, PatientWithCount, VisitPriority } from "../patients/api";
 
 // Reglas de la bandeja «Mis pacientes»: orden y cómo se nombra cada estado.
 
@@ -17,11 +17,32 @@ export const INBOX_STATUS: Record<InboxStatus, InboxStatusMeta> = {
   up_to_date: { label: "Al día", color: undefined, rank: 3 },
 };
 
-/** Primero lo que requiere acción; dentro de cada grupo, por cama y luego por nombre. */
+export const CRITICALITY_META: Record<PatientCriticality, { color: "red" | "orange" | "amber" | "green" | "gray" }> = {
+  critical: { color: "red" },
+  high: { color: "orange" },
+  moderate: { color: "amber" },
+  stable: { color: "green" },
+  unknown: { color: "gray" },
+};
+
+export const VISIT_META: Record<VisitPriority, { color: "red" | "amber" | "gray"; bold: boolean }> = {
+  now: { color: "red", bold: true },
+  soon: { color: "amber", bold: true },
+  ok: { color: "gray", bold: false },
+  unknown: { color: "gray", bold: false },
+};
+
+/**
+ * Primero lo que requiere acción; dentro de cada grupo, los pacientes con conflictos tuyos por
+ * resolver, luego lo más urgente de visitar (criticidad y tiempo sin verlo) y, a igualdad, por
+ * cama y luego por nombre.
+ */
 export function sortInbox(patients: readonly PatientWithCount[]): PatientWithCount[] {
   return [...patients].sort(
     (a, b) =>
       INBOX_STATUS[a.inboxStatus].rank - INBOX_STATUS[b.inboxStatus].rank ||
+      b.myOpenConflicts - a.myOpenConflicts ||
+      b.priorityScore - a.priorityScore ||
       a.bed.localeCompare(b.bed, "es", { numeric: true }) ||
       a.name.localeCompare(b.name, "es"),
   );
@@ -29,6 +50,11 @@ export function sortInbox(patients: readonly PatientWithCount[]): PatientWithCou
 
 export function needsAction(status: InboxStatus): boolean {
   return status === "review" || status === "failed";
+}
+
+/** «53 min», «2 h»… o «Sin visitas» si ningún profesional lo ha visto aún. */
+export function formatLastVisit(iso: string | null, now: Date = new Date()): string {
+  return iso ? formatSince(iso, now) : "Sin visitas";
 }
 
 /** Hace cuánto fue el último dictado, en formato corto: «15 min», «2 h», «ayer», «3 d». */

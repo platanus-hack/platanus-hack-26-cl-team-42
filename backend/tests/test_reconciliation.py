@@ -679,3 +679,150 @@ def test_stale_or_unjustified_consults_are_not_shown_to_the_consultant(
     rec.accept_other(allergy, doctor)  # la alergia se resuelve: la consulta pendiente ya no importa
     assert rec.list_external_consults(specialist) == []
     assert rec.get_external_consult(specialist, valid.id) is None
+
+
+# --- Triage de la bandeja: criticidad, prioridad de visita y tareas pendientes ---------------
+
+
+def test_inbox_triage_ranks_by_criticality_and_time_since_the_last_visit(doctor, nurse, patient):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.transcription.triage_services import triage_for
+
+    quiet = Patient.objects.create(name="Paciente Sin Informe", identifier="9-9", bed="Box 1")
+    _save_report(doctor, patient, "medico", _base_data())  # noradrenalina (vasoactivo): alto
+    now = timezone.now()
+
+    triage = triage_for(
+        [patient.id, quiet.id], {patient.id: now - timedelta(hours=5), quiet.id: None}, now
+    )
+
+    sick, unknown = triage[patient.id], triage[quiet.id]
+    assert sick.criticality == "high" and sick.criticality_label == "Alto"
+    # Un paciente de criticidad alta se visita cada ~4 h: a las 5 h ya toca.
+    assert (sick.visit_priority, sick.priority_score) == ("now", 1.25)
+    assert sick.pending_tasks == 1  # «Control de lactato»
+    assert unknown.criticality == "unknown" and unknown.visit_priority == "unknown"
+
+    def at(hours: float):
+        return triage_for([patient.id], {patient.id: now - timedelta(hours=hours)}, now)[patient.id]
+
+    assert (at(0.5).visit_priority, at(0.5).priority_score) == ("ok", 0.12)
+    assert at(3).visit_priority == "soon"  # 3 de 4 h
+    never = triage_for([patient.id], {patient.id: None}, now)[patient.id]
+    assert never.visit_priority == "now"  # sin ninguna visita registrada
+
+
+def test_patient_list_exposes_the_triage(doctor, nurse, patient):
+    _save_report(doctor, patient, "medico", _base_data())
+    client = Client()
+    client.force_login(doctor)
+
+    listed = client.get(f"/{settings.URL_PREFIX}/api/patients").json()[0]
+
+    assert listed["criticality"] == "high" and listed["criticalityLabel"] == "Alto"
+    assert listed["pendingTasks"] == 1
+    assert listed["visitPriority"] in ("now", "soon", "ok")
+    assert isinstance(listed["priorityScore"], float)
+
+
+# --- Visibilidad: solo quien tiene el paciente asignado; el resto, solo la versión anonimizada ---
+
+
+def test_only_professionals_with_the_patient_assigned_see_the_conflicts(
+    doctor, nurse, specialist, patient
+):
+    bystander = User.objects.create_user(email="otro@localhost", password="pw")
+    _save_report(doctor, patient, "medico", _base_data())
+    report = _save_report(nurse, patient, "enfermeria", _nurse_data())
+    reconciliation = report.reconciliations.get()
+    conflict = reconciliation.conflicts.first()
+
+    assert len(rec.list_reconciliations(doctor)) == 1  # participante asignado
+    assert rec.list_reconciliations(bystander) == []  # sin el paciente: nada
+    assert rec.list_reconciliations(specialist) == []  # ni siquiera el externo
+    assert rec.get_reconciliation(bystander, reconciliation.id) is None
+    assert rec.get_conflict(bystander, conflict.id) is None
+
+    # Si el paciente se traspasa, quien lo entregó deja de ver el conflicto y de poder actuar.
+    patient.assigned_to.remove(nurse)
+    assert rec.list_reconciliations(nurse) == []
+    assert rec.get_conflict(nurse, conflict.id) is None
+    with pytest.raises(rec.ReconciliationError, match="ya no está asignado"):
+        rec.accept_other(conflict, nurse)
+
+
+def test_an_off_shift_participant_triggers_the_anonymized_case_for_a_third_party(
+    doctor, nurse, specialist, patient
+):
+    _save_report(doctor, patient, "medico", _base_data())
+    report = _save_report(nurse, patient, "enfermeria", _nurse_data())
+    conflicts = _conflicts(report)
+    allergy, dose = conflicts["allergy:medicamentos"], conflicts["value:drogas_infusion"]
+    assert not allergy.consults.exists()  # con los dos de turno no hay nada que enviar
+
+    shifts.end_shift(nurse)
+    rec.list_reconciliations(doctor)  # el agente lo detecta al revisar los conflictos
+    rec.list_reconciliations(doctor)  # y no repite el envío
+
+    consult = allergy.consults.get()
+    assert consult.consultant == specialist
+    for secret in ("Juan", "Pérez", "11.111.111-1", "Box 7", "Dr. Rojas", "EU Soto"):
+        assert secret not in consult.brief
+    assert "Contexto clínico del paciente" in consult.brief
+    note = allergy.notes.filter(kind="system").last().body
+    assert "EU Soto está fuera de turno" in note and "anonimizado" in note
+    # El tercero recibe solo la versión anonimizada, no el conflicto.
+    assert [c.id for c in rec.list_external_consults(specialist)] == [str(consult.id)]
+    assert rec.list_reconciliations(specialist) == []
+    # Un dato con dos valores no se deriva: lo decide quien sigue de turno.
+    assert not dose.consults.exists()
+
+
+def test_the_anonymized_case_goes_out_when_the_conflict_opens_if_someone_is_already_off_shift(
+    doctor, nurse, specialist, patient
+):
+    _save_report(doctor, patient, "medico", _base_data())
+    shifts.end_shift(nurse)
+
+    report = _save_report(nurse, patient, "enfermeria", _nurse_data())
+
+    allergy = _conflicts(report)["allergy:medicamentos"]
+    assert allergy.consults.get().consultant == specialist
+
+
+def test_no_anonymized_case_is_sent_when_nobody_is_available(doctor, nurse, specialist, patient):
+    _save_report(doctor, patient, "medico", _base_data())
+    report = _save_report(nurse, patient, "enfermeria", _nurse_data())
+    shifts.end_shift(nurse)
+    shifts.end_shift(specialist)
+
+    rec.list_reconciliations(doctor)
+
+    assert not _conflicts(report)["allergy:medicamentos"].consults.exists()
+
+
+def test_patient_list_flags_patients_with_open_conflicts(doctor, nurse, patient):
+    quiet = Patient.objects.create(name="Sin Conflictos", identifier="7-7", bed="Box 2")
+    quiet.assigned_to.add(doctor)
+    bystander = User.objects.create_user(email="otro@localhost", password="pw")
+    patient.assigned_to.add(bystander)
+    _save_report(doctor, patient, "medico", _base_data())
+    report = _save_report(nurse, patient, "enfermeria", _nurse_data())
+
+    def counts(user):
+        client = Client()
+        client.force_login(user)
+        listed = client.get(f"/{settings.URL_PREFIX}/api/patients").json()
+        return {p["name"]: (p["openConflicts"], p["myOpenConflicts"]) for p in listed}
+
+    # Los dos implicados tienen los 3 conflictos como suyos; un tercero del equipo, ninguno.
+    assert counts(doctor) == {"Juan Pérez Soto": (3, 3), "Sin Conflictos": (0, 0)}
+    assert counts(nurse) == {"Juan Pérez Soto": (3, 3)}
+    assert counts(bystander) == {"Juan Pérez Soto": (3, 0)}
+
+    for conflict in report.reconciliations.get().conflicts.all():
+        rec.accept_other(conflict, doctor)
+    assert counts(doctor)["Juan Pérez Soto"] == (0, 0)  # resueltos: ya no se marcan

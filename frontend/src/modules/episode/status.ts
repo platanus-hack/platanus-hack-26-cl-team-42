@@ -15,7 +15,7 @@ export interface PatientStatus {
 }
 
 // Rangos orientativos para adultos, con límites inclusivos. Son una ayuda visual
-// para la demo y no constituyen un diagnóstico. PA se evalúa por su valor sistólico.
+// y no constituyen un diagnóstico. PA se evalúa por su valor sistólico.
 export const ADULT_VITAL_RANGES = {
   spo2: { min: 92, max: 100 },
   hr: { min: 60, max: 100 },

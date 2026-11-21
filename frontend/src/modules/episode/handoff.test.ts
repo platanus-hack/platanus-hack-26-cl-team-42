@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_EPISODES } from "./fixture";
+import { DEMO_EPISODES } from "./testing/fixture";
 import { formatElapsed } from "./format";
 import { buildHandoffSnapshots, handoffReferenceAt } from "./handoff";
 

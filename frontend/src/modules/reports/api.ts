@@ -27,6 +27,20 @@ export interface ReportPatient {
   bed: string;
 }
 
+/** Contradicción entre el informe y la evidencia (exámenes) del paciente, para revisar al validar. */
+export interface EvidenceAlert {
+  id: string;
+  /** `value` (valor o lectura distinta), `omission` (resultado alterado no mencionado) o `concept`. */
+  kind: "value" | "omission" | "concept";
+  severity: "high" | "medium";
+  section: string;
+  /** Tema del informe donde se muestra (coincide con `ReportTopic.id`). */
+  topic: string;
+  message: string;
+  evidenceId: number | null;
+  acknowledged: boolean;
+}
+
 export interface ReportTopic {
   id: string;
   label: string;
@@ -60,6 +74,7 @@ export interface Report {
   topics: ReportTopic[];
   /** Ids de los temas ya validados; con todos validados puede guardar el informe. */
   validatedTopics: string[];
+  evidenceAlerts: EvidenceAlert[];
   /** Solo quien generó el informe puede completarlo. */
   canEdit: boolean;
   recordedAt: string;
@@ -68,8 +83,11 @@ export interface Report {
 }
 
 export interface AssistantReference {
-  reportId: string;
-  section: string;
+  /** Informe y sección de origen, o `null` si la fuente es un examen (`evidenceId`). */
+  reportId: string | null;
+  section: string | null;
+  evidenceId?: string | null;
+  evidenceTitle?: string;
   patientId: number | null;
   patientName: string;
   profession: string;
@@ -130,6 +148,18 @@ export function useValidateTopic() {
       apiRequest<Report>(`/transcription/reports/${reportId}/topics/${topicId}`, {
         method: "PUT",
         body: JSON.stringify({ validated }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportKeys }),
+  });
+}
+
+/** Da por revisada una alerta de evidencia (queda marcada, no se borra). */
+export function useAcknowledgeAlert() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reportId, alertId }: { reportId: string; alertId: string }) =>
+      apiRequest<Report>(`/transcription/reports/${reportId}/alerts/${encodeURIComponent(alertId)}/ack`, {
+        method: "POST",
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: reportKeys }),
   });

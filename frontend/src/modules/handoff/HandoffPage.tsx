@@ -4,6 +4,7 @@ import {
   Button,
   Callout,
   Card,
+  Checkbox,
   Flex,
   Grid,
   Heading,
@@ -17,31 +18,35 @@ import { useNavigate } from "@tanstack/react-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ModulePage } from "../../components/ModulePage";
 import type { HandoffSearch, HandoffTab } from "../../routes/_authenticated/handoff";
-import { useClosePending, useEpisodeRecords, useHandoffs, useResetDemo, useSendHandoff } from "../episode/api";
+import { useClosePending, useEpisodeRecords, useHandoffs, useSendHandoff, useTeam } from "../episode/api";
 import { SourceLink } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
 import { buildHandoffSnapshots, handoffReferenceAt } from "../episode/handoff";
 import type { EpisodeRecord, Handoff, HandoffSnapshot, OpenConflict, PendingTask } from "../episode/model";
 import { PRIORITY_THRESHOLDS, rankPatients } from "../episode/priority";
+import type { Team } from "../episode/gateway";
 import { authorLine, professionalById } from "../episode/record";
 import { PatientPriorityList } from "./PatientPriorityList";
 import { PatientStatusCard } from "./PatientStatusCard";
 import { SnapshotView } from "./SnapshotView";
 
-const DEFAULT_ACTOR = "prof-nurse-day";
-type Team = Pick<EpisodeRecord, "professionals">;
+type People = Pick<EpisodeRecord, "professionals">;
 
 export function HandoffPage({ search }: { search: HandoffSearch }) {
-  const { data: records, isPending, error } = useEpisodeRecords();
+  const records = useEpisodeRecords();
+  const team = useTeam();
 
   return (
     <ModulePage stepId="handoff" connected>
-      {isPending ? (
+      {records.isPending || team.isPending ? (
         <Flex justify="center" py="6"><Spinner size="3" /></Flex>
-      ) : !records?.[0]?.professionals.length ? (
-        <EmptyState title="Sin equipo" description={error?.message ?? "No se pudo cargar el equipo de demostración."} />
+      ) : !records.data || !team.data ? (
+        <EmptyState
+          title="No se pudo cargar el traspaso"
+          description={(records.error ?? team.error)?.message ?? "Inténtalo de nuevo en unos segundos."}
+        />
       ) : (
-        <HandoffWorkspace records={records} team={records[0]} search={search} />
+        <HandoffWorkspace records={records.data} team={team.data} search={search} />
       )}
     </ModulePage>
   );
@@ -49,42 +54,15 @@ export function HandoffPage({ search }: { search: HandoffSearch }) {
 
 function HandoffWorkspace({ records, team, search }: { records: EpisodeRecord[]; team: Team; search: HandoffSearch }) {
   const navigate = useNavigate();
-  const reset = useResetDemo();
-  const actorId = professionalById(team, search.as ?? DEFAULT_ACTOR)?.id ?? team.professionals[0].id;
-  const handoffs = useHandoffs(actorId);
+  const actorId = team.meId;
+  const handoffs = useHandoffs();
   const tab = search.tab ?? "send";
   const received = handoffs.data?.filter(({ toId }) => toId === actorId) ?? [];
   const sent = handoffs.data?.filter(({ fromId }) => fromId === actorId) ?? [];
-  const go = (patch: Partial<HandoffSearch>) =>
-    navigate({ to: "/handoff", search: { as: actorId, tab, ...patch } });
+  const go = (patch: Partial<HandoffSearch>) => navigate({ to: "/handoff", search: { tab, ...patch } });
 
   return (
     <Flex direction="column" gap="4">
-      <Callout.Root color="gray" variant="surface">
-        <Flex align="center" justify="between" gap="3" wrap="wrap">
-          <Callout.Text>Profesionales y pacientes ficticios · datos de demostración.</Callout.Text>
-          <Button variant="soft" color="gray" size="1" loading={reset.isPending}
-            onClick={() => reset.mutate(undefined, { onSuccess: () => go({ handoff: undefined }) })}
-          >
-            Restablecer demo
-          </Button>
-        </Flex>
-      </Callout.Root>
-
-      <Flex direction="column" gap="1">
-        <Text size="2" weight="medium">Actuando como (profesional demo)</Text>
-        <Select.Root value={actorId} onValueChange={(as) => go({ as, handoff: undefined })}>
-          <Select.Trigger aria-label="Profesional demo" style={{ maxWidth: 320 }} />
-          <Select.Content>
-            {team.professionals.map((professional) => (
-              <Select.Item key={professional.id} value={professional.id}>
-                {professional.name} · {professional.role}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      </Flex>
-
       <Tabs.Root value={tab} onValueChange={(value) => go({ tab: value as HandoffTab, handoff: undefined })}>
         <Tabs.List>
           <Tabs.Trigger value="send">Nuevo traspaso</Tabs.Trigger>
@@ -93,11 +71,10 @@ function HandoffWorkspace({ records, team, search }: { records: EpisodeRecord[];
         </Tabs.List>
         <Tabs.Content value="send" mt="4">
           <SendHandoff
-            key={actorId}
             records={records}
             team={team}
             actorId={actorId}
-            onOpenReceived={(handoff) => go({ as: handoff.toId, tab: "received", handoff: handoff.id })}
+            onOpenSent={(handoff) => go({ tab: "sent", handoff: handoff.id })}
           />
         </Tabs.Content>
         {(tab === "received" || tab === "sent") && (
@@ -128,19 +105,36 @@ interface SendHandoffProps {
   records: EpisodeRecord[];
   team: Team;
   actorId: string;
-  onOpenReceived: (handoff: Handoff) => void;
+  onOpenSent: (handoff: Handoff) => void;
 }
 
-function SendHandoff({ records, team, actorId, onOpenReceived }: SendHandoffProps) {
-  const recipients = team.professionals.filter((professional) => professional.id !== actorId);
-  const [toId, setToId] = useState(recipients.find(({ discipline }) => discipline === "kinesiology")?.id ?? "");
+function SendHandoff({ records, team, actorId, onOpenSent }: SendHandoffProps) {
+  const recipients = team.professionals.filter(({ id }) => team.recipientIds.includes(id));
+  const [toId, setToId] = useState("");
   const [note, setNote] = useState("");
   const send = useSendHandoff();
+  const handoffs = useHandoffs();
   const snapshots = useMemo(() => buildHandoffSnapshots(records, actorId), [records, actorId]);
   const recipient = professionalById(team, toId);
+  // Los pacientes se reparten: cada envío lleva solo los marcados, y los ya enviados se desmarcan.
+  const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
+  const selected = snapshots.filter(({ episodeId }) => !excluded.has(episodeId));
+  const sentTo = recipientsByPatient(handoffs.data ?? [], actorId, team);
+  const toggle = (episodeId: string, checked: boolean) =>
+    setExcluded((current) => {
+      const next = new Set(current);
+      if (checked) next.delete(episodeId);
+      else next.add(episodeId);
+      return next;
+    });
 
   if (snapshots.length === 0) {
-    return <EmptyState title="Sin pacientes para traspasar" description="Este profesional no tiene atenciones registradas al corte." />;
+    return (
+      <EmptyState
+        title="Sin pacientes para traspasar"
+        description="Aquí aparecen los pacientes que atendiste (con informes guardados) para entregarlos a otra persona."
+      />
+    );
   }
 
   return (
@@ -173,17 +167,33 @@ function SendHandoff({ records, team, actorId, onOpenReceived }: SendHandoffProp
             </Flex>
             <AlertDialog.Root>
               <AlertDialog.Trigger>
-                <Button disabled={!recipient} loading={send.isPending}>Enviar traspaso</Button>
+                <Button disabled={!recipient || selected.length === 0} loading={send.isPending}>
+                  Enviar traspaso
+                </Button>
               </AlertDialog.Trigger>
               <AlertDialog.Content maxWidth="440px">
                 <AlertDialog.Title>Confirmar traspaso</AlertDialog.Title>
                 <AlertDialog.Description size="2">
-                  Se enviará a {recipient?.name} una sola entrega con {patientCount(snapshots.length)}.
+                  Se enviará a {recipient?.name} una sola entrega con {patientCount(selected.length)}. Quien la reciba
+                  pasará a ver a esos pacientes. Los demás los puedes entregar a otra persona.
                 </AlertDialog.Description>
                 <Flex gap="3" mt="4" justify="end">
                   <AlertDialog.Cancel><Button variant="soft" color="gray">Cancelar</Button></AlertDialog.Cancel>
                   <AlertDialog.Action>
-                    <Button onClick={() => send.mutate({ fromId: actorId, toId, note }, { onSuccess: () => setNote("") })}>
+                    <Button
+                      onClick={() => {
+                        const episodeIds = selected.map(({ episodeId }) => episodeId);
+                        send.mutate(
+                          { fromId: actorId, toId, note, episodeIds },
+                          {
+                            onSuccess: () => {
+                              setNote("");
+                              setExcluded((current) => new Set([...current, ...episodeIds]));
+                            },
+                          },
+                        );
+                      }}
+                    >
                       Confirmar envío
                     </Button>
                   </AlertDialog.Action>
@@ -191,33 +201,86 @@ function SendHandoff({ records, team, actorId, onOpenReceived }: SendHandoffProp
               </AlertDialog.Content>
             </AlertDialog.Root>
           </Flex>
-          <Text size="1" color="gray">
-            Incluye {snapshots.length === 1 ? "al paciente atendido" : `a los ${snapshots.length} pacientes atendidos`} por{" "}
-            {authorLine(team, actorId)}.
-          </Text>
+          <Flex direction="column" gap="2">
+            <Flex align="center" justify="between" gap="2" wrap="wrap">
+              <Text size="2" weight="medium">
+                Pacientes a entregar ({selected.length} de {snapshots.length}) · atendidos por {authorLine(team, actorId)}
+              </Text>
+              <Flex gap="2">
+                <Button size="1" variant="ghost" color="gray" onClick={() => setExcluded(new Set())}>
+                  Marcar todos
+                </Button>
+                <Button
+                  size="1"
+                  variant="ghost"
+                  color="gray"
+                  onClick={() => setExcluded(new Set(snapshots.map(({ episodeId }) => episodeId)))}
+                >
+                  Desmarcar todos
+                </Button>
+              </Flex>
+            </Flex>
+            <Flex direction="column" gap="1" role="group" aria-label="Pacientes a entregar">
+              {snapshots.map((snapshot) => (
+                <Text as="label" size="2" key={snapshot.episodeId}>
+                  <Flex align="center" gap="2">
+                    <Checkbox
+                      checked={!excluded.has(snapshot.episodeId)}
+                      onCheckedChange={(checked) => toggle(snapshot.episodeId, checked === true)}
+                      aria-label={`Entregar a ${snapshot.episodeLabel}`}
+                    />
+                    <span>{snapshot.episodeLabel}</span>
+                    {sentTo.get(snapshot.episodeId) && (
+                      <Text size="1" color="gray">
+                        · ya entregado a {sentTo.get(snapshot.episodeId)}
+                      </Text>
+                    )}
+                  </Flex>
+                </Text>
+              ))}
+            </Flex>
+          </Flex>
           {send.error && (
             <Callout.Root color="red"><Callout.Text>{send.error.message}</Callout.Text></Callout.Root>
           )}
           {send.data && !send.isPending && (
             <Callout.Root color="green">
               <Flex align="center" justify="between" gap="2" wrap="wrap">
-                <Callout.Text>Traspaso enviado a {professionalById(team, send.data.toId)?.name}.</Callout.Text>
-                <Button size="1" variant="soft" onClick={() => onOpenReceived(send.data)}>
-                  Abrir vista receptora
+                <Callout.Text>
+                  Traspaso de {patientCount(send.data.snapshots.length)} enviado a{" "}
+                  {professionalById(team, send.data.toId)?.name}.
+                </Callout.Text>
+                <Button size="1" variant="soft" onClick={() => onOpenSent(send.data)}>
+                  Ver en enviados
                 </Button>
               </Flex>
             </Callout.Root>
           )}
         </Flex>
       </Card>
-      <PatientSnapshots records={records} team={team} snapshots={snapshots} actorId={actorId} />
+      {selected.length > 0 && (
+        <PatientSnapshots records={records} team={team} snapshots={selected} actorId={actorId} />
+      )}
     </Flex>
   );
 }
 
+/** A quién ya le entregaste cada paciente («Ana Morales, Tomás Ibarra»), según tus traspasos enviados. */
+function recipientsByPatient(handoffs: Handoff[], actorId: string, team: People): Map<string, string> {
+  const names = new Map<string, Set<string>>();
+  for (const handoff of handoffs.filter(({ fromId }) => fromId === actorId)) {
+    const name = professionalById(team, handoff.toId)?.name;
+    if (!name) continue;
+    for (const { episodeId } of handoff.snapshots) {
+      names.set(episodeId, (names.get(episodeId) ?? new Set()).add(name));
+    }
+  }
+  return new Map([...names].map(([episodeId, people]) => [episodeId, [...people].join(", ")]));
+}
+
 interface InboxProps {
   records: EpisodeRecord[];
-  team: Team;
+  team: People;
   actorId: string;
   handoffs: Handoff[];
   direction: "received" | "sent";
@@ -230,7 +293,7 @@ function HandoffInbox({ records, team, actorId, handoffs, direction, selectedId,
     return (
       <EmptyState
         title={direction === "received" ? "Sin traspasos recibidos" : "Sin traspasos enviados"}
-        description="Cambia de profesional demo o prepara una entrega desde «Nuevo traspaso»."
+        description="Prepara una entrega desde «Nuevo traspaso»."
       />
     );
   }
@@ -276,7 +339,7 @@ function HandoffInbox({ records, team, actorId, handoffs, direction, selectedId,
 
 function PatientSnapshots({ records, team, snapshots, actorId }: {
   records: EpisodeRecord[];
-  team: Team;
+  team: People;
   snapshots: HandoffSnapshot[];
   actorId?: string;
 }) {
@@ -347,7 +410,7 @@ function ConflictNotes({ episodeId, conflicts }: { episodeId: string; conflicts:
  * después del envío) y quien recibe puede cerrarlos aquí mismo.
  */
 function PatientTodo({ team, snapshot, record, referenceAt, actorId }: {
-  team: Team;
+  team: People;
   snapshot: HandoffSnapshot;
   record: EpisodeRecord | undefined;
   referenceAt: string;
@@ -388,7 +451,7 @@ function PatientTodo({ team, snapshot, record, referenceAt, actorId }: {
                 aria-label={`Cerrar pendiente: ${pending.title}`}
                 disabled={close.isPending}
                 loading={close.isPending && close.variables?.pendingId === pending.id}
-                onClick={() => close.mutate({ episodeId: record.episode.id, pendingId: pending.id, closedById: actorId })}
+                onClick={() => close.mutate({ episodeId: record.episode.id, pendingId: pending.id })}
               >
                 Cerrar
               </Button>

@@ -266,6 +266,20 @@ function AgentGuidance({ conflict }: { conflict: Conflict }) {
           <strong>Orientación del agente:</strong> {guidance.suggestion}
           {recommended && ` Parece más seguro o verosímil el registro de ${recommended.authorName}.`}
         </Callout.Text>
+        {guidance.evidence.length > 0 && (
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">
+              Exámenes relevantes del paciente:
+            </Text>
+            <Flex gap="2" wrap="wrap">
+              {guidance.evidence.map((line) => (
+                <Badge key={line} color="gray" variant="surface">
+                  {line}
+                </Badge>
+              ))}
+            </Flex>
+          </Flex>
+        )}
         {guidance.externalRecommended && (
           <Callout.Text>
             <strong>Profesional adicional recomendado:</strong>{" "}

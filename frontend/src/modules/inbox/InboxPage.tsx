@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Badge,
   Box,
   Button,
   Callout,
@@ -10,18 +11,21 @@ import {
   Grid,
   Heading,
   IconButton,
+  Progress,
   Skeleton,
   Spinner,
   Text,
   TextField,
+  Tooltip,
 } from "@radix-ui/themes";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
-import { patientKeys, usePatients, useTransferPatient, type PatientWithCount } from "../patients/api";
+import { PROCESSING_STEPS, patientKeys, usePatients, useTransferPatient, type PatientWithCount } from "../patients/api";
 import { useReconciliations } from "../reconciliation/api";
+import { EvidencePanel } from "../evidence/EvidencePanel";
 import { Recorder } from "../recordings/Recorder";
 import { AssistantPanel } from "../reports/AssistantPanel";
 import { PatientSummaryView } from "../reports/PatientSummaryView";
@@ -29,7 +33,7 @@ import { ReportView, StatusBadge } from "../reports/ReportView";
 import { reportKeys, useReports, type Report } from "../reports/api";
 import { reportTitle } from "../reports/format";
 import { useRetryTranscription } from "../transcription/api";
-import { INBOX_STATUS, formatSince, needsAction, sortInbox } from "./inbox";
+import { CRITICALITY_META, INBOX_STATUS, VISIT_META, formatLastVisit, needsAction, sortInbox } from "./inbox";
 
 export interface InboxSearch {
   patient?: string;
@@ -85,13 +89,18 @@ export function InboxPage({ search }: { search: InboxSearch }) {
           description="Los pacientes vienen de otro sistema o te los traspasa otro usuario. Cuando tengas uno asignado aparecerá aquí."
         />
       ) : (
-        <Grid columns={{ initial: "1", md: "300px 1fr" }} gap="5" align="start">
-          <PatientInbox
-            patients={patients}
-            loading={isPending}
-            selected={selected?.id}
-            onSelect={(id) => go({ patient: String(id) })}
-          />
+        <Grid columns={{ initial: "1", md: "320px 1fr" }} gap={{ initial: "5", md: "8" }} align="start">
+          <Box
+            pr={{ initial: "0", md: "6" }}
+            style={{ borderRight: "1px solid var(--gray-a5)", alignSelf: "stretch" }}
+          >
+            <PatientInbox
+              patients={patients}
+              loading={isPending}
+              selected={selected?.id}
+              onSelect={(id) => go({ patient: String(id) })}
+            />
+          </Box>
           <Box style={{ minWidth: 0 }}>
             {selected && <PatientDetail key={selected.id} patient={selected} search={search} go={go} />}
           </Box>
@@ -125,6 +134,7 @@ function PatientInbox({ patients, loading, selected, onSelect }: PatientInboxPro
 function InboxRow({ patient, selected, onSelect }: { patient: PatientWithCount; selected: boolean; onSelect: (id: number) => void }) {
   const status = INBOX_STATUS[patient.inboxStatus];
   const urgent = needsAction(patient.inboxStatus);
+  const visit = VISIT_META[patient.visitPriority];
   return (
     <Button
       role="listitem"
@@ -145,13 +155,13 @@ function InboxRow({ patient, selected, onSelect }: { patient: PatientWithCount; 
         boxShadow: urgent ? `inset 3px 0 0 var(--${status.color}-9)` : undefined,
       }}
     >
-      <Flex justify="between" align="baseline" gap="2">
+      <Flex justify="between" align="center" gap="2">
         <Text size="2" weight={urgent || selected ? "bold" : "regular"} truncate>
           {patient.name}
         </Text>
-        <Text size="1" color="gray" style={{ whiteSpace: "nowrap" }}>
-          {formatSince(patient.lastDictationAt)}
-        </Text>
+        <Badge color={CRITICALITY_META[patient.criticality].color} variant={patient.criticality === "critical" ? "solid" : "soft"} size="1">
+          {patient.criticality === "unknown" ? "Sin clasificar" : patient.criticalityLabel}
+        </Badge>
       </Flex>
       <Flex align="center" gap="1" mt="1">
         <Text size="1" color="gray">
@@ -162,9 +172,40 @@ function InboxRow({ patient, selected, onSelect }: { patient: PatientWithCount; 
           <Text size="1" color={status.color ?? "gray"} weight={urgent ? "medium" : "regular"}>
             ·{" "}
             {patient.inboxStatus === "processing" && <Spinner size="1" style={{ display: "inline-block", marginRight: 4 }} />}
-            {status.label}
+            {patient.inboxStatus === "processing" && patient.processingLabel
+              ? `${patient.processingLabel} · ${patient.processingStep}/${PROCESSING_STEPS}`
+              : status.label}
           </Text>
         )}
+      </Flex>
+      {patient.openConflicts > 0 && (
+        <Flex mt="2">
+          <Badge color="orange" variant={patient.myOpenConflicts > 0 ? "solid" : "soft"} size="1">
+            ⚠ {patient.openConflicts} {patient.openConflicts === 1 ? "conflicto" : "conflictos"}
+            {patient.myOpenConflicts === 0 && " · de otros"}
+          </Badge>
+        </Flex>
+      )}
+      <Flex justify="between" align="center" gap="2" mt="2">
+        <Flex direction="column">
+          <Text size="1" color={visit.color} weight={visit.bold ? "bold" : "regular"}>
+            {patient.visitPriorityLabel}
+          </Text>
+          <Text size="1" color="gray">
+            Última visita: {formatLastVisit(patient.lastDictationAt)}
+          </Text>
+        </Flex>
+        <Tooltip content={`${patient.pendingTasks} ${patient.pendingTasks === 1 ? "tarea pendiente" : "tareas pendientes"}`}>
+          <Badge
+            color={patient.pendingTasks > 0 ? "amber" : "gray"}
+            variant={patient.pendingTasks > 0 ? "solid" : "soft"}
+            radius="full"
+            size="2"
+            aria-label={`${patient.pendingTasks} tareas pendientes`}
+          >
+            {patient.pendingTasks}
+          </Badge>
+        </Tooltip>
       </Flex>
     </Button>
   );
@@ -214,10 +255,12 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
     <Flex direction="column" gap="4">
       <PatientHeader patient={patient} />
       <ProcessingNotice patient={patient} />
+      <ConflictNotice patient={patient} />
       {toValidate.map((report) => (
         <ValidationPrompt key={report.id} report={report} onOpen={() => openReport(report.id)} />
       ))}
       <PatientSummaryView patientId={patient.id} onOpenReports={() => setHistoryOpen(true)} />
+      <EvidencePanel patientId={patient.id} />
       <CollapsibleSection title="Historial de informes" detail={String(reports.length)} open={historyOpen}>
         <ReportHistory reports={reports} onOpen={openReport} />
       </CollapsibleSection>
@@ -289,6 +332,31 @@ function RecordDialog({ patient }: { patient: PatientWithCount }) {
   );
 }
 
+/** Aviso de los conflictos abiertos del paciente, con un acceso directo a resolverlos. */
+function ConflictNotice({ patient }: { patient: PatientWithCount }) {
+  const { data: reconciliations = [] } = useReconciliations();
+  if (patient.openConflicts === 0) return null;
+  const open = reconciliations.find((item) => item.patientId === patient.id && item.status === "open");
+  const mine = patient.myOpenConflicts;
+  return (
+    <Callout.Root color="orange">
+      <Flex align="center" justify="between" gap="3" wrap="wrap" style={{ width: "100%" }}>
+        <Callout.Text>
+          <strong>
+            {patient.openConflicts} {patient.openConflicts === 1 ? "conflicto" : "conflictos"} entre informes por resolver
+          </strong>
+          {mine > 0 ? ` (${mine} ${mine === 1 ? "es tuyo" : "son tuyos"}).` : ": los resuelven quienes los reportaron."}
+        </Callout.Text>
+        <Link to="/reconciliation" search={open ? { id: open.id } : {}}>
+          <Button size="1" color="orange" variant={mine > 0 ? "solid" : "soft"}>
+            {mine > 0 ? "Resolver" : "Ver"}
+          </Button>
+        </Link>
+      </Flex>
+    </Callout.Root>
+  );
+}
+
 function ProcessingNotice({ patient }: { patient: PatientWithCount }) {
   const retry = useRetryTranscription();
   const queryClient = useQueryClient();
@@ -299,7 +367,14 @@ function ProcessingNotice({ patient }: { patient: PatientWithCount }) {
         <Callout.Icon>
           <Spinner size="1" />
         </Callout.Icon>
-        <Callout.Text>Procesando tu último dictado. Cuando el informe esté listo aparecerá aquí para validarlo.</Callout.Text>
+        <Flex direction="column" gap="2" style={{ width: "100%" }}>
+          <Callout.Text>
+            <strong>{patient.processingLabel ?? "Procesando tu último dictado"}</strong>
+            {patient.processingStep !== null && ` · etapa ${patient.processingStep} de ${PROCESSING_STEPS}`}. Cuando el
+            informe esté listo aparecerá aquí para validarlo.
+          </Callout.Text>
+          {patient.processingStep !== null && <Progress value={patient.processingStep} max={PROCESSING_STEPS} size="1" />}
+        </Flex>
       </Callout.Root>
     );
   }

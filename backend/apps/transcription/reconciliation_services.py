@@ -26,7 +26,7 @@ from apps.agent.llm import ChatMessage
 from apps.clinical_templates.models import ClinicalTemplate
 from apps.users import shifts
 
-from . import consolidation_services, extraction_services, pipeline_cache
+from . import consolidation_services, evidence_services, extraction_services, pipeline_cache
 from .models import (
     Conflict,
     ConflictNote,
@@ -85,6 +85,7 @@ def open_reconciliation(
             conflict,
             "El agente detectó este choque entre los informes y avisó a los implicados.",
         )
+    send_anonymized_if_needed(reconciliation)
     # El agente ya orientó con reglas; el modelo la afina en segundo plano (si está disponible).
     transaction.on_commit(lambda: _enqueue_guidance(reconciliation.id))
     return reconciliation
@@ -319,12 +320,58 @@ def external_candidate(conflict: Conflict) -> Any | None:
     profession = guidance.get("external_profession")
     taken = _authors(conflict)
     on_duty = shifts.users_on_shift().exclude(pk__in=taken)
-    if profession:
-        match = on_duty.filter(profession=profession).order_by("id").first()
+    # Se prefiere a alguien ajeno al equipo del paciente: aporta una mirada externa.
+    patient = conflict.reconciliation.patient
+    outside = on_duty.exclude(pk__in=patient.assigned_to.values("pk"))
+    for pool in (outside, on_duty):
+        if profession:
+            match = pool.filter(profession=profession).order_by("id").first()
+            if match:
+                return match
+    # Sin nadie de esa categoría de turno: un especialista o médico de turno que no esté implicado.
+    for pool in (outside, on_duty):
+        match = pool.filter(profession__in=["especialista", "medico"]).order_by("id").first()
         if match:
             return match
-    # Sin nadie de esa categoría de turno: un especialista o médico de turno que no esté implicado.
-    return on_duty.filter(profession__in=["especialista", "medico"]).order_by("id").first()
+    return None
+
+
+def send_anonymized_if_needed(reconciliation: Reconciliation) -> None:
+    """Si un involucrado ya está fuera de turno, el caso conceptual sale anonimizado a un tercero.
+
+    Sin los dos profesionales no hay consenso posible: el agente pide, sin esperar a nadie, la
+    opinión del profesional de turno que corresponde, con el caso sin datos identificatorios.
+    Es idempotente: no repite una consulta ya enviada.
+    """
+    for conflict in reconciliation.conflicts.all():
+        if conflict.status != Conflict.Status.OPEN or conflict.kind not in CONCEPTUAL_KINDS:
+            continue
+        if conflict.consults.exists():
+            continue
+        absent = [author for author in sorted(_authors(conflict)) if not _on_shift(author)]
+        consultant = external_candidate(conflict) if absent else None
+        if consultant is None:
+            continue
+        present = [author for author in sorted(_authors(conflict)) if author not in absent]
+        requester_id = (present or absent)[0]
+        names = ", ".join(_participant_name(conflict, author) for author in absent)
+        ExternalConsult.objects.create(
+            conflict=conflict,
+            requested_by_id=requester_id,
+            consultant=consultant,
+            brief=anonymized_brief(conflict),
+        )
+        _system_note(
+            conflict,
+            f"{names} está fuera de turno y no puede participar: el agente envió el caso "
+            f"anonimizado a {PROFESSION_NAMES.get(consultant.profession, 'otro profesional')} "
+            "de turno para apoyar la decisión.",
+        )
+
+
+def _participant_name(conflict: Conflict, author_id: int) -> str:
+    side = conflict.side_a if conflict.side_a["authorId"] == author_id else conflict.side_b
+    return side["authorName"]
 
 
 def request_external(conflict: Conflict, user) -> ExternalConsult:
@@ -409,10 +456,26 @@ def anonymized_brief(conflict: Conflict) -> str:
             "Contexto clínico del paciente:",
             *(f"- {anonymize(c, patient, names)}" for c in context),
         ]
+    exams = _exam_lines(conflict, patient, names)
+    if exams:
+        lines += ["Exámenes relevantes (sin datos identificatorios):", *(f"- {e}" for e in exams)]
     if notes:
         lines += ["Razones que dejaron los profesionales:", *notes]
     lines.append("¿Qué opinión te merece? Responde con tu criterio clínico.")
     return "\n".join(lines)
+
+
+def _exam_lines(conflict: Conflict, patient, names: list[str]) -> list[str]:
+    """Exámenes relacionados con el conflicto, o los más recientes si ninguno se relaciona.
+
+    Para un tercero se anonimizan: sin nombre, RUT ni códigos de muestra, y con tiempos relativos.
+    """
+    rows = evidence_services.related_results(patient, _conflict_terms(conflict))
+    lines = evidence_services.anonymized_lines(
+        patient, rows or evidence_services.recent_summary(patient), names
+    )
+    findings = evidence_services.recent_findings(patient)
+    return [*lines, *evidence_services.anonymized_findings(patient, findings, names)]
 
 
 def _clinical_context(conflict: Conflict) -> list[str]:
@@ -607,6 +670,8 @@ def _on_shift(user_id: int) -> bool:
 def _require_can_act(conflict: Conflict, user) -> None:
     """Solo participan de la resolución los implicados que están de turno."""
     _require_participant(conflict, user)
+    if not _can_view(conflict.reconciliation, user):
+        raise ReconciliationError("Este paciente ya no está asignado a tu cuenta.")
     if not _on_shift(user.id):
         raise ReconciliationError("Estás fuera de turno: no puedes participar de la resolución.")
 
@@ -696,6 +761,8 @@ class GuidanceOut(BaseModel):
     externalReason: str
     # El profesional de turno que el sistema eligió para la opinión externa (si hay alguien).
     externalCandidate: ExternalCandidateOut | None
+    # Exámenes relacionados con el conflicto (p. ej. glicemia en un conflicto de insulina).
+    evidence: list[str]
 
 
 class ParticipantShift(BaseModel):
@@ -756,36 +823,56 @@ class ExternalConsultOut(BaseModel):
 
 
 def list_reconciliations(user) -> list[ReconciliationOut]:
-    """Las reconciliaciones donde participas o de los pacientes que tienes asignados."""
-    return [
-        to_reconciliation_out(reconciliation, user)
-        for reconciliation in _reconciliations().all()
-        if _can_view(reconciliation, user)
-    ]
+    """Las reconciliaciones de los pacientes que tienes asignados."""
+    visible = [r for r in _reconciliations().all() if _can_view(r, user)]
+    for reconciliation in visible:
+        send_anonymized_if_needed(reconciliation)
+    return [to_reconciliation_out(reconciliation, user) for reconciliation in visible]
+
+
+def open_conflict_counts(user, patient_ids: list[int]) -> dict[int, tuple[int, int]]:
+    """Por paciente: conflictos abiertos y cuántos de ellos son tuyos (reportaste uno de los lados).
+
+    Para la bandeja «Mis pacientes»; los pacientes se suponen ya asignados al profesional.
+    """
+    counts = {patient_id: [0, 0] for patient_id in patient_ids}
+    conflicts = Conflict.objects.filter(
+        status=Conflict.Status.OPEN, reconciliation__patient_id__in=patient_ids
+    ).select_related("reconciliation")
+    for conflict in conflicts:
+        entry = counts[conflict.reconciliation.patient_id]
+        entry[0] += 1
+        entry[1] += int(_is_participant(conflict, user))
+    return {patient_id: (total, mine) for patient_id, (total, mine) in counts.items()}
 
 
 def get_reconciliation(user, reconciliation_id: int) -> ReconciliationOut | None:
     reconciliation = _reconciliations().filter(pk=reconciliation_id).first()
     if reconciliation is None or not _can_view(reconciliation, user):
         return None
+    send_anonymized_if_needed(reconciliation)
     return to_reconciliation_out(reconciliation, user)
 
 
 def _can_view(reconciliation: Reconciliation, user) -> bool:
-    """Ven la reconciliación sus participantes y el equipo asignado al paciente (solo lectura)."""
-    if reconciliation.patient.assigned_to.filter(pk=user.pk).exists():
-        return True
-    return any(_is_participant(c, user) for c in reconciliation.conflicts.all())
+    """Solo los profesionales que tienen asignado al paciente ven sus conflictos.
+
+    Participar no basta: si el paciente se traspasó a otra persona, quien lo entregó deja de
+    verlo. Un tercero (p. ej. quien da una opinión externa) solo recibe la versión anonimizada.
+    """
+    return reconciliation.patient.assigned_to.filter(pk=user.pk).exists()
 
 
 def get_conflict(user, conflict_id: int) -> Conflict | None:
-    """El conflicto, si participas en él."""
+    """El conflicto, si participas en él y tienes asignado al paciente."""
     conflict = (
         Conflict.objects.select_related("reconciliation__patient", "reconciliation__report")
         .filter(pk=conflict_id)
         .first()
     )
-    return conflict if conflict and _is_participant(conflict, user) else None
+    if conflict is None or not _is_participant(conflict, user):
+        return None
+    return conflict if _can_view(conflict.reconciliation, user) else None
 
 
 def _consults_for(user):
@@ -899,7 +986,26 @@ def _guidance_out(conflict: Conflict) -> GuidanceOut | None:
             if candidate
             else None
         ),
+        evidence=_relevant_evidence(conflict),
     )
+
+
+def _conflict_terms(conflict: Conflict) -> list[str]:
+    """Los fármacos o términos del conflicto con los que se buscan exámenes relacionados."""
+    return [conflict.label, conflict.side_a["value"], conflict.side_b["value"]]
+
+
+def _relevant_evidence(conflict: Conflict) -> list[str]:
+    """Exámenes relacionados con el conflicto, para quienes lo resuelven (identificados)."""
+    rows = evidence_services.related_results(
+        conflict.reconciliation.patient, _conflict_terms(conflict)
+    )
+    return [
+        f"{r['name']} {r['value']} {r['unit']}".strip()
+        + {"high": " (alto)", "low": " (bajo)"}.get(r["flag"], "")
+        + f" · {timezone.localtime(r['takenAt']):%d/%m %H:%M}"
+        for r in rows
+    ]
 
 
 def _participants_shift(conflict: Conflict) -> list[ParticipantShift]:
