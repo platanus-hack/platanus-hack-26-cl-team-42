@@ -12,7 +12,6 @@ import {
   TextArea,
   TextField,
 } from "@radix-ui/themes";
-import { CollapsibleSection } from "../../components/CollapsibleSection";
 import {
   EVIDENCE_KIND_LABEL,
   useAddEvidence,
@@ -23,49 +22,38 @@ import {
 } from "./api";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });
-const FLAG_COLOR: Record<EvidenceResult["flag"], "red" | "blue" | "green" | "gray"> = {
-  high: "red",
-  low: "blue",
-  normal: "green",
-  "": "gray",
-};
 const FLAG_MARK: Record<EvidenceResult["flag"], string> = { high: " ↑", low: " ↓", normal: "", "": "" };
 
 /** Evidencia del paciente además de los dictados: se cruza con los informes al validarlos. */
 export function EvidencePanel({ patientId }: { patientId: number }) {
-  const { data: items = [], isPending } = useEvidence(patientId);
-  const abnormal = items.flatMap((item) => item.results).filter((result) => result.flag === "high" || result.flag === "low");
+  const { data: items, isPending } = useEvidence(patientId);
 
   return (
-    <CollapsibleSection
-      title="Evidencia (exámenes)"
-      detail={`${items.length}`}
-      badge={abnormal.length > 0 ? { label: `${abnormal.length} fuera de rango`, color: "amber" } : undefined}
-    >
-      <Flex direction="column" gap="3">
-        <Flex justify="between" align="center" gap="3" wrap="wrap">
-          <Text size="1" color="gray">
-            Al registrar un informe se revisa si contradice estos resultados y se avisa al validarlo.
-          </Text>
-          <AddEvidenceDialog patientId={patientId} />
-        </Flex>
-        {isPending ? (
-          <Skeleton height="60px" />
-        ) : items.length === 0 ? (
-          <Text size="2" color="gray">
-            Aún no hay exámenes cargados para este paciente.
-          </Text>
-        ) : (
-          items.map((item) => <EvidenceRow key={item.id} item={item} />)
-        )}
+    <Flex direction="column" gap="3">
+      <Flex justify="between" align="center" gap="3" wrap="wrap">
+        <Text size="1" color="gray">
+          Al registrar un informe se revisa si contradice estos resultados y se avisa al validarlo.
+        </Text>
+        <AddEvidenceDialog patientId={patientId} />
       </Flex>
-    </CollapsibleSection>
+      {isPending ? (
+        <Skeleton height="60px" />
+      ) : !items ? (
+        <Text size="2" color="gray">No se pudieron cargar los exámenes.</Text>
+      ) : items.length === 0 ? (
+        <Text size="2" color="gray">
+          Aún no hay exámenes cargados para este paciente.
+        </Text>
+      ) : (
+        items.map((item) => <EvidenceRow key={item.id} item={item} />)
+      )}
+    </Flex>
   );
 }
 
 function EvidenceRow({ item }: { item: EvidenceItem }) {
   return (
-    <Flex direction="column" gap="1" p="2" style={{ borderRadius: "var(--radius-3)", background: "var(--gray-a2)" }}>
+    <Flex id={`evidence-${item.id}`} tabIndex={-1} direction="column" gap="1" p="2" style={{ borderRadius: "var(--radius-3)", background: "var(--gray-a2)" }}>
       <Flex align="center" gap="2" wrap="wrap">
         <Text size="2" weight="medium">
           {item.title}
@@ -80,7 +68,7 @@ function EvidenceRow({ item }: { item: EvidenceItem }) {
       {item.results.length > 0 && (
         <Flex gap="2" wrap="wrap">
           {item.results.map((result) => (
-            <Badge key={result.name} color={FLAG_COLOR[result.flag]} variant={result.flag === "high" || result.flag === "low" ? "solid" : "soft"}>
+            <Badge key={result.name} color={FLAG_MARK[result.flag] ? "amber" : "gray"} variant="soft">
               {result.name} {result.value} {result.unit}
               {FLAG_MARK[result.flag]}
             </Badge>

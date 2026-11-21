@@ -437,7 +437,7 @@ def test_abnormal_findings_prioritize_mortality_scales_and_labs():
 
     user = get_user_model().objects.create_user(email="ab@example.com", password="x")
     patient = Patient.objects.create(name="Paciente", identifier="9-9", bed="1")
-    Evidence.objects.create(
+    evidence = Evidence.objects.create(
         patient=patient,
         kind="lab",
         title="Lab",
@@ -480,12 +480,23 @@ def test_abnormal_findings_prioritize_mortality_scales_and_labs():
             {"nombre": "Glasgow", "puntaje": 15},
         ]
     }
-    found = abnormal_findings(patient, data)
+    found = abnormal_findings(
+        patient,
+        data,
+        provenance={"escalas::sofa": 17},
+        visible_report_ids={17},
+    )
     assert [(f.name, f.severity, f.mortality) for f in found] == [
         ("SOFA", "critical", True),
         ("Lactato", "critical", True),
         ("Glucosa", "moderate", False),
     ]
+    assert [(f.evidenceId, f.reportId) for f in found] == [
+        (None, "17"),
+        (evidence.id, None),
+        (evidence.id, None),
+    ]
+    assert abnormal_findings(patient, data, provenance={"escalas::sofa": 17})[0].reportId is None
 
 
 def test_key_points_flag_let_cpr_and_allergies():

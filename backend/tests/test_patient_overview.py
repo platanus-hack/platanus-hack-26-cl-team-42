@@ -18,6 +18,7 @@ from apps.transcription.models import (
     Report,
     Transcription,
 )
+from apps.transcription.tasks import generate_patient_synthesis
 
 API_URL = f"/{settings.URL_PREFIX}/api/patients"
 User = get_user_model()
@@ -94,15 +95,20 @@ def test_overview_without_a_version_is_empty(doctor, patient):
     assert overview.areas == []
 
 
-def test_model_writes_the_global_summary_and_each_area(monkeypatch, doctor, patient, version):
+def test_model_writes_the_global_summary_and_each_area(
+    monkeypatch, doctor, patient, version, synthesis_jobs
+):
     _model(monkeypatch, MODEL_REPLY)
 
+    summary_services.patient_overview(doctor, patient)
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
     overview = summary_services.patient_overview(doctor, patient)
     areas = _by_area(overview)
 
     assert overview.version == 1
     assert overview.globalSummary == MODEL_REPLY["resumen_global"]
     assert areas["Respiratorio"].summary == "Ventilación mecánica con FiO2 40 %."
+    assert "Noradrenalina" in areas["Hemodinamia"].summary
     assert areas["Respiratorio"].informed is True
     assert areas["Nutrición"].summary == ""
     assert areas["Nutrición"].informed is False
@@ -126,26 +132,60 @@ def test_others_is_left_out_when_nothing_is_unplaced(monkeypatch, doctor, patien
     assert "Otros" not in _by_area(summary_services.patient_overview(doctor, patient))
 
 
-def test_the_second_request_is_served_from_the_cache(monkeypatch, doctor, patient, version):
+def test_overview_returns_available_data_before_running_one_job(
+    monkeypatch, doctor, patient, version, synthesis_jobs
+):
     calls = _model(monkeypatch, MODEL_REPLY)
 
     first = summary_services.patient_overview(doctor, patient)
     second = summary_services.patient_overview(doctor, patient)
 
     assert first == second
+    assert first.synthesisPending is True
+    assert first.globalSummary == DATA["resumen_24h"]
+    assert "VMI" in _by_area(first)["Respiratorio"].summary
+    assert calls == []
+    assert len(synthesis_jobs) == 1
+
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
+    third = summary_services.patient_overview(doctor, patient)
+
+    assert third.synthesisPending is False
+    assert third.globalSummary == MODEL_REPLY["resumen_global"]
+    assert synthesis_jobs == []
     assert len(calls) == 1
 
 
-def test_without_a_model_the_areas_are_written_by_hand(monkeypatch, doctor, patient, version):
+def test_without_a_model_the_areas_are_written_by_hand(
+    monkeypatch, doctor, patient, version, synthesis_jobs
+):
     _model(monkeypatch, error=ValueError("sin modelo"))
 
+    summary_services.patient_overview(doctor, patient)
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
     overview = summary_services.patient_overview(doctor, patient)
     areas = _by_area(overview)
 
     assert overview.globalSummary == "Paciente estable, sin novedades."
+    assert overview.synthesisPending is False
     assert "Noradrenalina" in areas["Hemodinamia"].summary
     assert "VMI" in areas["Respiratorio"].summary
     assert "Control de lactato" in areas["Plan y pendientes"].summary
+
+
+def test_overview_stops_polling_when_the_worker_does_not_run(
+    monkeypatch, doctor, patient, version, synthesis_jobs
+):
+    monkeypatch.setattr(summary_services, "time", lambda: 100)
+    assert summary_services.patient_overview(doctor, patient).synthesisPending is True
+
+    expires_at = 100 + summary_services.SYNTHESIS_PENDING_TTL
+    monkeypatch.setattr(summary_services, "time", lambda: expires_at)
+    overview = summary_services.patient_overview(doctor, patient)
+
+    assert overview.synthesisPending is False
+    assert overview.globalSummary == DATA["resumen_24h"]
+    assert len(synthesis_jobs) == 1
 
 
 def test_endpoint_returns_the_overview_of_an_assigned_patient(
@@ -159,7 +199,7 @@ def test_endpoint_returns_the_overview_of_an_assigned_patient(
 
     assert response.status_code == 200, response.content
     body = response.json()
-    assert body["globalSummary"] == MODEL_REPLY["resumen_global"]
+    assert body["globalSummary"] == DATA["resumen_24h"]
     assert {area["area"] for area in body["areas"]} >= {"Hemodinamia", "Respiratorio"}
 
 
@@ -240,7 +280,9 @@ def test_contributors_are_professions_not_people(monkeypatch, doctor, patient, v
     assert "EU Soto" not in dumped and "Klgo" not in dumped and "Dr. Rojas" not in dumped
 
 
-def test_the_model_never_receives_professional_names(monkeypatch, doctor, patient, version):
+def test_the_model_never_receives_professional_names(
+    monkeypatch, doctor, patient, version, synthesis_jobs
+):
     version.data = {**DATA, "metadatos": {**DATA["metadatos"], "nombre_profesional": "Dr. Rojas"}}
     version.save()
     seen: list[str] = []
@@ -252,6 +294,7 @@ def test_the_model_never_receives_professional_names(monkeypatch, doctor, patien
     monkeypatch.setattr(extraction_services, "complete_json", complete_json)
 
     summary_services.patient_overview(doctor, patient)
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
 
     sent = "\n".join(seen)
     assert "Dr. Rojas" not in sent and "nombre_profesional" not in sent

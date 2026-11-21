@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../../services/api/client";
+import { patientKeys } from "../patients/api";
 import { reportKeys } from "../reports/api";
 
 // Evidencia clínica del paciente además de los dictados: exámenes, imágenes, cultivos…
@@ -66,6 +67,7 @@ export function useAddEvidence(patientId: number) {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: evidenceKeys });
+      void queryClient.invalidateQueries({ queryKey: [...patientKeys, patientId] });
       // Los informes por validar del paciente se revisan de nuevo con la evidencia nueva.
       void queryClient.invalidateQueries({ queryKey: reportKeys });
     },

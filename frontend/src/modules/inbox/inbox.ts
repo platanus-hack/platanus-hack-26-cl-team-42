@@ -1,55 +1,82 @@
-import type { InboxStatus, PatientCriticality, PatientWithCount, VisitPriority } from "../patients/api";
+import { PROCESSING_STEPS, type PatientWithCount } from "../patients/api";
 
-// Reglas de la bandeja «Mis pacientes»: orden y cómo se nombra cada estado.
+// Reglas de la bandeja «Mis pacientes»: orden de la lista y señales de cada paciente.
 
-interface InboxStatusMeta {
-  label: string;
-  /** Solo lo que requiere acción lleva color. */
-  color: "red" | "amber" | "gray" | undefined;
-  /** Prioridad en la bandeja: menor va primero. */
-  rank: number;
+/** Nivel de atención: define el color de la fila. */
+export type InboxTier = "urgent" | "review" | "processing" | "ok" | "no_data";
+
+export type TierColor = "red" | "amber" | "green" | "gray";
+
+interface InboxTierMeta {
+  /** Rojo: urgencia clínica; ámbar: gestión pendiente; verde: al día; gris: sin datos o en proceso. */
+  color: TierColor;
+  /** Insignia cuando el paciente no tiene ninguna señal propia. */
+  badge: string;
 }
 
-export const INBOX_STATUS: Record<InboxStatus, InboxStatusMeta> = {
-  review: { label: "Por validar", color: "amber", rank: 0 },
-  failed: { label: "Error al procesar", color: "red", rank: 1 },
-  processing: { label: "Procesando…", color: "gray", rank: 2 },
-  up_to_date: { label: "Al día", color: undefined, rank: 3 },
+const INBOX_TIERS: Record<InboxTier, InboxTierMeta> = {
+  urgent: { color: "red", badge: "Urgente" },
+  review: { color: "amber", badge: "Por revisar" },
+  processing: { color: "gray", badge: "Procesando" },
+  ok: { color: "green", badge: "Al día" },
+  no_data: { color: "gray", badge: "Sin datos" },
 };
 
-export const CRITICALITY_META: Record<PatientCriticality, { color: "red" | "orange" | "amber" | "green" | "gray" }> = {
-  critical: { color: "red" },
-  high: { color: "orange" },
-  moderate: { color: "amber" },
-  stable: { color: "green" },
-  unknown: { color: "gray" },
-};
+/** Una señal del paciente; la primera define la insignia y las siguientes van en el subtítulo. */
+export interface InboxSignal {
+  text: string;
+  color: TierColor;
+  processing?: boolean;
+}
 
-export const VISIT_META: Record<VisitPriority, { color: "red" | "amber" | "gray"; bold: boolean }> = {
-  now: { color: "red", bold: true },
-  soon: { color: "amber", bold: true },
-  ok: { color: "gray", bold: false },
-  unknown: { color: "gray", bold: false },
-};
+export interface InboxRowState {
+  tier: InboxTier;
+  color: TierColor;
+  badge: InboxSignal;
+  /** Hasta dos señales más (o, si no hay, lo informativo), para el subtítulo. */
+  secondary: string[];
+}
+
+/** El nivel de un paciente: primero la urgencia clínica, luego lo que te toca gestionar. */
+export function inboxTier(patient: PatientWithCount): InboxTier {
+  if (patient.criticality === "critical" || patient.visitPriority === "now") return "urgent";
+  if (
+    patient.inboxStatus === "review" ||
+    patient.inboxStatus === "failed" ||
+    patient.myOpenConflicts > 0 ||
+    patient.visitPriority === "soon" ||
+    patient.criticality === "high"
+  ) {
+    return "review";
+  }
+  if (patient.inboxStatus === "processing") return "processing";
+  if (patient.criticality === "unknown") return "no_data";
+  return "ok";
+}
 
 /**
- * Primero lo que requiere acción; dentro de cada grupo, los pacientes con conflictos tuyos por
- * resolver, luego lo más urgente de visitar (criticidad y tiempo sin verlo) y, a igualdad, por
- * cama y luego por nombre.
+ * Cómo se ve la fila: el color lo pone el nivel y la insignia, la señal más importante. Una segunda
+ * señal (p. ej. «Por validar» en un paciente crítico) no se pierde: pasa al subtítulo.
  */
-export function sortInbox(patients: readonly PatientWithCount[]): PatientWithCount[] {
-  return [...patients].sort(
-    (a, b) =>
-      INBOX_STATUS[a.inboxStatus].rank - INBOX_STATUS[b.inboxStatus].rank ||
-      b.myOpenConflicts - a.myOpenConflicts ||
-      b.priorityScore - a.priorityScore ||
-      a.bed.localeCompare(b.bed, "es", { numeric: true }) ||
-      a.name.localeCompare(b.name, "es"),
-  );
+export function inboxRowState(patient: PatientWithCount, now: Date = new Date()): InboxRowState {
+  const tier = inboxTier(patient);
+  const { color, badge } = INBOX_TIERS[tier];
+  const [first, ...rest] = signalsOf(patient);
+  const secondary = rest.slice(0, 2).map((signal) => signal.text);
+  if (secondary.length === 0) secondary.push(...contextOf(patient, tier, now));
+  return { tier, color, badge: first ?? { text: badge, color }, secondary };
 }
 
-export function needsAction(status: InboxStatus): boolean {
-  return status === "review" || status === "failed";
+/** Orden por cama y nombre, con los pacientes sin cama al final. */
+export function sortInbox(patients: readonly PatientWithCount[]): PatientWithCount[] {
+  return [...patients].sort((a, b) => {
+    const firstBed = a.bed.trim();
+    const secondBed = b.bed.trim();
+    return Number(!firstBed) - Number(!secondBed) ||
+      firstBed.localeCompare(secondBed, "es", { numeric: true }) ||
+      a.name.localeCompare(b.name, "es") ||
+      a.id - b.id;
+  });
 }
 
 /** «53 min», «2 h»… o «Sin visitas» si ningún profesional lo ha visto aún. */
@@ -67,4 +94,37 @@ export function formatSince(iso: string | null, now: Date = new Date()): string 
   if (hours < 24) return `${hours} h`;
   const days = Math.floor(hours / 24);
   return days === 1 ? "Ayer" : `${days} d`;
+}
+
+/** Todas las señales que aplican, de la más a la menos importante. */
+function signalsOf(patient: PatientWithCount): InboxSignal[] {
+  const signals: (InboxSignal | false)[] = [
+    patient.criticality === "critical" && { text: "Crítico", color: "red" },
+    patient.visitPriority === "now" && { text: patient.visitPriorityLabel || "Visitar ahora", color: "red" },
+    patient.inboxStatus === "failed" && { text: "Error al procesar", color: "amber" },
+    patient.inboxStatus === "review" && { text: "Por validar", color: "amber" },
+    patient.myOpenConflicts > 0 && {
+      text: patient.myOpenConflicts === 1 ? "1 conflicto tuyo" : `${patient.myOpenConflicts} conflictos tuyos`,
+      color: "amber",
+    },
+    patient.visitPriority === "soon" && { text: patient.visitPriorityLabel || "Visitar pronto", color: "amber" },
+    patient.criticality === "high" && { text: "Criticidad alta", color: "amber" },
+    patient.inboxStatus === "processing" && {
+      text: patient.processingLabel ? `${patient.processingLabel} ${patient.processingStep ?? 0}/${PROCESSING_STEPS}` : "Procesando…",
+      color: "gray",
+      processing: true,
+    },
+  ];
+  return signals.filter((signal): signal is InboxSignal => signal !== false);
+}
+
+/** Lo informativo, para el subtítulo de un paciente sin otras señales. */
+function contextOf(patient: PatientWithCount, tier: InboxTier, now: Date): string[] {
+  if (tier === "no_data") return ["Sin informe oficial"];
+  const visit = patient.lastDictationAt ? `Última visita ${formatSince(patient.lastDictationAt, now)}` : "Sin visitas";
+  const tasks = patient.pendingTasks > 0 ? `${patient.pendingTasks} ${patient.pendingTasks === 1 ? "pendiente" : "pendientes"}` : null;
+  const criticality = patient.criticality !== "unknown" && patient.criticality !== "critical" && patient.criticality !== "high"
+    ? patient.criticalityLabel
+    : null;
+  return [criticality, visit, tasks].filter((item): item is string => item !== null).slice(0, 2);
 }

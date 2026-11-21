@@ -20,3 +20,21 @@ import pytest  # noqa: E402
 def isolated_pipeline_cache(tmp_path, monkeypatch):
     """Los tests nunca leen ni escriben la caché real del pipeline (samples/cache)."""
     monkeypatch.setenv("PIPELINE_CACHE_DIR", str(tmp_path / "pipeline-cache"))
+
+
+@pytest.fixture(autouse=True)
+def synthesis_jobs(settings, monkeypatch, tmp_path):
+    from apps.transcription.tasks import generate_patient_synthesis
+
+    settings.CACHES = {
+        **settings.CACHES,
+        "patient_summaries": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": str(tmp_path),
+        },
+    }
+    queued = []
+    monkeypatch.setattr(
+        generate_patient_synthesis, "apply_async", lambda *, args, **kw: queued.append(args)
+    )
+    return queued

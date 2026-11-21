@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
-import { Badge, Button, Callout, Card, Flex, Grid, Heading, Text, TextArea } from "@radix-ui/themes";
+import { useCallback, useEffect, useState } from "react";
+import { Badge, Box, Button, Callout, Card, Flex, Grid, Heading, Text, TextArea } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
+import { SelectableListItem } from "../../components/SelectableListItem";
 import { EmptyState } from "../../components/EmptyState";
 import { Toast, type ToastMessage } from "../../components/Toast";
 import { ConflictCard } from "./ConflictCard";
@@ -9,14 +10,23 @@ import { useIncomingConsults, useReconciliations, useReplyConsult, type Incoming
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });
 
-export function ReconciliationPage({ reconciliationId }: { reconciliationId?: string }) {
+export function ReconciliationPage({ reconciliationId, conflictId }: { reconciliationId?: string; conflictId?: string }) {
   const { data: reconciliations = [], isPending, isError, error } = useReconciliations();
   const { data: consults = [] } = useIncomingConsults();
-  const [selectedId, setSelectedId] = useState<string | undefined>(reconciliationId);
+  const [selectedId, setSelectedId] = useState<string>();
   const open = reconciliations.filter((item) => item.status === "open");
   const selected =
-    reconciliations.find((item) => item.id === selectedId) ?? open[0] ?? reconciliations[0];
+    reconciliations.find((item) => item.id === selectedId) ??
+    reconciliations.find((item) => item.conflicts.some((conflict) => conflict.id === conflictId)) ??
+    reconciliations.find((item) => item.id === reconciliationId) ?? open[0] ?? reconciliations[0];
   const [toast, closeToast] = useVersionToast(selected);
+  const focused = selectedId === undefined && selected?.conflicts.some((conflict) => conflict.id === conflictId);
+  useEffect(() => {
+    if (!focused) return;
+    const target = document.getElementById(`conflict-${conflictId}`);
+    target?.scrollIntoView({ block: "center" });
+    target?.focus({ preventScroll: true });
+  }, [focused, conflictId]);
 
   return (
     <ModulePage stepId="reconciliation" connected>
@@ -48,9 +58,14 @@ export function ReconciliationPage({ reconciliationId }: { reconciliationId?: st
         />
         )
       ) : (
-        <Grid columns={{ initial: "1", md: "240px 1fr" }} gap="4" align="start">
-          <Flex direction="column" gap="2">
-            <Heading size="3">Reconciliaciones</Heading>
+        <Grid columns={{ initial: "1", md: "280px 1fr" }} gap="5" align="start">
+          <Flex direction="column" gap="2" role="list" aria-label="Reconciliaciones">
+            <Heading size="3" as="h2">
+              Reconciliaciones{" "}
+              <Text size="2" color="gray" weight="regular">
+                {reconciliations.length}
+              </Text>
+            </Heading>
             {reconciliations.map((item) => (
               <ReconciliationItem
                 key={item.id}
@@ -63,7 +78,9 @@ export function ReconciliationPage({ reconciliationId }: { reconciliationId?: st
           {selected && (
             <Flex direction="column" gap="3" style={{ minWidth: 0 }}>
               {selected.conflicts.map((conflict) => (
-                <ConflictCard key={conflict.id} conflict={conflict} patientId={selected.patientId} reportId={selected.reportId} />
+                <Box key={conflict.id} id={`conflict-${conflict.id}`} tabIndex={-1}>
+                  <ConflictCard conflict={conflict} patientId={selected.patientId} reportId={selected.reportId} />
+                </Box>
               ))}
             </Flex>
           )}
@@ -115,36 +132,16 @@ function ReconciliationItem({
 }) {
   const resolved = reconciliation.status === "resolved";
   return (
-    <Flex
-      direction="column"
-      style={{
-        borderRadius: "var(--radius-3)",
-        background: selected ? "var(--accent-a3)" : "var(--gray-a2)",
-        boxShadow: selected ? "inset 0 0 0 1px var(--accent-a7)" : undefined,
-      }}
+    <SelectableListItem
+      title={reconciliation.patientName}
+      subtitle={`${reconciliation.reportTitle} · ${resolvedCount(reconciliation)} de ${reconciliation.conflicts.length} resueltos`}
+      badge={{ label: resolved ? "Resuelta" : "Abierta", color: resolved ? "green" : "amber" }}
+      accent={resolved ? undefined : "amber"}
+      selected={selected}
+      onSelect={onSelect}
     >
-      <button
-        type="button"
-        aria-expanded={selected}
-        onClick={onSelect}
-        style={{ all: "unset", cursor: "pointer", padding: "10px 12px", borderRadius: "var(--radius-3)" }}
-      >
-        <Flex justify="between" align="start" gap="2">
-          <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
-            <Text size="2" weight="medium">
-              {reconciliation.patientName}
-            </Text>
-            <Text size="1" color="gray">
-              {reconciliation.reportTitle} · {resolvedCount(reconciliation)} de {reconciliation.conflicts.length} resueltos
-            </Text>
-          </Flex>
-          <Badge color={resolved ? "green" : "amber"} variant="soft" radius="full">
-            {resolved ? "Resuelta" : "Abierta"}
-          </Badge>
-        </Flex>
-      </button>
-      {selected && <ReconciliationContext reconciliation={reconciliation} />}
-    </Flex>
+      <ReconciliationContext reconciliation={reconciliation} />
+    </SelectableListItem>
   );
 }
 
@@ -158,7 +155,7 @@ function ReconciliationContext({ reconciliation }: { reconciliation: Reconciliat
     (conflict) => conflict.status === "open" && conflict.myRole !== null,
   );
   return (
-    <Flex direction="column" gap="1" px="3" pb="3">
+    <Flex direction="column" gap="1">
       <Text size="1" color="gray">
         Comparado con la versión oficial n.º {reconciliation.baseVersion}
       </Text>
