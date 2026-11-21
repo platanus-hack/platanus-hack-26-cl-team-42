@@ -16,11 +16,12 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
 import { patientKeys, usePatients, useTransferPatient, type PatientWithCount } from "../patients/api";
+import { useReconciliations } from "../reconciliation/api";
 import { Recorder } from "../recordings/Recorder";
 import { AssistantPanel } from "../reports/AssistantPanel";
 import { PatientSummaryView } from "../reports/PatientSummaryView";
@@ -45,12 +46,35 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const navigate = useNavigate();
   const { data = [], isPending, isError, error } = usePatients();
   const patients = sortInbox(data);
+  const { data: reconciliations = [] } = useReconciliations();
+  const openConflicts = reconciliations
+    .filter((item) => item.status === "open")
+    .reduce(
+      (total, item) =>
+        total + item.conflicts.filter((conflict) => conflict.status === "open" && conflict.myRole !== null).length,
+      0,
+    );
   const selected = patients.find((patient) => String(patient.id) === search.patient) ?? patients[0];
   const go = (next: InboxSearch) => navigate({ to: "/", search: next });
 
   return (
     <Flex direction="column" gap="4" p={{ initial: "4", md: "6" }} style={{ maxWidth: 1280 }}>
       <Heading size="6">Mis pacientes</Heading>
+      {openConflicts > 0 && (
+        <Callout.Root color="orange">
+          <Flex align="center" justify="between" gap="3" wrap="wrap">
+            <Callout.Text>
+              Hay {openConflicts} {openConflicts === 1 ? "conflicto" : "conflictos"} entre informes por resolver en los que
+              participas.
+            </Callout.Text>
+            <Link to="/reconciliation" search={{}}>
+              <Button size="1" color="orange">
+                Resolver conflictos
+              </Button>
+            </Link>
+          </Flex>
+        </Callout.Root>
+      )}
       {isError ? (
         <Callout.Root color="red">
           <Callout.Text>No se pudieron cargar tus pacientes: {error.message}</Callout.Text>
@@ -153,7 +177,9 @@ interface PatientDetailProps {
 }
 
 function PatientDetail({ patient, search, go }: PatientDetailProps) {
-  const { data: reports = [], isPending } = useReports(patient.id);
+  // Incluye tus borradores (para «Informe por validar»); el historial solo muestra los guardados.
+  const { data: allReports = [], isPending } = useReports(patient.id, true);
+  const reports = allReports.filter((report) => report.status === "done");
   const [historyOpen, setHistoryOpen] = useState(false);
   const queryClient = useQueryClient();
   // Al terminar de procesarse un dictado aparece (o cambia) su informe.
@@ -164,7 +190,7 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
   const openReport = (reportId: string) => go({ patient: patientParam, report: reportId });
 
   if (search.report) {
-    const report = reports.find((item) => item.id === search.report);
+    const report = allReports.find((item) => item.id === search.report);
     return (
       <Flex direction="column" gap="4">
         <Flex>
@@ -183,7 +209,7 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
     );
   }
 
-  const toValidate = reports.filter((report) => report.canEdit && report.status === "review");
+  const toValidate = allReports.filter((report) => report.canEdit && report.status === "review");
   return (
     <Flex direction="column" gap="4">
       <PatientHeader patient={patient} />

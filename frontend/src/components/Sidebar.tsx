@@ -11,6 +11,7 @@ import {
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useAuth } from "../services/auth";
+import { DemoAccountSwitcher } from "./DemoAccountSwitcher";
 import { VISIBLE_STEPS } from "../config/workflow";
 import { HomeIcon, StepIcon } from "./icons";
 
@@ -102,8 +103,9 @@ export function Sidebar({ userEmail }: SidebarProps) {
                 </Flex>
               </Flex>
             </Popover.Trigger>
-            <Popover.Content style={{ width: "200px" }}>
+            <Popover.Content style={{ width: "260px" }}>
               <Flex direction="column" gap="2">
+                <DemoAccountSwitcher />
                 <Link to="/profile">
                   <Button
                     variant="ghost"

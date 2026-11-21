@@ -21,3 +21,15 @@ def extract_record_information(record_id: int) -> str:
 def update_record_section(record_id: int, section: str, text: str, audio_name: str) -> str:
     """Incorpora información nueva (texto y/o audio) a una sección del registro."""
     return extraction_services.run_section_update(record_id, section, text, audio_name)
+
+
+@app.task(name="transcription.tasks.refine_conflict_guidance")
+def refine_conflict_guidance(reconciliation_id: int) -> int:
+    """Afina con el modelo la orientación de los conflictos de una reconciliación."""
+    from .models import Conflict
+    from .reconciliation_services import refine_guidance
+
+    conflicts = Conflict.objects.filter(reconciliation_id=reconciliation_id)
+    for conflict in conflicts:
+        refine_guidance(conflict.id)
+    return conflicts.count()

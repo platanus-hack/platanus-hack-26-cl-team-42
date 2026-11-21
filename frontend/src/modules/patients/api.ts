@@ -56,6 +56,9 @@ export interface Criticality {
 export interface PatientSummary {
   patient: Omit<Patient, "reference">;
   reportCount: number;
+  /** Versión oficial vigente de la que sale el resumen (0 si aún no hay). */
+  version: number;
+  versionReason: string;
   criticality: Criticality;
   /** Una línea con el día de estadía y el soporte actual. */
   status: string;
@@ -65,6 +68,17 @@ export interface PatientSummary {
   treatmentPending: Highlight[];
   byProfession: ProfessionActivity[];
   highlights: Highlight[];
+}
+
+export interface PatientVersion {
+  version: number;
+  /** `official` (primer informe), `merge` (sin conflictos) o `reconciliation` (conflictos resueltos). */
+  reason: "official" | "merge" | "reconciliation";
+  isCurrent: boolean;
+  created_at: string;
+  sourceReportId: string | null;
+  sourceAuthor: string;
+  sourceProfession: string;
 }
 
 export const patientKeys = ["patients"] as const;
@@ -99,5 +113,13 @@ export function useTransferPatient() {
         body: JSON.stringify({ to_email: toEmail }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: patientKeys }),
+  });
+}
+
+/** Historial de versiones oficiales del paciente: las anteriores nunca se pierden. */
+export function usePatientVersions(patientId: number) {
+  return useQuery({
+    queryKey: [...patientKeys, patientId, "versions"],
+    queryFn: () => apiRequest<PatientVersion[]>(`/patients/${patientId}/versions`),
   });
 }

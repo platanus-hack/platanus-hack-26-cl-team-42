@@ -16,7 +16,7 @@ from apps.agent.llm import ChatMessage
 
 from . import extraction_services, pipeline_cache
 from .models import Report
-from .report_services import visible_reports
+from .report_services import saved_reports
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ def ask(professional, question: str, patient_id: int | None = None) -> Assistant
 
 
 def _scoped_reports(professional, patient_id: int | None):
-    reports = visible_reports(professional).filter(status=Report.Status.DONE)
+    reports = saved_reports(professional)
     if patient_id is not None:
         reports = reports.filter(patient_id=patient_id)
     return reports.order_by("-extracted_record__transcription__recording__recorded_at")

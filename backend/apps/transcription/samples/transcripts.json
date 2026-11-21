@@ -23,5 +23,20 @@
     "file": "Dra. Fuentes - Especialista - 18-11-2026 10-30.wav",
     "text": "Consulta de cardiología solicitada por UCI para evaluación de paciente en cama siete. Motivo de consulta: paciente post operatorio de laparotomía exploratoria por sepsis abdominal, requiere evaluación cardiovascular pre-extubación. Antecedentes cardiológicos: hipertensión arterial crónica en tratamiento, infarto agudo al miocardio hace cuatro años, revascularización coronaria percutánea con stent de metal. Insuficiencia cardíaca sistólica leve, fracción de eyección treinta y cinco por ciento según último ecocardiograma. Revisión de electrocardiograma: se observan cambios de repolarización en cara inferior, sin cambios agudos comparado con electrocardiograma previo de hace un año. Examen cardiovascular: paciente sedado, frecuencia cardíaca cien latidos por minuto, ritmo regular sin soplos auscultables, presión venosa central elevada en dieciséis centímetros de agua. Revisión de medicamentos cardioactivos: se verificó que paciente recibe lisinopril diez miligramos diarios, carvedilol veinticinco miligramos dos veces al día, se agregó furosemida cuarenta miligramos para manejo de congestión. Recomendaciones: mantener medicación cardiovascular actual, monitoreo cercano de presión venosa central, consideramos que paciente está en condiciones cardiológicas aceptables para destete ventilatorio progresivo. Realizar ecocardiografía transtorácica cuando sea posible para evaluación de función ventricular actual. Recomendamos rehabilitación cardíaca en fase de convalecencia post alta hospitalaria. Próximo seguimiento cardiológico ambulatorio dentro de dos a tres semanas.",
     "profession": "especialista"
+  },
+  "884a8bc425f52761e4b529b73b7c84b67229677bab70e012d95d9be8eeb85808": {
+    "file": "Dr. Rojas - Médico UCI - 19-11-2026 08-00.wav",
+    "profession": "medico",
+    "text": "Revisión de paciente, cama siete, día tres de ingreso UCI. Varón de sesenta y ocho años. Diagnóstico: shock séptico de foco abdominal. Se encuentra en ventilación mecánica invasiva, con saturación de oxígeno de noventa y seis por ciento. Presión arterial media de sesenta y ocho milímetros de mercurio, frecuencia cardíaca de noventa y cuatro latidos por minuto. Mantiene norepinefrina en infusión a cero coma quince microgramos por kilo por minuto. Tiene catéter venoso central en yugular derecha. Se indica piperacilina tazobactam, cuatro coma cinco gramos endovenoso cada seis horas. Sin alergias conocidas. Pendiente: control de lactato a las catorce horas."
+  },
+  "a4be1c3ca998f80684795e2a1425aa820dae6d09a83c7653edb2ce5df90ecab0": {
+    "file": "EU Soto - Enfermería - 19-11-2026 11-00.wav",
+    "profession": "enfermeria",
+    "text": "Turno de la mañana, paciente de la cama siete. Signos vitales: presión arterial media de sesenta y cinco milímetros de mercurio, frecuencia cardíaca de cien latidos por minuto. Noradrenalina en infusión a cero coma tres microgramos por kilo por minuto, se subió por hipotensión. Vía central en subclavia derecha, sitio sin signos de infección. La hija refiere alergia a la penicilina, con rash cutáneo. Balance hídrico positivo de cuatrocientos cincuenta mililitros, diuresis de mil doscientos mililitros."
+  },
+  "c58dd30df0111b5552922be0f8dca8f12b50f6fe0f29df1d629b9f78c8f9804e": {
+    "file": "Klgo. Muñoz - Kinesiología - 19-11-2026 14-00.wav",
+    "profession": "kinesiologia",
+    "text": "Evaluación kinésica del paciente en cama siete, día tres de ventilación mecánica invasiva. Saturación de oxígeno de noventa y seis por ciento. Auscultación con crépitos basales derechos. Se realiza aspiración de secreciones y vibropresiones, con buena tolerancia. Escala de Richmond menos dos. Objetivo: preparar prueba de ventilación espontánea."
   }
 }

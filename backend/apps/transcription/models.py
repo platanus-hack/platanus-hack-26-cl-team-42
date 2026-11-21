@@ -125,6 +125,17 @@ class Report(models.Model):
         DONE = "done", _("Validated")
         FAILED = "failed", _("Failed")
 
+    class Consolidation(models.TextChoices):
+        PENDING = "pending", _("Not consolidated")
+        # Primer informe guardado del paciente: es la versión oficial.
+        OFFICIAL = "official", _("Official")
+        # Coincidía con la versión oficial: se incorporó sin conflictos.
+        MERGED = "merged", _("Merged")
+        # Chocaba con lo ya reportado: espera la reconciliación entre los profesionales.
+        RECONCILING = "reconciling", _("In reconciliation")
+        # Sus conflictos se resolvieron y quedó incorporado a la versión oficial.
+        CONSOLIDATED = "consolidated", _("Consolidated")
+
     extracted_record = models.OneToOneField(
         ExtractedRecord, on_delete=models.CASCADE, related_name="report"
     )
@@ -149,6 +160,10 @@ class Report(models.Model):
     # Ids de los temas (``report_topics``) ya validados; con todos puede guardar el informe.
     validated_sections = models.JSONField(default=list, blank=True)
     error = models.CharField(max_length=500, blank=True)
+    # Qué pasó con el informe al guardarse respecto de la versión oficial del paciente.
+    consolidation = models.CharField(
+        max_length=14, choices=Consolidation.choices, default=Consolidation.PENDING
+    )
     validated_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -158,3 +173,141 @@ class Report(models.Model):
 
     def __str__(self) -> str:
         return f"Informe {self.id} ({self.profession} #{self.sequence})"
+
+
+class ConsolidatedVersion(models.Model):
+    """Versión consolidada («oficial») del estado de un paciente; las anteriores se conservan."""
+
+    class Reason(models.TextChoices):
+        OFFICIAL = "official", _("First saved report")
+        MERGE = "merge", _("Report without conflicts")
+        RECONCILIATION = "reconciliation", _("Conflicts resolved")
+
+    patient = models.ForeignKey(
+        "recordings.Patient", on_delete=models.PROTECT, related_name="versions"
+    )
+    version = models.PositiveIntegerField()
+    data = models.JSONField()
+    # Qué informe aportó cada sección y elemento: ``{"<sección>::<identidad>": <id de informe>}``.
+    provenance = models.JSONField(default=dict, blank=True)
+    reason = models.CharField(max_length=14, choices=Reason.choices)
+    source_report = models.ForeignKey(
+        Report, on_delete=models.SET_NULL, null=True, blank=True, related_name="versions"
+    )
+    is_current = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-version"]
+        constraints = [
+            models.UniqueConstraint(fields=["patient", "version"], name="unique_patient_version"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Versión {self.version} de {self.patient_id}"
+
+
+class Reconciliation(models.Model):
+    """Revisión de un informe guardado que chocó con la versión oficial del paciente."""
+
+    class Status(models.TextChoices):
+        OPEN = "open", _("Open")
+        RESOLVED = "resolved", _("Resolved")
+
+    patient = models.ForeignKey(
+        "recordings.Patient", on_delete=models.PROTECT, related_name="reconciliations"
+    )
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="reconciliations")
+    base_version = models.ForeignKey(
+        ConsolidatedVersion, on_delete=models.PROTECT, related_name="reconciliations"
+    )
+    result_version = models.ForeignKey(
+        ConsolidatedVersion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="resolved_reconciliations",
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class Conflict(models.Model):
+    """Un choque entre lo reportado por dos informes sobre el mismo dato."""
+
+    class Status(models.TextChoices):
+        OPEN = "open", _("Open")
+        RESOLVED = "resolved", _("Resolved")
+
+    reconciliation = models.ForeignKey(
+        Reconciliation, on_delete=models.CASCADE, related_name="conflicts"
+    )
+    key = models.CharField(max_length=200)
+    kind = models.CharField(max_length=20)
+    section = models.CharField(max_length=80)
+    label = models.CharField(max_length=300)
+    # Cada lado: {reportId, authorId, authorName, profession, value, evidence, patch}.
+    side_a = models.JSONField()
+    side_b = models.JSONField()
+    explanation = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN)
+    # {mode: accepted|consensus|off_shift|sole, side: a|b|custom, value, decidedBy, decidedAt}
+    resolution = models.JSONField(null=True, blank=True)
+    # {by, side: a|b|custom, value}: propuesta que la otra parte debe aceptar (consenso).
+    proposal = models.JSONField(null=True, blank=True)
+    # Orientación del agente (se genera sola al abrirse el conflicto): qué postura parece más
+    # segura y qué profesional adicional conviene consultar.
+    guidance = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+
+class ConflictNote(models.Model):
+    """Nota de un profesional en la conversación del conflicto: deja registro de sus razones."""
+
+    class Kind(models.TextChoices):
+        NOTE = "note", _("Note")
+        EXTERNAL = "external", _("External opinion")
+        SYSTEM = "system", _("System")
+
+    conflict = models.ForeignKey(Conflict, on_delete=models.CASCADE, related_name="notes")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.NOTE)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+
+class ExternalConsult(models.Model):
+    """Opinión externa pedida a otro profesional, con el caso anonimizado."""
+
+    class Status(models.TextChoices):
+        REQUESTED = "requested", _("Requested")
+        ANSWERED = "answered", _("Answered")
+
+    conflict = models.ForeignKey(Conflict, on_delete=models.CASCADE, related_name="consults")
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    consultant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="external_consults"
+    )
+    # Resumen sin nombre, identificador ni cama del paciente, ni nombres de los profesionales.
+    brief = models.TextField()
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.REQUESTED)
+    reply = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]

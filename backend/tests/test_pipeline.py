@@ -229,8 +229,9 @@ def test_api_exposes_pipeline_reports_and_concepts(monkeypatch, user):
     assert pipeline["extraction"]["status"] == "done"
     assert pipeline["report"]["sequence"] == 1
     assert pipeline["report"]["authorName"] == "Klgo. Muñoz"
-    assert [r["id"] for r in reports] == [pipeline["report"]["id"]]
-    assert client.get(f"{API_URL}/reports/{reports[0]['id']}").status_code == 200
+    # Un borrador no aparece en Informes (solo los guardados), pero su autor sí puede abrirlo.
+    assert reports == []
+    assert client.get(f"{API_URL}/reports/{pipeline['report']['id']}").status_code == 200
     assert any(c["sourceTerm"] == "norepinefrina" for c in concepts)
 
 
