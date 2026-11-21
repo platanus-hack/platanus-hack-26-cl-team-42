@@ -4,15 +4,22 @@ import { ReconciliationPage } from "../../modules/reconciliation/ReconciliationP
 export interface ReconciliationSearch {
   /** Reconciliación a mostrar seleccionada al llegar desde un aviso. */
   id?: string;
+  conflict?: string;
 }
 
 export const Route = createFileRoute("/_authenticated/reconciliation")({
-  validateSearch: (search: Record<string, unknown>): ReconciliationSearch =>
-    typeof search.id === "string" || typeof search.id === "number" ? { id: String(search.id) } : {},
+  validateSearch: (search: Record<string, unknown>): ReconciliationSearch => ({
+    id: optionalId(search.id),
+    conflict: optionalId(search.conflict),
+  }),
   component: ReconciliationRoute,
 });
 
 function ReconciliationRoute() {
-  const { id } = Route.useSearch();
-  return <ReconciliationPage reconciliationId={id} />;
+  const { id, conflict } = Route.useSearch();
+  return <ReconciliationPage key={`${id ?? ""}:${conflict ?? ""}`} reconciliationId={id} conflictId={conflict} />;
+}
+
+function optionalId(value: unknown): string | undefined {
+  return typeof value === "string" || typeof value === "number" ? String(value) : undefined;
 }

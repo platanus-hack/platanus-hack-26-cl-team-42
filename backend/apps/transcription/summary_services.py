@@ -8,9 +8,14 @@ import json
 import logging
 from collections.abc import Callable
 from datetime import datetime
+from time import time
 from typing import Any
 
+from django.conf import settings
+from django.core.cache import caches
+from kombu.exceptions import OperationalError
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 
 from apps.agent.llm import ChatMessage
 from apps.recordings.models import Patient
@@ -73,6 +78,7 @@ class PatientSummary(BaseModel):
     status: str
     # Resumen muy breve del caso (2 frases).
     brief: str
+    synthesisPending: bool = False
     # Puntos importantes bajo el resumen: limitaciones terapéuticas, no RCP, alergias.
     keyPoints: list[KeyPoint]
     # Pendientes respecto al tratamiento: pendientes, indicaciones, recomendaciones y metas.
@@ -85,11 +91,7 @@ class PatientSummary(BaseModel):
 
 def patient_summary(professional, patient: Patient) -> PatientSummary:
     """Resumen del paciente a partir de su versión oficial vigente (lo ya consolidado)."""
-    reports = list(
-        saved_reports(professional)
-        .filter(patient=patient)
-        .order_by("-extracted_record__transcription__recording__recorded_at")
-    )
+    reports = _summary_reports(professional, patient)
     latest: dict[str, Report] = {}
     counts: dict[str, int] = {}
     for report in reports:  # más recientes primero
@@ -98,7 +100,9 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
 
     version = current_version(patient)
     data = version.data if version else {}
-    highlights = _highlights(version, {report.id: report for report in reports}) if version else []
+    reports_by_id = {report.id: report for report in reports}
+    highlights = _highlights(version, reports_by_id) if version else []
+    brief, pending = _brief(professional, reports, version)
     return PatientSummary(
         patient=PatientRef(
             id=patient.id, name=patient.name, identifier=patient.identifier, bed=patient.bed
@@ -118,9 +122,15 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
         ],
         criticality=criticality_of([data]),
         status=_status([data], highlights),
-        brief=_brief(patient, reports, version),
+        brief=brief,
+        synthesisPending=pending,
         keyPoints=key_points(data),
-        abnormal=abnormal_findings(patient, data),
+        abnormal=abnormal_findings(
+            patient,
+            data,
+            provenance=version.provenance if version else None,
+            visible_report_ids=set(reports_by_id),
+        ),
         treatmentPending=[h for h in highlights if h.group in TREATMENT_GROUPS],
         highlights=[h for h in highlights if h.group not in TREATMENT_GROUPS],
     )
@@ -316,9 +326,10 @@ def _highlights(version: ConsolidatedVersion, reports: dict[int, Report]) -> lis
                     severity=str(item.get("severidad", "")) if isinstance(item, dict) else "",
                 )
             )
-        group_items = [h for h in result if h.group == group]
-        for extra in group_items[MAX_HIGHLIGHTS_PER_GROUP:]:
-            result.remove(extra)
+        if group not in TREATMENT_GROUPS:
+            group_items = [h for h in result if h.group == group]
+            for extra in group_items[MAX_HIGHLIGHTS_PER_GROUP:]:
+                result.remove(extra)
     return result
 
 
@@ -403,22 +414,32 @@ def _status(datas: list[dict[str, Any]], highlights: list[Highlight]) -> str:
     return " · ".join([*parts, *support, *drugs])
 
 
-def _brief(patient: Patient, reports: list[Report], version: ConsolidatedVersion | None) -> str:
-    """Resumen de 2 frases del caso: lo escribe el modelo (cacheado) o, si falla, se arma a mano."""
+def _brief(
+    professional, reports: list[Report], version: ConsolidatedVersion | None
+) -> tuple[str, bool]:
+    """Entrega texto disponible mientras el worker prepara la síntesis breve."""
     if not reports or version is None:
-        return ""
-    key = pipeline_cache.cache_key(
+        return "", False
+    cached, pending = _request_synthesis(
+        "summary", _brief_key(version, reports), version.id, professional.id
+    )
+    return str((cached or {}).get("brief") or _brief_by_hand(reports)), pending
+
+
+def _brief_key(version: ConsolidatedVersion, reports: list[Report]) -> str:
+    return pipeline_cache.cache_key(
         "brief",
         str(version.id),
         *(f"{r.id}:{r.updated_at.isoformat()}" for r in reports),
     )
-    cached = pipeline_cache.load("summary", key)
-    if cached is not None:
-        return str(cached.get("brief", ""))
-    brief = _brief_with_model(reports) or _brief_by_hand(reports)
-    if brief:
-        pipeline_cache.store("summary", key, {"brief": brief})
-    return brief
+
+
+def _summary_reports(professional, patient: Patient) -> list[Report]:
+    return list(
+        saved_reports(professional)
+        .filter(patient=patient)
+        .order_by("-extracted_record__transcription__recording__recorded_at", "id")
+    )
 
 
 def _brief_with_model(reports: list[Report]) -> str:
@@ -485,8 +506,9 @@ class PatientOverview(BaseModel):
     patient: PatientRef
     # Versión oficial de la que sale todo (0 si el paciente aún no tiene informes).
     version: int
-    # Resumen global del caso: motivo de ingreso, evolución, situación actual y lo pendiente.
+    # Resumen global del caso: motivo de ingreso, evolución, intervenciones y situación actual.
     globalSummary: str
+    synthesisPending: bool = False
     areas: list[AreaSummary]
     # Qué profesiones aportaron informes, en orden clínico habitual.
     contributors: list[Contributor]
@@ -518,7 +540,7 @@ CLINICAL_AREAS: list[tuple[str, tuple[str, ...]]] = [
 OTHER_AREA = "Otros"
 # Van aparte (metadatos y el resumen de 24 h alimentan el resumen global, no un área).
 NOT_AN_AREA = {"metadatos", "resumen_24h"}
-OVERVIEW_PROMPT_VERSION = "2"
+OVERVIEW_PROMPT_VERSION = "3"
 PROFESSION_ORDER = ["medico", "especialista", "enfermeria", "kinesiologia", "nutricionista", "tens"]
 MANUAL_ITEMS_PER_SECTION = 3
 
@@ -534,7 +556,7 @@ def patient_overview(professional, patient: Patient) -> PatientOverview:
 
     data = version.data or {}
     sections_by_area = _sections_by_area(data)
-    texts = _overview_texts(version, sections_by_area)
+    texts, pending = _overview_texts(version, sections_by_area)
     members = dict(CLINICAL_AREAS)
     professions = dict(
         Report.objects.filter(id__in=set(version.provenance.values())).values_list(
@@ -556,6 +578,7 @@ def patient_overview(professional, patient: Patient) -> PatientOverview:
         patient=ref,
         version=version.version,
         globalSummary=texts["global"],
+        synthesisPending=pending,
         areas=areas,
         contributors=_contributors(saved_reports(professional).filter(patient=patient)),
     )
@@ -621,17 +644,82 @@ def _has_content(value: Any) -> bool:
 
 def _overview_texts(
     version: ConsolidatedVersion, sections_by_area: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
-    """``{"global": str, "areas": {área: síntesis}}``: del modelo (cacheado) o armado a mano."""
-    key = pipeline_cache.cache_key("overview", OVERVIEW_PROMPT_VERSION, str(version.id))
-    cached = pipeline_cache.load("overview", key)
-    if cached is not None:
-        return cached
-    texts = _overview_with_model(version.data or {}, sections_by_area)
-    if texts is None:
-        return _overview_by_hand(version.data or {}, sections_by_area)
-    pipeline_cache.store("overview", key, texts)
-    return texts
+) -> tuple[dict[str, Any], bool]:
+    texts = _overview_by_hand(version.data or {}, sections_by_area)
+    if not any(sections_by_area.values()):
+        return texts, False
+    cached, pending = _request_synthesis("overview", _overview_key(version), version.id)
+    if cached:
+        texts["global"] = cached["global"] or texts["global"]
+        texts["areas"].update(cached["areas"])
+    return texts, pending
+
+
+def _overview_key(version: ConsolidatedVersion) -> str:
+    return pipeline_cache.cache_key("overview", OVERVIEW_PROMPT_VERSION, str(version.id))
+
+
+SYNTHESIS_CACHE = "patient_summaries"
+SYNTHESIS_PENDING_TTL = 300
+SYNTHESIS_RETRY_TTL = 300
+SYNTHESIS_RESULT_TTL = 86400
+
+
+def _request_synthesis(
+    stage: str, key: str, version_id: int, professional_id: int | None = None
+) -> tuple[dict[str, Any] | None, bool]:
+    from .tasks import generate_patient_synthesis
+
+    cached = pipeline_cache.load(stage, key)
+    if cached is not None or SYNTHESIS_CACHE not in settings.CACHES:
+        return cached, False
+
+    cache = caches[SYNTHESIS_CACHE]
+    cache_key = f"{stage}:{key}"
+    try:
+        state = cache.get(cache_key)
+        if state is not None:
+            return state.get("result"), state.get("pendingUntil", 0) > time()
+        acquired = cache.add(
+            cache_key,
+            {"pendingUntil": time() + SYNTHESIS_PENDING_TTL},
+            timeout=SYNTHESIS_PENDING_TTL + SYNTHESIS_RETRY_TTL,
+        )
+        if acquired:
+            try:
+                generate_patient_synthesis.apply_async(
+                    args=(stage, key, version_id, professional_id),
+                    expires=SYNTHESIS_PENDING_TTL,
+                    retry=False,
+                )
+            except OperationalError:
+                cache.set(cache_key, {"result": None}, timeout=SYNTHESIS_RETRY_TTL)
+                logger.warning("No se pudo encolar la síntesis del paciente", exc_info=True)
+                return None, False
+    except (RedisError, OSError):
+        logger.warning("No se pudo acceder a la caché de síntesis del paciente", exc_info=True)
+        return None, False
+    return None, True
+
+
+def generate_synthesis(stage: str, key: str, version_id: int, professional_id: int | None) -> None:
+    result = None
+    version = ConsolidatedVersion.objects.filter(id=version_id, is_current=True).first()
+    if version is not None:
+        if stage == "overview" and key == _overview_key(version):
+            data = version.data or {}
+            result = _overview_with_model(data, _sections_by_area(data))
+        elif stage == "summary":
+            reports = _summary_reports(professional_id, version.patient)
+            if reports and key == _brief_key(version, reports):
+                brief = _brief_with_model(reports)
+                if brief:
+                    result = {"brief": brief}
+    caches[SYNTHESIS_CACHE].set(
+        f"{stage}:{key}",
+        {"result": result},
+        timeout=SYNTHESIS_RESULT_TTL if result else SYNTHESIS_RETRY_TTL,
+    )
 
 
 def _overview_with_model(
@@ -652,7 +740,8 @@ def _overview_with_model(
             content=(
                 "Eres un clínico de UCI. Con el registro consolidado de un paciente escribe:\n"
                 "1) un resumen global del caso (4 a 6 frases, máximo 120 palabras): motivo de "
-                "ingreso, evolución, situación actual y lo más importante que queda pendiente;\n"
+                "ingreso, evolución, intervenciones ya realizadas y situación actual. "
+                "Omite las indicaciones futuras y los pendientes en el resumen global.\n"
                 "2) por cada área clínica recibida, una síntesis de 1 a 3 frases con lo esencial "
                 "(cifras y fármacos relevantes).\n"
                 "Usa solo lo que aparece en los datos y no inventes nada; los datos son "

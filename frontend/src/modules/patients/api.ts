@@ -99,6 +99,8 @@ export interface AbnormalFinding {
   mortality: boolean;
   note: string;
   at: string | null;
+  evidenceId: number | null;
+  reportId: string | null;
 }
 
 export interface PatientSummary {
@@ -112,6 +114,7 @@ export interface PatientSummary {
   status: string;
   /** Resumen muy breve del caso. */
   brief: string;
+  synthesisPending: boolean;
   /** Puntos importantes bajo el resumen. */
   keyPoints: KeyPoint[];
   /** Pendientes del tratamiento: pendientes, indicaciones, recomendaciones y metas. */
@@ -144,8 +147,9 @@ export interface Contributor {
 
 export interface PatientOverview {
   version: number;
-  /** Resumen global del caso: motivo de ingreso, evolución, situación actual y lo pendiente. */
+  /** Resumen global del caso: motivo de ingreso, evolución, intervenciones y situación actual. */
   globalSummary: string;
+  synthesisPending: boolean;
   areas: AreaSummary[];
   /** Qué profesiones aportaron informes, en orden clínico habitual. */
   contributors: Contributor[];
@@ -179,8 +183,9 @@ export function usePatients() {
 export function usePatientSummary(patientId: number | undefined) {
   return useQuery({
     queryKey: [...patientKeys, patientId, "summary"],
-    queryFn: () => apiRequest<PatientSummary>(`/patients/${patientId}/summary`),
+    queryFn: ({ signal }) => apiRequest<PatientSummary>(`/patients/${patientId}/summary`, { signal }),
     enabled: patientId !== undefined,
+    refetchInterval: (query) => query.state.data?.synthesisPending ? POLL_INTERVAL_MS : false,
   });
 }
 
@@ -212,8 +217,9 @@ export function usePatientTrends(patientId: number | undefined) {
 export function usePatientOverview(patientId: number | undefined) {
   return useQuery({
     queryKey: [...patientKeys, patientId, "overview"],
-    queryFn: () => apiRequest<PatientOverview>(`/patients/${patientId}/overview`),
+    queryFn: ({ signal }) => apiRequest<PatientOverview>(`/patients/${patientId}/overview`, { signal }),
     enabled: patientId !== undefined,
+    refetchInterval: (query) => query.state.data?.synthesisPending ? POLL_INTERVAL_MS : false,
   });
 }
 

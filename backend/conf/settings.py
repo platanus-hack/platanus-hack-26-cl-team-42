@@ -395,6 +395,13 @@ CACHES = {
         "LOCATION": "",
     },
 }
+if celery_config.RESULT_BACKEND.startswith(("redis://", "rediss://")):
+    CACHES["patient_summaries"] = {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": celery_config.RESULT_BACKEND,
+        "KEY_PREFIX": "patient-summaries",
+        "OPTIONS": {"socket_connect_timeout": 1, "socket_timeout": 1},
+    }
 
 
 #############################

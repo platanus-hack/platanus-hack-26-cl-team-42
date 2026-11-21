@@ -16,6 +16,7 @@ from apps.recordings.models import Recording
 from apps.transcription import extraction_services as extraction
 from apps.transcription import homologation_services as homologation
 from apps.transcription.models import ConceptMapping, ExtractedRecord, Report, Transcription
+from apps.transcription.tasks import generate_patient_synthesis
 
 API_URL = f"/{settings.URL_PREFIX}/api/transcription"
 User = get_user_model()
@@ -555,35 +556,47 @@ def test_completing_a_section_only_unvalidates_its_topic(monkeypatch, user):
     assert [t.id for t in report_services.unvalidated_topics(report)] == ["assessment"]
 
 
-def test_patient_summary_has_criticality_status_brief_and_treatment_pending(monkeypatch, user):
+def test_patient_summary_has_criticality_status_brief_and_treatment_pending(
+    monkeypatch, user, synthesis_jobs
+):
     patient = _patient(user)
     _report_for(user, patient, "medico")
     _use_model(monkeypatch, [json.dumps({"resumen": "Shock séptico abdominal en resolución."})])
     client = Client()
     client.force_login(user)
 
-    summary = client.get(f"/{settings.URL_PREFIX}/api/patients/{patient.id}/summary").json()
+    url = f"/{settings.URL_PREFIX}/api/patients/{patient.id}/summary"
+    first = client.get(url).json()
+    assert first["synthesisPending"] is True
+    assert first["brief"] == _medico_record()["resumen_24h"]
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
+    summary = client.get(url).json()
 
     assert summary["criticality"]["level"] in {"critical", "high"}
     assert any("vasoactivo" in reason for reason in summary["criticality"]["reasons"])
     assert summary["status"].startswith("Día 3 de UCI")
     assert summary["brief"] == "Shock séptico abdominal en resolución."
+    assert summary["synthesisPending"] is False
     pending_groups = {h["group"] for h in summary["treatmentPending"]}
     assert pending_groups <= {"Pendientes", "Indicaciones", "Recomendaciones", "Metas del día"}
     assert "Pendientes" in pending_groups
     assert not any(h["group"] == "Pendientes" for h in summary["highlights"])
 
 
-def test_summary_brief_falls_back_to_the_report_text(monkeypatch, user):
+def test_summary_brief_falls_back_to_the_report_text(monkeypatch, user, synthesis_jobs):
     patient = _patient(user)
     _report_for(user, patient, "medico")
     _use_model(monkeypatch, ["no es json"])
     client = Client()
     client.force_login(user)
 
-    summary = client.get(f"/{settings.URL_PREFIX}/api/patients/{patient.id}/summary").json()
+    url = f"/{settings.URL_PREFIX}/api/patients/{patient.id}/summary"
+    client.get(url)
+    generate_patient_synthesis.run(*synthesis_jobs.pop())
+    summary = client.get(url).json()
 
     assert summary["brief"] == _medico_record()["resumen_24h"]
+    assert summary["synthesisPending"] is False
 
 
 def test_extraction_cache_does_not_depend_on_the_patient(monkeypatch, user):

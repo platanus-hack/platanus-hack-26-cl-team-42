@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Badge,
   Box,
   Button,
   Callout,
@@ -16,24 +15,31 @@ import {
   Spinner,
   Text,
   TextField,
-  Tooltip,
 } from "@radix-ui/themes";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CollapsibleSection } from "../../components/CollapsibleSection";
 import { useMediaQuery } from "../../components/useMediaQuery";
 import { EmptyState } from "../../components/EmptyState";
+import { ModulePage } from "../../components/ModulePage";
+import { SelectableListItem } from "../../components/SelectableListItem";
 import { StepIcon } from "../../components/icons";
-import { PROCESSING_STEPS, patientKeys, usePatients, useTransferPatient, type PatientWithCount } from "../patients/api";
+import { Toast, type ToastMessage } from "../../components/Toast";
+import {
+  PROCESSING_STEPS,
+  patientKeys,
+  usePatientSummary,
+  usePatients,
+  useTransferPatient,
+  type PatientWithCount,
+} from "../patients/api";
 import { useOpenConflictCount, useReconciliations } from "../reconciliation/api";
-import { EvidencePanel } from "../evidence/EvidencePanel";
 import { Recorder } from "../recordings/Recorder";
-import { PatientSummaryView } from "../reports/PatientSummaryView";
-import { ReportView, StatusBadge } from "../reports/ReportView";
+import { PatientSummaryView, type PatientTab } from "../reports/PatientSummaryView";
+import { ReportView } from "../reports/ReportView";
 import { reportKeys, useReports, type Report } from "../reports/api";
 import { reportTitle } from "../reports/format";
 import { useRetryTranscription } from "../transcription/api";
-import { CRITICALITY_META, INBOX_STATUS, VISIT_META, formatLastVisit, needsAction, sortInbox } from "./inbox";
+import { formatLastVisit, inboxRowState, sortInbox } from "./inbox";
 
 export interface InboxSearch {
   patient?: string;
@@ -58,32 +64,32 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const selected = chosen ?? (wide ? patients[0] : undefined);
   const showList = wide || !chosen;
   const go = (next: InboxSearch) => navigate({ to: "/", search: next });
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const closeToast = useCallback(() => setToast(null), []);
+  useProcessingToasts(data, setToast);
 
   return (
-    <Flex direction="column" gap="4" p={{ initial: "3", sm: "4", md: "6" }} style={{ maxWidth: 1280, margin: "0 auto" }}>
+    <ModulePage stepId="patients">
+      <Toast message={toast} onClose={closeToast} />
       {showList ? (
-        <Heading size={{ initial: "5", md: "6" }}>Mis pacientes</Heading>
+        openConflicts > 0 && (
+          <Flex align="center" gap="2" wrap="wrap">
+            <Text size="2" color="amber" weight="medium">
+              {openConflicts} {openConflicts === 1 ? "conflicto tuyo" : "conflictos tuyos"} por resolver
+            </Text>
+            <Button size="1" variant="soft" color="amber" asChild>
+              <Link to="/reconciliation" search={{}}>
+                Resolver
+              </Link>
+            </Button>
+          </Flex>
+        )
       ) : (
         <Flex>
           <Button size="3" variant="soft" color="gray" onClick={() => go({})}>
-            ← Mis pacientes
+            ← Volver a la lista
           </Button>
         </Flex>
-      )}
-      {openConflicts > 0 && showList && (
-        <Callout.Root color="orange">
-          <Flex align="center" justify="between" gap="3" wrap="wrap">
-            <Callout.Text>
-              Hay {openConflicts} {openConflicts === 1 ? "conflicto" : "conflictos"} entre informes por resolver en los que
-              participas.
-            </Callout.Text>
-            <Link to="/reconciliation" search={{}}>
-              <Button size="2" color="orange">
-                Resolver conflictos
-              </Button>
-            </Link>
-          </Flex>
-        </Callout.Root>
       )}
       {isError ? (
         <Callout.Root color="red">
@@ -95,29 +101,46 @@ export function InboxPage({ search }: { search: InboxSearch }) {
           description="Los pacientes vienen de otro sistema o te los traspasa otro usuario. Cuando tengas uno asignado aparecerá aquí."
         />
       ) : (
-        <Grid columns={wide ? "320px 1fr" : "1"} gap={wide ? "8" : "0"} align="start">
+        <Grid columns={wide ? "280px 1fr" : "1"} gap="5" align="start">
           {showList && (
-            <Box
-              pr={wide ? "6" : "0"}
-              style={wide ? { borderRight: "1px solid var(--gray-a5)", alignSelf: "stretch" } : undefined}
-            >
-              <PatientInbox
-                patients={patients}
-                loading={isPending}
-                selected={selected?.id}
-                onSelect={(id) => go({ patient: String(id) })}
-              />
-            </Box>
+            <PatientInbox
+              patients={patients}
+              loading={isPending}
+              selected={wide ? selected?.id : undefined}
+              onSelect={(id) => go({ patient: String(id) })}
+            />
           )}
           {selected && (
             <Box style={{ minWidth: 0 }}>
-              <PatientDetail key={selected.id} patient={selected} search={search} go={go} />
+              <PatientDetail key={selected.id} patient={selected} search={search} go={go} showContext={!wide} />
             </Box>
           )}
         </Grid>
       )}
-    </Flex>
+    </ModulePage>
   );
+}
+
+/** Avisa cuando un dictado termina de procesarse (listo para validar o con error), en cualquier paciente. */
+function useProcessingToasts(patients: PatientWithCount[], notify: (message: ToastMessage) => void) {
+  const previous = useRef<Map<number, PatientWithCount["inboxStatus"]> | null>(null);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = new Map(patients.map((patient) => [patient.id, patient.inboxStatus]));
+    if (!before) return;
+    const finished = patients.filter(
+      (patient) => before.get(patient.id) === "processing" && (patient.inboxStatus === "review" || patient.inboxStatus === "failed"),
+    );
+    const last = finished[finished.length - 1];
+    if (!last) return;
+    notify({
+      id: Date.now(),
+      text:
+        last.inboxStatus === "review"
+          ? `El informe de ${last.name} está listo para validar.`
+          : `No se pudo procesar el dictado de ${last.name}.`,
+    });
+  }, [patients, notify]);
 }
 
 interface PatientInboxProps {
@@ -127,97 +150,81 @@ interface PatientInboxProps {
   onSelect: (id: number) => void;
 }
 
+/** La posición en la lista depende de la cama y el nombre. */
 function PatientInbox({ patients, loading, selected, onSelect }: PatientInboxProps) {
   if (loading) return <Skeleton height="240px" />;
   return (
-    <Flex direction="column" gap="1" role="list" aria-label="Mis pacientes">
-      <Text size="1" color="gray" mb="1">
-        {patients.length} {patients.length === 1 ? "asignado" : "asignados"}
-      </Text>
-      {patients.map((patient) => (
-        <InboxRow key={patient.id} patient={patient} selected={patient.id === selected} onSelect={onSelect} />
-      ))}
+    <Flex direction="column" gap="2">
+      <Heading size="3" as="h2" id="assigned-patients-heading">
+        Pacientes asignados{" "}
+        <Text size="2" color="gray" weight="regular">{patients.length}</Text>
+      </Heading>
+      <Flex direction="column" gap="2" role="list" aria-labelledby="assigned-patients-heading">
+        {patients.map((patient) => (
+          <InboxRow key={patient.id} patient={patient} selected={patient.id === selected} onSelect={onSelect} />
+        ))}
+      </Flex>
     </Flex>
   );
 }
 
+/** Fila compacta: nombre, cama, la señal principal como insignia y las demás debajo. */
 function InboxRow({ patient, selected, onSelect }: { patient: PatientWithCount; selected: boolean; onSelect: (id: number) => void }) {
-  const status = INBOX_STATUS[patient.inboxStatus];
-  const urgent = needsAction(patient.inboxStatus);
-  const visit = VISIT_META[patient.visitPriority];
+  const row = inboxRowState(patient);
   return (
-    <Button
-      role="listitem"
-      variant="ghost"
-      color="gray"
-      aria-current={selected || undefined}
-      onClick={() => onSelect(patient.id)}
-      style={{
-        display: "block",
-        width: "100%",
-        height: "auto",
-        margin: 0,
-        padding: "14px 14px",
-        textAlign: "left",
-        borderRadius: "var(--radius-3)",
-        color: "var(--gray-12)",
-        background: selected ? "var(--gray-a3)" : undefined,
-        boxShadow: urgent ? `inset 3px 0 0 var(--${status.color}-9)` : undefined,
-      }}
+    <SelectableListItem
+      title={patient.name}
+      meta={patient.bed.trim() || "Sin cama"}
+      subtitle={row.secondary.join(" · ")}
+      badge={{ label: row.badge.text, color: row.badge.color, loading: row.badge.processing }}
+      accent={row.color === "red" || row.color === "amber" ? row.color : undefined}
+      selected={selected}
+      onSelect={() => onSelect(patient.id)}
     >
-      <Flex justify="between" align="center" gap="2">
-        <Text size="2" weight={urgent || selected ? "bold" : "regular"} truncate>
-          {patient.name}
-        </Text>
-        <Badge color={CRITICALITY_META[patient.criticality].color} variant={patient.criticality === "critical" ? "solid" : "soft"} size="1">
-          {patient.criticality === "unknown" ? "Sin clasificar" : patient.criticalityLabel}
-        </Badge>
-      </Flex>
-      <Flex align="center" gap="1" mt="1">
+      <PatientContext patient={patient} />
+    </SelectableListItem>
+  );
+}
+
+/**
+ * Contexto del paciente: última visita, versión oficial y conflictos con su acción. En escritorio va en
+ * la fila seleccionada; en teléfono, bajo el encabezado del detalle (nunca en ambos lugares).
+ */
+function PatientContext({ patient }: { patient: PatientWithCount }) {
+  const { data: summary } = usePatientSummary(patient.id);
+  const { data: reconciliations = [] } = useReconciliations();
+  const open = reconciliations.filter((item) => item.patientId === patient.id && item.status === "open");
+  const target = open.find((item) => item.conflicts.some((conflict) => conflict.status === "open" && conflict.myRole !== null)) ?? open[0];
+  const mine = patient.myOpenConflicts;
+  const facts = [
+    `Última visita: ${formatLastVisit(patient.lastDictationAt)}`,
+    patient.visitPriority !== "unknown" ? patient.visitPriorityLabel : null,
+    patient.criticality !== "unknown" ? `Criticidad ${patient.criticalityLabel.toLowerCase()}` : null,
+    patient.pendingTasks > 0 ? `${patient.pendingTasks} ${patient.pendingTasks === 1 ? "tarea pendiente" : "tareas pendientes"}` : null,
+  ];
+
+  return (
+    <Flex direction="column" gap="1">
+      {facts.map((fact) => fact && <Text key={fact} size="1" color="gray">{fact}</Text>)}
+      {summary && (
         <Text size="1" color="gray">
-          {patient.bed || "Sin cama"}
+          {summary.version > 0 ? <>Versión oficial <strong>n.º {summary.version}</strong></> : "Sin versión oficial"}
         </Text>
-        {/* «Al día» solo dice algo si ya hubo dictados. */}
-        {(patient.inboxStatus !== "up_to_date" || patient.lastDictationAt) && (
-          <Text size="1" color={status.color ?? "gray"} weight={urgent ? "medium" : "regular"}>
-            ·{" "}
-            {patient.inboxStatus === "processing" && <Spinner size="1" style={{ display: "inline-block", marginRight: 4 }} />}
-            {patient.inboxStatus === "processing" && patient.processingLabel
-              ? `${patient.processingLabel} · ${patient.processingStep}/${PROCESSING_STEPS}`
-              : status.label}
-          </Text>
-        )}
-      </Flex>
+      )}
       {patient.openConflicts > 0 && (
-        <Flex mt="2">
-          <Badge color="orange" variant={patient.myOpenConflicts > 0 ? "solid" : "soft"} size="1">
-            ⚠ {patient.openConflicts} {patient.openConflicts === 1 ? "conflicto" : "conflictos"}
-            {patient.myOpenConflicts === 0 && " · de otros"}
-          </Badge>
+        <Flex align="center" justify="between" gap="2" wrap="wrap" mt="1">
+          <Text size="1" color="amber" weight="medium">
+            {patient.openConflicts} {patient.openConflicts === 1 ? "conflicto" : "conflictos"} entre informes
+            {mine > 0 ? (mine === patient.openConflicts ? "" : ` · ${mine} ${mine === 1 ? "tuyo" : "tuyos"}`) : " · de otros"}
+          </Text>
+          <Button size="1" color={mine > 0 ? "amber" : "gray"} variant="soft" asChild>
+            <Link to="/reconciliation" search={target ? { id: target.id } : {}}>
+              {mine > 0 ? "Resolver" : "Consultar"}
+            </Link>
+          </Button>
         </Flex>
       )}
-      <Flex justify="between" align="center" gap="2" mt="2">
-        <Flex direction="column">
-          <Text size="1" color={visit.color} weight={visit.bold ? "bold" : "regular"}>
-            {patient.visitPriorityLabel}
-          </Text>
-          <Text size="1" color="gray">
-            Última visita: {formatLastVisit(patient.lastDictationAt)}
-          </Text>
-        </Flex>
-        <Tooltip content={`${patient.pendingTasks} ${patient.pendingTasks === 1 ? "tarea pendiente" : "tareas pendientes"}`}>
-          <Badge
-            color={patient.pendingTasks > 0 ? "amber" : "gray"}
-            variant={patient.pendingTasks > 0 ? "solid" : "soft"}
-            radius="full"
-            size="2"
-            aria-label={`${patient.pendingTasks} tareas pendientes`}
-          >
-            {patient.pendingTasks}
-          </Badge>
-        </Tooltip>
-      </Flex>
-    </Button>
+    </Flex>
   );
 }
 
@@ -225,9 +232,12 @@ interface PatientDetailProps {
   patient: PatientWithCount;
   search: InboxSearch;
   go: (next: InboxSearch) => void;
+  /** En teléfono la fila no se ve junto al detalle: el contexto va bajo el encabezado. */
+  showContext: boolean;
 }
 
-function PatientDetail({ patient, search, go }: PatientDetailProps) {
+function PatientDetail({ patient, search, go, showContext }: PatientDetailProps) {
+  const [tab, setTab] = useState<PatientTab>("summary");
   // Incluye tus borradores (para «Informe por validar»); el historial solo muestra los guardados.
   const { data: allReports = [], isPending } = useReports(patient.id, true);
   const reports = allReports.filter((report) => report.status === "done");
@@ -263,16 +273,19 @@ function PatientDetail({ patient, search, go }: PatientDetailProps) {
   return (
     <Flex direction="column" gap="4">
       <PatientHeader patient={patient} />
+      {showContext && <PatientContext patient={patient} />}
       <ProcessingNotice patient={patient} />
-      <ConflictNotice patient={patient} />
       {toValidate.map((report) => (
         <ValidationPrompt key={report.id} report={report} onOpen={() => openReport(report.id)} />
       ))}
-      <PatientSummaryView patientId={patient.id} />
-      <EvidencePanel patientId={patient.id} />
-      <CollapsibleSection title="Historial de informes" detail={String(reports.length)}>
-        <ReportHistory reports={reports} onOpen={openReport} />
-      </CollapsibleSection>
+      <PatientSummaryView
+        patientId={patient.id}
+        reports={reports}
+        reportsLoading={isPending}
+        onOpenReport={openReport}
+        tab={tab}
+        onTabChange={setTab}
+      />
     </Flex>
   );
 }
@@ -340,31 +353,6 @@ function RecordDialog({ patient }: { patient: PatientWithCount }) {
   );
 }
 
-/** Aviso de los conflictos abiertos del paciente, con un acceso directo a resolverlos. */
-function ConflictNotice({ patient }: { patient: PatientWithCount }) {
-  const { data: reconciliations = [] } = useReconciliations();
-  if (patient.openConflicts === 0) return null;
-  const open = reconciliations.find((item) => item.patientId === patient.id && item.status === "open");
-  const mine = patient.myOpenConflicts;
-  return (
-    <Callout.Root color="orange">
-      <Flex align="center" justify="between" gap="3" wrap="wrap" style={{ width: "100%" }}>
-        <Callout.Text>
-          <strong>
-            {patient.openConflicts} {patient.openConflicts === 1 ? "conflicto" : "conflictos"} entre informes por resolver
-          </strong>
-          {mine > 0 ? ` (${mine} ${mine === 1 ? "es tuyo" : "son tuyos"}).` : ": los resuelven quienes los reportaron."}
-        </Callout.Text>
-        <Link to="/reconciliation" search={open ? { id: open.id } : {}}>
-          <Button size="1" color="orange" variant={mine > 0 ? "solid" : "soft"}>
-            {mine > 0 ? "Resolver" : "Ver"}
-          </Button>
-        </Link>
-      </Flex>
-    </Callout.Root>
-  );
-}
-
 function ProcessingNotice({ patient }: { patient: PatientWithCount }) {
   const retry = useRetryTranscription();
   const queryClient = useQueryClient();
@@ -390,7 +378,7 @@ function ProcessingNotice({ patient }: { patient: PatientWithCount }) {
 
   const retryId = patient.retryRecordingId;
   return (
-    <Callout.Root color="red" variant="surface">
+    <Callout.Root color="amber" variant="surface">
       <Flex justify="between" align="center" gap="3" wrap="wrap" style={{ width: "100%" }}>
         <Callout.Text>
           No se pudo procesar tu último dictado.{retryId ? "" : " Vuelve a grabarlo."}
@@ -400,7 +388,7 @@ function ProcessingNotice({ patient }: { patient: PatientWithCount }) {
           <Button
             size="1"
             variant="soft"
-            color="red"
+            color="amber"
             loading={retry.isPending}
             onClick={() =>
               retry.mutate(retryId, { onSuccess: () => void queryClient.invalidateQueries({ queryKey: patientKeys }) })
@@ -429,37 +417,6 @@ function ValidationPrompt({ report, onOpen }: { report: Report; onOpen: () => vo
         <Button onClick={onOpen}>Revisar y validar</Button>
       </Flex>
     </Card>
-  );
-}
-
-function ReportHistory({ reports, onOpen }: { reports: Report[]; onOpen: (reportId: string) => void }) {
-  if (reports.length === 0) {
-    return (
-      <Text size="2" color="gray">
-        Aún no hay informes de este paciente.
-      </Text>
-    );
-  }
-  return (
-    <Flex direction="column" gap="1">
-      {reports.map((report) => (
-        <Button
-          key={report.id}
-          variant="ghost"
-          color="gray"
-          onClick={() => onOpen(report.id)}
-          style={{ justifyContent: "space-between", height: "auto", padding: "8px", margin: 0, color: "var(--gray-12)" }}
-        >
-          <Flex direction="column" align="start" style={{ textAlign: "left" }}>
-            <Text size="2">{reportTitle(report.sequence, report.profession)}</Text>
-            <Text size="1" color="gray">
-              {report.authorName} · {DATE_FORMAT.format(new Date(report.recordedAt))}
-            </Text>
-          </Flex>
-          {report.status !== "done" && <StatusBadge report={report} />}
-        </Button>
-      ))}
-    </Flex>
   );
 }
 

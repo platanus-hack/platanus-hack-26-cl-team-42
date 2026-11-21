@@ -33,3 +33,12 @@ def refine_conflict_guidance(reconciliation_id: int) -> int:
     for conflict in conflicts:
         refine_guidance(conflict.id)
     return conflicts.count()
+
+
+@app.task(soft_time_limit=45, time_limit=60)
+def generate_patient_synthesis(
+    stage: str, key: str, version_id: int, professional_id: int | None
+) -> None:
+    from .summary_services import generate_synthesis
+
+    generate_synthesis(stage, key, version_id, professional_id)

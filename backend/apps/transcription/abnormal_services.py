@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from apps.recordings.models import Patient
 
+from .consolidation_services import identity_of
 from .evidence_services import _latest_results, canonical_lab
 from .homologation_services import normalize
 from .models import Evidence
@@ -49,11 +50,22 @@ class AbnormalFinding(BaseModel):
     mortality: bool = False
     note: str = ""
     at: datetime | None = None
+    evidenceId: int | None = None
+    reportId: str | None = None
 
 
-def abnormal_findings(patient: Patient, version_data: dict[str, Any]) -> list[AbnormalFinding]:
+def abnormal_findings(
+    patient: Patient,
+    version_data: dict[str, Any],
+    *,
+    provenance: dict[str, int] | None = None,
+    visible_report_ids: set[int] | None = None,
+) -> list[AbnormalFinding]:
     """Escalas y exámenes fuera de rango: lo más grave y ligado a mortalidad primero."""
-    found = [*_scale_findings(version_data), *_lab_findings(patient)]
+    found = [
+        *_scale_findings(version_data, provenance or {}, visible_report_ids or set()),
+        *_lab_findings(patient),
+    ]
     return sorted(
         found,
         key=lambda f: (SEVERITY_ORDER[f.severity], not f.mortality, f.kind != "scale", f.name),
@@ -119,7 +131,9 @@ SCALE_RULES: list[tuple[tuple[str, ...], bool, ScaleRule]] = [
 ]
 
 
-def _scale_findings(data: dict[str, Any]) -> list[AbnormalFinding]:
+def _scale_findings(
+    data: dict[str, Any], provenance: dict[str, int], visible_report_ids: set[int]
+) -> list[AbnormalFinding]:
     found: dict[str, AbnormalFinding] = {}
     for item in data.get("escalas") or []:
         if not isinstance(item, dict):
@@ -136,6 +150,9 @@ def _scale_findings(data: dict[str, Any]) -> list[AbnormalFinding]:
             if verdict:
                 severity, note = verdict
                 interpretation = str(item.get("interpretacion", "")).strip()
+                source_id = provenance.get(f"escalas::{identity_of(item)}") or provenance.get(
+                    "section::escalas"
+                )
                 found[plain] = AbnormalFinding(
                     kind="scale",
                     name=name,
@@ -144,6 +161,7 @@ def _scale_findings(data: dict[str, Any]) -> list[AbnormalFinding]:
                     severityLabel=SEVERITY_LABELS[severity],
                     mortality=mortality,
                     note=interpretation or note,
+                    reportId=str(source_id) if source_id in visible_report_ids else None,
                 )
             break
     return list(found.values())
@@ -174,6 +192,7 @@ def _lab_findings(patient: Patient) -> list[AbnormalFinding]:
                 mortality=mortality,
                 note="por debajo del rango" if lab["flag"] == "low" else "por sobre el rango",
                 at=lab["takenAt"],
+                evidenceId=lab["evidenceId"],
             )
         )
     return found

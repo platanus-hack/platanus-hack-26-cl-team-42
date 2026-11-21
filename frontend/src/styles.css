@@ -323,3 +323,36 @@
   background: var(--color-panel-solid);
   box-shadow: var(--shadow-4);
 }
+
+/* Fila seleccionable de las listas (Mis pacientes, Conflictos): franja de color y despliegue. */
+.list-item {
+  border-radius: var(--radius-3);
+  background: var(--gray-a2);
+  box-shadow: inset 3px 0 0 var(--list-item-accent, transparent);
+}
+
+.list-item[data-selected] {
+  background: var(--accent-a3);
+  box-shadow:
+    inset 3px 0 0 var(--list-item-accent, transparent),
+    inset 0 0 0 1px var(--accent-a7);
+}
+
+.list-item__trigger {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.list-item:not([data-selected]) .list-item__trigger:hover {
+  background: var(--gray-a3);
+}
+
+.list-item__trigger:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -2px;
+}
