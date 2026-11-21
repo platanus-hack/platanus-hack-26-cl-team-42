@@ -39,7 +39,7 @@ function Login() {
             <img src="/logo.png" className="brand-mark" alt="" aria-hidden="true" style={{ width: 64, height: 64 }} />
           </Flex>
           <Heading size="6" weight="bold" align="center">
-            Login
+            Dendrita
           </Heading>
           {providerLogin ? (
             <ProviderLogin providerLogin={providerLogin} />
