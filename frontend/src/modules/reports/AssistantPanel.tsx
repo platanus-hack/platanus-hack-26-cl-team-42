@@ -95,12 +95,11 @@ function Answer({ exchange }: { exchange: Exchange }) {
           {references.map((reference) => (
             <Text key={`${reference.reportId}-${reference.section}`} size="1">
               <Link
-                to="/reports"
+                to="/"
                 search={{
-                  patient: reference.patientId !== null ? String(reference.patientId) : "all",
+                  patient: reference.patientId !== null ? String(reference.patientId) : undefined,
                   report: reference.reportId,
                   section: reference.section,
-                  view: "reports",
                 }}
               >
                 {reportTitle(reference.sequence, reference.profession)} · {reference.patientName} ·{" "}
