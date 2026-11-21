@@ -1,5 +1,5 @@
 import { formatClinicalTime } from "./format";
-import type { EpisodeRecord, HandoffSnapshot, SourcedEntry } from "./model";
+import type { Encounter, EpisodeRecord, HandoffSnapshot, LastEncounter, SourcedEntry } from "./model";
 import { authorLine, datumText, episodeEncountersAtCutoff, pendingText, selectRecord, sourcedEntries } from "./record";
 
 /** Ventana de «cambios recientes»: las últimas 12 h clínicas antes del corte. */
@@ -35,9 +35,18 @@ function buildHandoffSnapshot(record: EpisodeRecord): HandoffSnapshot {
     cutoffData: view.cutoffData,
     pendings: view.pendings,
     openConflicts: view.openConflicts,
+    lastEncounter: lastEncounterAtCutoff(record),
   };
   snapshot.summaryText = renderHandoffSummary(record, snapshot);
   return structuredClone(snapshot);
+}
+
+function lastEncounterAtCutoff(record: EpisodeRecord): LastEncounter | null {
+  const latest = episodeEncountersAtCutoff(record).reduce<Encounter | null>(
+    (last, encounter) => (!last || Date.parse(encounter.occurredAt) > Date.parse(last.occurredAt) ? encounter : last),
+    null,
+  );
+  return latest && { encounterId: latest.id, authorId: latest.authorId, occurredAt: latest.occurredAt };
 }
 
 /** Resumen en texto del traspaso; sale del propio snapshot, no del estado vivo. */
