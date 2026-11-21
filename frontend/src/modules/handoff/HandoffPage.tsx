@@ -33,18 +33,19 @@ type People = Pick<EpisodeRecord, "professionals">;
 export function HandoffPage() {
   const records = useEpisodeRecords();
   const team = useTeam();
+  const handoffs = useHandoffs();
 
   return (
     <ModulePage stepId="handoff" connected>
-      {records.isPending || team.isPending ? (
+      {records.isPending || team.isPending || handoffs.isPending ? (
         <Flex justify="center" py="6"><Spinner size="3" /></Flex>
-      ) : !records.data || !team.data ? (
+      ) : !records.data || !team.data || !handoffs.data ? (
         <EmptyState
           title="No se pudo cargar el traspaso"
-          description={(records.error ?? team.error)?.message ?? "Inténtalo de nuevo en unos segundos."}
+          description={(records.error ?? team.error ?? handoffs.error)?.message ?? "Inténtalo de nuevo en unos segundos."}
         />
       ) : (
-        <SendHandoff records={records.data} team={team.data} actorId={team.data.meId} />
+        <SendHandoff records={records.data} team={team.data} handoffs={handoffs.data} />
       )}
     </ModulePage>
   );
@@ -53,21 +54,21 @@ export function HandoffPage() {
 interface SendHandoffProps {
   records: EpisodeRecord[];
   team: Team;
-  actorId: string;
+  handoffs: Handoff[];
 }
 
-function SendHandoff({ records, team, actorId }: SendHandoffProps) {
+function SendHandoff({ records, team, handoffs }: SendHandoffProps) {
+  const actorId = team.meId;
   const recipients = team.professionals.filter(({ id }) => team.recipientIds.includes(id));
   const [toId, setToId] = useState("");
   const [note, setNote] = useState("");
   const send = useSendHandoff();
-  const handoffs = useHandoffs();
-  const snapshots = useMemo(() => buildHandoffSnapshots(records, actorId), [records, actorId]);
+  const snapshots = useMemo(() => buildHandoffSnapshots(records, actorId, handoffs), [records, actorId, handoffs]);
   const recipient = professionalById(team, toId);
   // Los pacientes se reparten: cada envío lleva solo los marcados, y los ya enviados se desmarcan.
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
   const selected = snapshots.filter(({ episodeId }) => !excluded.has(episodeId));
-  const sentTo = recipientsByPatient(handoffs.data ?? [], actorId, team);
+  const sentTo = recipientsByPatient(handoffs, actorId, team);
   const toggle = (episodeId: string, checked: boolean) =>
     setExcluded((current) => {
       const next = new Set(current);
@@ -80,7 +81,7 @@ function SendHandoff({ records, team, actorId }: SendHandoffProps) {
     return (
       <EmptyState
         title="Sin pacientes para traspasar"
-        description="Aquí aparecen los pacientes que atendiste (con informes guardados) para entregarlos a otra persona."
+        description="Aquí aparecen los pacientes que recibiste en un traspaso o para quienes guardaste un informe."
       />
     );
   }
@@ -151,7 +152,7 @@ function SendHandoff({ records, team, actorId }: SendHandoffProps) {
           </Flex>
           <Flex direction="column" gap="2">
             <Text size="2" weight="medium">
-              Pacientes a entregar ({selected.length} de {snapshots.length}) · atendidos por {authorLine(team, actorId)}
+              Pacientes a entregar ({selected.length} de {snapshots.length})
             </Text>
             <Table.Root variant="surface" size="1" aria-label="Pacientes a entregar">
               <Table.Header>

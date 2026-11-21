@@ -1,14 +1,24 @@
 import { formatClinicalTime } from "./format";
-import type { Encounter, EpisodeRecord, HandoffSnapshot, LastEncounter, SourcedEntry } from "./model";
+import type { Encounter, EpisodeRecord, Handoff, HandoffSnapshot, LastEncounter, SourcedEntry } from "./model";
 import { authorLine, datumText, episodeEncountersAtCutoff, pendingText, selectRecord, sourcedEntries } from "./record";
 
 /** Ventana de «cambios recientes»: las últimas 12 h clínicas antes del corte. */
 export const RECENT_WINDOW_HOURS = 12;
 
-/** Incluye cada episodio en que el emisor registró una atención al corte. */
-export function buildHandoffSnapshots(records: EpisodeRecord[], fromId: string): HandoffSnapshot[] {
+/** Incluye pacientes asignados que el emisor recibió o atendió al corte. */
+export function buildHandoffSnapshots(
+  records: EpisodeRecord[],
+  fromId: string,
+  handoffs: Handoff[] = [],
+): HandoffSnapshot[] {
+  const received = new Set(
+    handoffs.filter(({ toId }) => toId === fromId).flatMap(({ snapshots }) => snapshots.map(({ episodeId }) => episodeId)),
+  );
   return records
-    .filter((record) => episodeEncountersAtCutoff(record).some((encounter) => encounter.authorId === fromId))
+    .filter((record) =>
+      received.has(record.episode.id) ||
+      episodeEncountersAtCutoff(record).some((encounter) => encounter.authorId === fromId),
+    )
     .map(buildHandoffSnapshot);
 }
 

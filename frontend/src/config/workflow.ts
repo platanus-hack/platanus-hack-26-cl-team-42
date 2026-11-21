@@ -61,7 +61,7 @@ export const WORKFLOW_STEPS = [
   {
     id: "handoff",
     label: "Traspaso",
-    summary: "Entrega en conjunto los pacientes que atendiste a otra persona del equipo.",
+    summary: "Entrega a otra persona del equipo los pacientes que atendiste o recibiste en un traspaso.",
     path: "/handoff",
     hidden: false,
     connected: true,
