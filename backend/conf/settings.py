@@ -155,6 +155,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # STORAGES
 #############################
 STORAGES = {
+    # Archivos subidos (p. ej. audios de dictados). No se exponen vía MEDIA_URL:
+    # cada módulo los sirve a través de su API autenticada.
+    # TODO: usar S3 (deploy/terraform/webapp/storage) en entornos desplegados.
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -217,6 +223,7 @@ INSTALLED_APPS = [
     "dbi18n",
     "apps.users",
     "apps.demo",
+    "apps.recordings",
 ]
 
 

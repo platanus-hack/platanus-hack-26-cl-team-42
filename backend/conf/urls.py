@@ -24,6 +24,7 @@ from drf_spectacular.views import (
 # web process can list/dispatch them through the tracker API.
 import apps.demo.tasks  # noqa: F401
 from apps.demo.api import router as demo_router
+from apps.recordings.api import router as recordings_router
 from apps.transcription.api import router as transcription_router
 from tracker.api import router as tracker_router
 
@@ -32,6 +33,7 @@ from tracker.api import router as tracker_router
 ########################
 API_ROUTERS = [
     ("/demo", demo_router),
+    ("/recordings", recordings_router),
     ("/tracker", tracker_router),
     ("/transcription", transcription_router),
     ("/eventcore", eventcore_docs_router),
