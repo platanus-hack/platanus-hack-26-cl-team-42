@@ -4,6 +4,7 @@ Cualquier modelo que cumpla `ChatModel` (texto de entrada, texto de salida) pued
 usarse en el agente, sin depender de que soporte llamadas nativas a herramientas.
 """
 
+from collections.abc import Callable
 from typing import Literal, Protocol
 
 from pydantic import BaseModel
@@ -20,5 +21,9 @@ class ModelError(Exception):
 
 class ChatModel(Protocol):
     name: str
+    # Los modelos con `streams = True` aceptan `on_delta`, que recibe el texto acumulado.
+    streams: bool
 
-    def complete(self, messages: list[ChatMessage]) -> str: ...
+    def complete(
+        self, messages: list[ChatMessage], on_delta: Callable[[str], None] | None = None
+    ) -> str: ...

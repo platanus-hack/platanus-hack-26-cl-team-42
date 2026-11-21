@@ -1,29 +1,45 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Callout, Card, Flex, Grid, Heading, Select, Spinner, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
 import { professionLabel } from "../recordings/professions";
 import { useTranscripts } from "../transcription/api";
+import { RecordView } from "./RecordSections";
 import {
   isExtractionInProgress,
   useExtractions,
   useExtractRecord,
   useReportTemplates,
+  useTemplate,
   type Extraction,
   type ExtractionStatus,
   type ReportTemplate,
+  type TemplateDetail,
 } from "./api";
 
 export function TemplatesPage() {
   const { data: transcripts = [], isPending } = useTranscripts();
   const { data: templates = [] } = useReportTemplates();
-  const { data: extractions = [] } = useExtractions();
+  const { data: extractions = [], isPending: extractionsPending } = useExtractions();
+  const { mutate: startExtraction } = useExtractRecord();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const requested = useRef(new Set<string>());
 
   const ready = transcripts.filter((transcript) => transcript.status === "done");
-  const selected = ready.find((transcript) => transcript.id === selectedId) ?? ready[0];
+  const newest = [...ready].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  const selected = ready.find((transcript) => transcript.id === selectedId) ?? newest;
   const extraction = extractions.find((item) => item.transcriptId === selected?.id);
+  const automaticSlug = templates.find((template) => template.profession === selected?.profession)?.slug;
+  const { data: template } = useTemplate(extraction?.templateSlug ?? automaticSlug);
+
+  // Al llegar al paso, el dictado se parsea solo con la plantilla de su tipo de profesional.
+  useEffect(() => {
+    if (!selected || extractionsPending || extraction || !automaticSlug) return;
+    if (requested.current.has(selected.id)) return;
+    requested.current.add(selected.id);
+    startExtraction({ transcriptId: selected.id });
+  }, [selected, extraction, extractionsPending, automaticSlug, startExtraction]);
 
   return (
     <ModulePage stepId="templates" connected>
@@ -33,7 +49,7 @@ export function TemplatesPage() {
           {!isPending && ready.length === 0 ? (
             <EmptyState
               title="Sin transcripciones listas"
-              description="Cuando un dictado termine de transcribirse podrás estructurarlo con una plantilla."
+              description="Cuando un dictado termine de transcribirse se parseará con la plantilla de su profesional."
             />
           ) : (
             ready.map((transcript) => {
@@ -64,22 +80,23 @@ export function TemplatesPage() {
               <Flex direction="column" gap="1">
                 <Heading size="4">{selected.name}</Heading>
                 <Text size="2" color="gray">
-                  La plantilla se elige según el tipo de profesional del dictado y Qwen completa sus campos con el texto
-                  transcrito. Revisa los valores antes de continuar.
+                  {selected.profession
+                    ? `Dictado de ${professionLabel(selected.profession)}: la plantilla se elige y se llena automáticamente.`
+                    : "Este dictado no indica el tipo de profesional: elige la plantilla manualmente."}
                 </Text>
               </Flex>
-              <ExtractControls
+              <TemplatePicker
                 key={selected.id}
                 transcriptId={selected.id}
-                profession={selected.profession}
                 templates={templates}
+                automaticSlug={automaticSlug}
                 current={extraction}
               />
-              {extraction && <ExtractionResult extraction={extraction} />}
+              {extraction ? <ExtractionBody extraction={extraction} template={template} /> : null}
             </Flex>
           ) : (
             <Text size="2" color="gray">
-              Selecciona una transcripción para estructurarla.
+              Selecciona una transcripción para parsearla.
             </Text>
           )}
         </Card>
@@ -90,8 +107,8 @@ export function TemplatesPage() {
 
 const STATUS_LABELS: Record<ExtractionStatus, { label: string; color: "gray" | "blue" | "green" | "red" }> = {
   pending: { label: "En cola", color: "gray" },
-  processing: { label: "Extrayendo", color: "blue" },
-  done: { label: "Estructurado", color: "green" },
+  processing: { label: "Llenando", color: "blue" },
+  done: { label: "Parseado", color: "green" },
   failed: { label: "Error", color: "red" },
 };
 
@@ -104,30 +121,29 @@ function ExtractionBadge({ status }: { status: ExtractionStatus }) {
   );
 }
 
-interface ExtractControlsProps {
+interface TemplatePickerProps {
   transcriptId: string;
-  profession: string;
   templates: ReportTemplate[];
+  automaticSlug: string | undefined;
   current: Extraction | undefined;
 }
 
-function ExtractControls({ transcriptId, profession, templates, current }: ExtractControlsProps) {
+/** La plantilla sale del rol del dictado; este selector solo sirve para cambiarla o elegirla a mano. */
+function TemplatePicker({ transcriptId, templates, automaticSlug, current }: TemplatePickerProps) {
   const extract = useExtractRecord();
   const [chosenSlug, setChosenSlug] = useState<string | undefined>();
-  const automaticSlug = templates.find((template) => template.profession === profession)?.slug;
   const templateSlug = chosenSlug ?? current?.templateSlug ?? automaticSlug;
   const busy = extract.isPending || (current !== undefined && isExtractionInProgress(current));
+  const changed = current !== undefined && templateSlug !== current.templateSlug;
 
   return (
     <Flex direction="column" gap="2">
-      <Text size="2" color="gray">
-        {profession
-          ? `Tipo de profesional del dictado: ${professionLabel(profession)}.`
-          : "Este dictado no indica el tipo de profesional: elige la plantilla manualmente."}
-      </Text>
       <Flex gap="3" align="center" wrap="wrap">
+        <Text size="2" weight="medium">
+          Plantilla
+        </Text>
         <Select.Root value={templateSlug} onValueChange={setChosenSlug}>
-          <Select.Trigger placeholder="Plantilla" style={{ minWidth: 260 }} />
+          <Select.Trigger placeholder="Elige una plantilla" style={{ minWidth: 260 }} />
           <Select.Content>
             {templates.map((template) => (
               <Select.Item key={template.slug} value={template.slug}>
@@ -136,81 +152,45 @@ function ExtractControls({ transcriptId, profession, templates, current }: Extra
             ))}
           </Select.Content>
         </Select.Root>
-        <Button
-          disabled={!templateSlug}
-          loading={busy}
-          onClick={() => templateSlug && extract.mutate({ transcriptId, templateSlug })}
-        >
-          {current ? "Volver a extraer" : "Extraer registro"}
-        </Button>
+        {(!current || changed || current.status === "failed") && (
+          <Button
+            disabled={!templateSlug}
+            loading={busy}
+            onClick={() => templateSlug && extract.mutate({ transcriptId, templateSlug })}
+          >
+            {current ? "Volver a parsear" : "Parsear"}
+          </Button>
+        )}
       </Flex>
       {extract.isError && (
         <Callout.Root color="red">
-          <Callout.Text>No se pudo iniciar la extracción: {extract.error.message}</Callout.Text>
+          <Callout.Text>No se pudo iniciar el parseo: {extract.error.message}</Callout.Text>
         </Callout.Root>
       )}
     </Flex>
   );
 }
 
-function ExtractionResult({ extraction }: { extraction: Extraction }) {
-  if (isExtractionInProgress(extraction)) {
-    return (
-      <Flex align="center" justify="center" gap="3" py="6">
-        <Spinner size="3" />
-        <Text color="gray">Qwen está extrayendo el registro con «{extraction.templateName}»…</Text>
-      </Flex>
-    );
-  }
+interface ExtractionBodyProps {
+  extraction: Extraction;
+  template: TemplateDetail | undefined;
+}
+
+function ExtractionBody({ extraction, template }: ExtractionBodyProps) {
   if (extraction.status === "failed") {
     return (
       <Callout.Root color="red">
-        <Callout.Text>{extraction.error || "No se pudo extraer el registro."}</Callout.Text>
+        <Callout.Text>{extraction.error || "No se pudo parsear el dictado."}</Callout.Text>
       </Callout.Root>
     );
   }
-  return (
-    <Flex direction="column" gap="2">
-      <Heading size="3">{extraction.templateName}</Heading>
-      <RecordValue value={extraction.data} />
-    </Flex>
-  );
-}
-
-function RecordValue({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === "") {
-    return <Text color="gray">—</Text>;
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <Text color="gray">—</Text>;
+  if (extraction.status === "pending") {
     return (
-      <Flex direction="column" gap="2">
-        {value.map((item, index) => (
-          <Card key={index} variant="surface">
-            <RecordValue value={item} />
-          </Card>
-        ))}
+      <Flex align="center" justify="center" gap="3" py="6">
+        <Spinner size="3" />
+        <Text color="gray">Preparando el parseo con «{extraction.templateName}»…</Text>
       </Flex>
     );
   }
-  if (typeof value === "object") {
-    return (
-      <Flex direction="column" gap="2">
-        {Object.entries(value as Record<string, unknown>).map(([key, child]) => (
-          <Flex key={key} direction="column" gap="1">
-            <Text size="2" weight="medium">
-              {labelFor(key)}
-            </Text>
-            <RecordValue value={child} />
-          </Flex>
-        ))}
-      </Flex>
-    );
-  }
-  return <Text size="2">{String(value)}</Text>;
-}
-
-function labelFor(key: string): string {
-  const words = key.replace(/_/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  return <RecordView extraction={extraction} template={template} />;
 }

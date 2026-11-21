@@ -130,6 +130,31 @@ def validate_record(template: ClinicalTemplate, payload: Any) -> list[Validation
     ]
 
 
+def section_schema(template: ClinicalTemplate, section: str) -> dict[str, Any]:
+    """Schema autocontenido de una sola sección: ``{"<sección>": ...}``."""
+    schema = template.output_schema
+    return {
+        "$schema": JSON_SCHEMA_DIALECT,
+        "type": "object",
+        "properties": {section: schema["properties"][section]},
+        "required": [section],
+        "additionalProperties": False,
+        "$defs": schema.get("$defs", {}),
+    }
+
+
+def validate_section(
+    template: ClinicalTemplate, section: str, payload: Any
+) -> list[ValidationIssue]:
+    """Valida ``{"<sección>": ...}`` contra la sección de la plantilla; vacío si es válido."""
+    validator = Draft202012Validator(section_schema(template, section))
+    errors = sorted(validator.iter_errors(payload), key=lambda e: list(e.absolute_path))
+    return [
+        ValidationIssue(path=_json_path(error.absolute_path), message=error.message)
+        for error in errors
+    ]
+
+
 def _sync_one(built: BuiltTemplate) -> SyncResult:
     with transaction.atomic():
         versions = ClinicalTemplate.objects.select_for_update().filter(slug=built.slug)

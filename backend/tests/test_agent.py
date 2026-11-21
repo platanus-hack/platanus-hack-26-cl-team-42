@@ -180,10 +180,26 @@ class _FakeAnthropicMessages:
     def __init__(self, response=None, error=None):
         self.response, self.error, self.kwargs = response, error, None
 
-    def create(self, **kwargs):
+    def stream(self, **kwargs):
         self.kwargs = kwargs
         if self.error:
             raise self.error
+        response = self.response
+        text = "".join(block.text for block in response.content)
+        return _FakeStream(response, [text[:3], text[3:]])
+
+
+class _FakeStream:
+    def __init__(self, response, chunks):
+        self.response, self.text_stream = response, iter(chunks)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def get_final_message(self):
         return self.response
 
 
@@ -213,6 +229,17 @@ def test_anthropic_model_splits_system_prompt_and_returns_text():
     assert api.kwargs["messages"] == [{"role": "user", "content": "hola"}]
     assert api.kwargs["model"] == "claude-test"
     assert api.kwargs["fallbacks"] == "default"
+
+
+def test_anthropic_model_reports_streamed_text_progress():
+    api = _FakeAnthropicMessages(_anthropic_response('{"ok": true}'))
+    seen: list[str] = []
+
+    _anthropic_model(api).complete(
+        [ChatMessage(role="user", content="hola")], on_delta=seen.append
+    )
+
+    assert seen == ['{"o', '{"ok": true}']
 
 
 def test_anthropic_model_reports_refusals_and_api_errors():

@@ -239,3 +239,184 @@ def test_api_extract_uses_the_recording_profession(monkeypatch, client, transcri
 
     assert response.status_code == 202
     assert response.json()["templateSlug"] == "kinesiologia_uci"
+
+
+class StreamingModel(FakeModel):
+    streams = True
+
+    def __init__(self, reply: str, on_partial):
+        super().__init__([reply])
+        self.on_partial = on_partial
+
+    def complete(self, messages, on_delta=None):
+        reply = super().complete(messages)
+        on_delta(reply[: len(reply) // 2])
+        self.on_partial()
+        return reply
+
+
+def test_partial_record_is_saved_while_the_model_is_still_writing(monkeypatch, transcription):
+    monkeypatch.setattr(extraction, "PROGRESS_INTERVAL_SECONDS", 0)
+    record = extraction.request_extraction(transcription, "medico_uci")
+    seen: list[dict | None] = []
+    model = StreamingModel(
+        json.dumps(_valid_record()), lambda: seen.append(ExtractedRecord.objects.get().data)
+    )
+    monkeypatch.setattr(extraction, "_extraction_model", lambda: model)
+
+    extraction.run_extraction(record.id)
+
+    assert seen[0], "el registro parcial debía guardarse antes de terminar"
+    assert len(seen[0]) < len(_valid_record())
+    assert ExtractedRecord.objects.get().data == _valid_record()
+
+
+def test_requesting_again_while_one_is_running_does_not_queue_another(transcription):
+    first = extraction.request_extraction(transcription)
+    first.status = ExtractedRecord.Status.PROCESSING
+    first.save()
+
+    second = extraction.request_extraction(transcription)
+
+    assert second.id == first.id
+    assert second.status == ExtractedRecord.Status.PROCESSING
+
+
+def test_stale_in_progress_record_is_requeued(transcription):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    first = extraction.request_extraction(transcription)
+    ExtractedRecord.objects.filter(pk=first.pk).update(
+        status=ExtractedRecord.Status.PROCESSING, updated_at=timezone.now() - timedelta(hours=1)
+    )
+
+    second = extraction.request_extraction(transcription)
+
+    assert second.status == ExtractedRecord.Status.PENDING
+
+
+@pytest.fixture()
+def done_record(transcription):
+    record = extraction.request_extraction(transcription, "medico_uci")
+    record.status = ExtractedRecord.Status.DONE
+    record.data = _valid_record()
+    record.save()
+    return record
+
+
+def test_section_is_completed_with_written_information(monkeypatch, done_record):
+    model = _use_model(monkeypatch, [json.dumps({"resumen_24h": "Evolución estable."})])
+
+    extraction.request_section_update(done_record, "resumen_24h", "Evolución estable.")
+    done_record.refresh_from_db()
+    assert done_record.status == ExtractedRecord.Status.PROCESSING
+
+    assert extraction.run_section_update(done_record.id, "resumen_24h", "Evolución estable.", "")
+
+    done_record.refresh_from_db()
+    assert done_record.status == ExtractedRecord.Status.DONE
+    assert done_record.data["resumen_24h"] == "Evolución estable."
+    assert done_record.data["metadatos"] == _valid_record()["metadatos"]
+    assert "Evolución estable." in model.calls[0][1].content
+
+
+def test_section_is_completed_with_another_audio(monkeypatch, done_record):
+    model = _use_model(monkeypatch, [json.dumps({"resumen_24h": "Dicho en audio."})])
+    monkeypatch.setattr(extraction, "_transcribe_stored_audio", lambda name: "texto del audio")
+    audio = SimpleUploadedFile("complemento.wav", b"x", "audio/wav")
+
+    extraction.request_section_update(done_record, "resumen_24h", "", audio)
+    audio_name = _stored_audio_name(done_record)
+    extraction.run_section_update(done_record.id, "resumen_24h", "", audio_name)
+
+    done_record.refresh_from_db()
+    assert done_record.data["resumen_24h"] == "Dicho en audio."
+    assert "texto del audio" in model.calls[0][1].content
+    from django.core.files.storage import default_storage
+
+    assert not default_storage.exists(audio_name), "el audio temporal debía borrarse"
+
+
+def _stored_audio_name(record) -> str:
+    from django.core.files.storage import default_storage
+
+    _, files = default_storage.listdir("complements")
+    return next(f"complements/{name}" for name in files if name.startswith(f"{record.id}-"))
+
+
+def test_failed_section_update_keeps_the_record_and_reports_the_error(monkeypatch, done_record):
+    _use_model(monkeypatch, ["no es json", "{}"])
+    extraction.request_section_update(done_record, "resumen_24h", "algo")
+
+    extraction.run_section_update(done_record.id, "resumen_24h", "algo", "")
+
+    done_record.refresh_from_db()
+    assert done_record.status == ExtractedRecord.Status.DONE
+    assert done_record.data == _valid_record()
+    assert "No se pudo incorporar" in done_record.error
+
+
+def test_section_update_rejects_unknown_sections_and_empty_input(done_record):
+    with pytest.raises(extraction.ExtractionError):
+        extraction.request_section_update(done_record, "inexistente", "algo")
+    with pytest.raises(extraction.ExtractionError):
+        extraction.request_section_update(done_record, "resumen_24h", "   ")
+
+
+def test_api_complement_with_text(monkeypatch, client, done_record):
+    response = client.post(
+        f"{API_URL}/extractions/{done_record.id}/complement",
+        data={"section": "resumen_24h", "text": "Estable."},
+    )
+
+    assert response.status_code == 202, response.content
+    assert response.json()["status"] == "processing"
+
+
+def test_api_complement_with_audio_and_ownership(monkeypatch, client, done_record):
+    response = client.post(
+        f"{API_URL}/extractions/{done_record.id}/complement",
+        data={
+            "section": "resumen_24h",
+            "audio": SimpleUploadedFile("c.webm", b"x", "audio/webm;codecs=opus"),
+        },
+    )
+    assert response.status_code == 202, response.content
+
+    from django.core.files.storage import default_storage
+
+    default_storage.delete(_stored_audio_name(done_record))
+
+    other = User.objects.create_user(email="otro2@example.com", password="pw")
+    done_record.transcription.recording.professional = other
+    done_record.transcription.recording.save()
+    denied = client.post(
+        f"{API_URL}/extractions/{done_record.id}/complement",
+        data={"section": "resumen_24h", "text": "x"},
+    )
+    assert denied.status_code == 404
+
+
+def test_empty_values_never_overwrite_existing_information():
+    old = {"cama": "7", "fecha": "2026-11-21", "turno": None, "items": [1, 2]}
+    new = {"cama": "7", "fecha": None, "turno": "noche", "items": []}
+
+    assert extraction._keep_existing(old, new) == {
+        "cama": "7",
+        "fecha": "2026-11-21",
+        "turno": "noche",
+        "items": [1, 2],
+    }
+
+
+def test_section_update_keeps_what_the_model_dropped(monkeypatch, done_record):
+    dropped = {**_valid_record()["metadatos"], "cama": None}
+    _use_model(monkeypatch, [json.dumps({"metadatos": dropped})])
+    extraction.request_section_update(done_record, "metadatos", "Turno de noche.")
+
+    extraction.run_section_update(done_record.id, "metadatos", "Turno de noche.", "")
+
+    done_record.refresh_from_db()
+    assert done_record.data["metadatos"]["cama"] == _valid_record()["metadatos"]["cama"]

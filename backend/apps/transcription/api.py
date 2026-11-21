@@ -8,22 +8,30 @@ Cada profesional solo ve las de sus propios dictados.
 from uuid import UUID
 
 from django.shortcuts import get_object_or_404
-from ninja import Router, Schema
+from ninja import File, Form, Router, Schema
 from ninja.errors import HttpError
+from ninja.files import UploadedFile
 
 from apps.recordings.models import Recording
+from apps.recordings.services import ALLOWED_MIME_TYPES, MAX_AUDIO_BYTES, base_mime_type
 
 from .extraction_services import (
     ExtractionError,
     ExtractionOut,
     list_extractions,
     request_extraction,
+    request_section_update,
 )
 from .extraction_services import to_out as extraction_to_out
-from .models import Transcription
+from .models import ExtractedRecord, Transcription
 from .services import TranscriptionOut, list_transcriptions, request_transcription, to_out
 
 router = Router(tags=["transcription"])
+
+
+class ComplementIn(Schema):
+    section: str
+    text: str = ""
 
 
 class ExtractIn(Schema):
@@ -71,6 +79,31 @@ def extract_transcript(request, transcription_id: int, payload: ExtractIn):
     )
     try:
         record = request_extraction(transcription, payload.template_slug)
+    except ExtractionError as error:
+        raise HttpError(409, str(error)) from error
+    return 202, extraction_to_out(record)
+
+
+@router.post("/extractions/{extraction_id}/complement", response={202: ExtractionOut})
+def complement_extraction(
+    request,
+    extraction_id: int,
+    data: Form[ComplementIn],
+    audio: UploadedFile | None = File(None),
+):
+    """Completa una sección del registro con información escrita y/o con otro audio."""
+    record = get_object_or_404(
+        ExtractedRecord.objects.select_related("template", "transcription__recording"),
+        pk=extraction_id,
+        transcription__recording__professional=request.user,
+    )
+    if audio is not None:
+        if base_mime_type(audio.content_type) not in ALLOWED_MIME_TYPES:
+            raise HttpError(400, "Formato de audio no soportado.")
+        if audio.size == 0 or audio.size > MAX_AUDIO_BYTES:
+            raise HttpError(400, "El audio está vacío o supera el tamaño máximo permitido.")
+    try:
+        record = request_section_update(record, data.section, data.text, audio)
     except ExtractionError as error:
         raise HttpError(409, str(error)) from error
     return 202, extraction_to_out(record)
