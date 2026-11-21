@@ -1,140 +1,99 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import {
-  AlertDialog,
-  Badge,
   Box,
   Button,
   Callout,
   Card,
   Flex,
-  Heading,
-  IconButton,
   Select,
   Spinner,
-  Table,
   Text,
   TextArea,
-  TextField,
 } from "@radix-ui/themes";
 import { useNavigate } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
-import { EmptyState } from "../../components/EmptyState";
 import { StepIcon } from "../../components/icons";
-import { useDeleteRecording, useRecordings, useUploadRecording, type Recording } from "./api";
-import { PROFESSIONS, professionLabel } from "./professions";
-import { formatBytes, formatDuration } from "./recorderFormat";
+import { useUploadRecording, type Recording } from "./api";
+import { usePatients } from "../patients/api";
+import { PipelineView } from "../pipeline/PipelineView";
+import { formatDuration } from "./recorderFormat";
 import { isRecordingSupported, useAudioRecorder } from "./useAudioRecorder";
 
-export function RecordingsPage() {
-  const [patientReference, setPatientReference] = useState("");
-  const [profession, setProfession] = useState("");
-  const [specialty, setSpecialty] = useState("");
+interface RecordingsPageProps {
+  /** Dictado cuyo proceso (transcripción → informe) se está mostrando. */
+  recordingId?: string;
+}
+
+export function RecordingsPage({ recordingId }: RecordingsPageProps) {
+  const [patientId, setPatientId] = useState<number | undefined>();
   const navigate = useNavigate();
-  // Paso 2 del flujo: el dictado guardado ya está transcribiéndose; se pasa directo a verlo.
-  const openTranscription = (recording: Recording) =>
-    navigate({ to: "/transcription", search: { recording: recording.id } });
+  // El dictado guardado ya se está procesando solo: se muestra el avance aquí mismo.
+  const showProcess = (recording: Recording) => navigate({ to: "/recordings", search: { recording: recording.id } });
 
   return (
     <ModulePage stepId="recordings" connected>
       <Card size="3">
         <Flex direction="column" gap="5">
-          <PatientField value={patientReference} onChange={setPatientReference} />
-          <ProfessionField
-            profession={profession}
-            specialty={specialty}
-            onProfessionChange={setProfession}
-            onSpecialtyChange={setSpecialty}
-          />
-          <Recorder
-            patientReference={patientReference.trim()}
-            profession={profession}
-            specialty={specialty.trim()}
-            onSaved={openTranscription}
-          />
+          <PatientPicker value={patientId} onChange={setPatientId} />
+          <Recorder patientId={patientId} onSaved={showProcess} />
         </Flex>
       </Card>
 
-      <RecordingsList />
+      {recordingId && (
+        <PipelineView
+          key={recordingId}
+          recordingId={recordingId}
+          onMissing={() => navigate({ to: "/recordings", search: {}, replace: true })}
+        />
+      )}
     </ModulePage>
   );
 }
 
-/** El paciente se fija antes de grabar para no mezclar dictados entre pacientes. */
-function PatientField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <Flex direction="column" gap="1">
-      <Text as="label" htmlFor="patient-reference" size="2" weight="medium">
-        Paciente / cama
-      </Text>
-      <TextField.Root
-        id="patient-reference"
-        size="3"
-        placeholder="Ej.: Cama 4 · UCI"
-        value={value}
-        maxLength={120}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      <Text size="1" color="gray">
-        Confirma el paciente antes de grabar. Usa datos ficticios durante la demo.
-      </Text>
-    </Flex>
-  );
-}
+/** El paciente se elige entre los asignados antes de grabar: identifica de quién es el dictado y el informe. */
+function PatientPicker({ value, onChange }: { value: number | undefined; onChange: (id: number) => void }) {
+  const { data: patients = [], isPending } = usePatients();
+  const selected = patients.find((patient) => patient.id === value);
 
-interface ProfessionFieldProps {
-  profession: string;
-  specialty: string;
-  onProfessionChange: (value: string) => void;
-  onSpecialtyChange: (value: string) => void;
-}
-
-/** El tipo de profesional elige automáticamente la plantilla con que se estructura el dictado. */
-function ProfessionField({ profession, specialty, onProfessionChange, onSpecialtyChange }: ProfessionFieldProps) {
   return (
     <Flex direction="column" gap="1">
       <Text as="label" size="2" weight="medium">
-        Tipo de profesional
+        Paciente
       </Text>
-      <Flex gap="3" wrap="wrap">
-        <Select.Root value={profession || undefined} onValueChange={onProfessionChange}>
-          <Select.Trigger placeholder="Selecciona quién dicta" style={{ minWidth: 260 }} />
+      <Flex gap="3" wrap="wrap" align="center">
+        <Select.Root value={selected ? String(selected.id) : undefined} onValueChange={(id) => onChange(Number(id))}>
+          <Select.Trigger
+            placeholder={isPending ? "Cargando pacientes…" : patients.length === 0 ? "No tienes pacientes asignados" : "Elige un paciente asignado"}
+            style={{ minWidth: 300 }}
+          />
           <Select.Content>
-            {PROFESSIONS.map((item) => (
-              <Select.Item key={item.value} value={item.value}>
-                {item.label}
+            {patients.map((patient) => (
+              <Select.Item key={patient.id} value={String(patient.id)}>
+                {patient.reference}
               </Select.Item>
             ))}
           </Select.Content>
         </Select.Root>
-        {profession === "especialista" && (
-          <TextField.Root
-            placeholder="Especialidad (ej.: Cardiología)"
-            value={specialty}
-            maxLength={120}
-            onChange={(event) => onSpecialtyChange(event.target.value)}
-          />
-        )}
       </Flex>
       <Text size="1" color="gray">
-        Define la plantilla clínica con que se estructurará el dictado.
+        Solo aparecen los pacientes que tienes asignados (vienen de otro sistema o te los traspasa otro usuario). El
+        audio se nombra solo con tu cuenta, el profesional y la hora.
       </Text>
     </Flex>
   );
 }
 
 interface RecorderProps {
-  patientReference: string;
-  profession: string;
-  specialty: string;
+  patientId: number | undefined;
   onSaved: (recording: Recording) => void;
 }
 
-function Recorder({ patientReference, profession, specialty, onSaved }: RecorderProps) {
+function Recorder({ patientId, onSaved }: RecorderProps) {
   const recorder = useAudioRecorder();
   const upload = useUploadRecording();
   const [note, setNote] = useState("");
   const { status, audio } = recorder;
-  const canStart = patientReference.length > 0 && profession.length > 0;
+  const canStart = patientId !== undefined;
   const isLive = status === "recording" || status === "paused";
 
   const save = () => {
@@ -145,10 +104,8 @@ function Recorder({ patientReference, profession, specialty, onSaved }: Recorder
         source: "in_app",
         recordedAt: audio.startedAt,
         durationSeconds: audio.durationSeconds,
-        patientReference,
+        patientId,
         note,
-        profession,
-        specialty,
       },
       {
         onSuccess: (recording) => {
@@ -264,9 +221,7 @@ function Recorder({ patientReference, profession, specialty, onSaved }: Recorder
 
       {!isLive && status !== "stopped" && (
         <FileUpload
-          patientReference={patientReference}
-          profession={profession}
-          specialty={specialty}
+          patientId={patientId}
           onSaved={onSaved}
           prominent={!isRecordingSupported()}
         />
@@ -286,7 +241,7 @@ function statusHint(status: ReturnType<typeof useAudioRecorder>["status"], canSt
     case "stopped":
       return "Escucha el dictado y guárdalo para transcribirlo.";
     default:
-      return canStart ? "Pulsa para comenzar a dictar." : "Indica el paciente y el tipo de profesional para habilitar la grabación.";
+      return canStart ? "Pulsa para comenzar a dictar." : "Elige un paciente asignado para habilitar la grabación.";
   }
 }
 
@@ -295,7 +250,7 @@ function StopGlyph() {
 }
 
 /** Alternativa: subir un audio grabado con otra aplicación. */
-function FileUpload({ patientReference, profession, specialty, onSaved, prominent }: RecorderProps & { prominent: boolean }) {
+function FileUpload({ patientId, onSaved, prominent }: RecorderProps & { prominent: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const upload = useUploadRecording();
 
@@ -310,9 +265,7 @@ function FileUpload({ patientReference, profession, specialty, onSaved, prominen
         filename: file.name,
         recordedAt: new Date(file.lastModified),
         durationSeconds: await readAudioDuration(file),
-        patientReference,
-        profession,
-        specialty,
+        patientId,
       },
       { onSuccess: onSaved },
     );
@@ -325,7 +278,7 @@ function FileUpload({ patientReference, profession, specialty, onSaved, prominen
         variant={prominent ? "solid" : "ghost"}
         color={prominent ? undefined : "gray"}
         size="2"
-        disabled={!patientReference || !profession}
+        disabled={patientId === undefined}
         loading={upload.isPending}
         onClick={() => input.current?.click()}
       >
@@ -354,124 +307,4 @@ function readAudioDuration(file: Blob): Promise<number | null> {
     element.onerror = () => done(null);
     element.src = url;
   });
-}
-
-const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });
-
-function RecordingsList() {
-  const { data: recordings = [], isPending, isError, error } = useRecordings();
-
-  return (
-    <Flex direction="column" gap="3">
-      <Heading size="4">Mis dictados</Heading>
-      {isError ? (
-        <Callout.Root color="red">
-          <Callout.Text>No se pudieron cargar los dictados: {error.message}</Callout.Text>
-        </Callout.Root>
-      ) : !isPending && recordings.length === 0 ? (
-        <EmptyState title="Aún no hay dictados" description="Los audios que grabes o subas aparecerán aquí." />
-      ) : (
-        <Table.Root variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Paciente</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Profesional</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Duración</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Origen</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Audio</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell />
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {recordings.map((recording) => (
-              <Table.Row key={recording.id} align="center">
-                <Table.RowHeaderCell>
-                  <Flex direction="column">
-                    <Text weight="medium">{recording.patientReference || "—"}</Text>
-                    {recording.note && (
-                      <Text size="1" color="gray">
-                        {recording.note}
-                      </Text>
-                    )}
-                  </Flex>
-                </Table.RowHeaderCell>
-                <Table.Cell>
-                  <Flex direction="column">
-                    <Text>{recording.profession ? professionLabel(recording.profession) : "—"}</Text>
-                    {recording.specialty && (
-                      <Text size="1" color="gray">
-                        {recording.specialty}
-                      </Text>
-                    )}
-                  </Flex>
-                </Table.Cell>
-                <Table.Cell>{DATE_FORMAT.format(new Date(recording.recordedAt))}</Table.Cell>
-                <Table.Cell>
-                  <Flex direction="column">
-                    <Text>{formatDuration(recording.durationSeconds)}</Text>
-                    <Text size="1" color="gray">
-                      {formatBytes(recording.sizeBytes)}
-                    </Text>
-                  </Flex>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge color={recording.source === "in_app" ? "red" : "gray"} variant="soft">
-                    {recording.source === "in_app" ? "Grabado en app" : "Archivo subido"}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <audio controls preload="none" src={recording.audioUrl} style={{ height: 32, maxWidth: 220 }} />
-                </Table.Cell>
-                <Table.Cell>
-                  <DeleteRecordingButton recording={recording} />
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      )}
-    </Flex>
-  );
-}
-
-function DeleteRecordingButton({ recording }: { recording: Recording }) {
-  const remove = useDeleteRecording();
-  return (
-    <AlertDialog.Root>
-      <AlertDialog.Trigger>
-        <IconButton variant="ghost" color="gray" aria-label="Eliminar dictado" loading={remove.isPending}>
-          <TrashGlyph />
-        </IconButton>
-      </AlertDialog.Trigger>
-      <AlertDialog.Content maxWidth="420px">
-        <AlertDialog.Title>¿Eliminar este dictado?</AlertDialog.Title>
-        <AlertDialog.Description size="2">
-          Se borrará el audio de {recording.patientReference || "este paciente"}. No se puede deshacer.
-        </AlertDialog.Description>
-        <Flex gap="3" mt="4" justify="end">
-          <AlertDialog.Cancel>
-            <Button variant="soft" color="gray">
-              Cancelar
-            </Button>
-          </AlertDialog.Cancel>
-          <AlertDialog.Action>
-            <Button color="red" onClick={() => remove.mutate(recording.id)}>
-              Eliminar
-            </Button>
-          </AlertDialog.Action>
-        </Flex>
-      </AlertDialog.Content>
-    </AlertDialog.Root>
-  );
-}
-
-function TrashGlyph() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
 }

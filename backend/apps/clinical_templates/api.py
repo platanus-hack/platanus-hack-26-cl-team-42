@@ -62,6 +62,7 @@ class ValidationOut(Schema):
 @router.get("/", response=list[TemplateSummaryOut])
 def list_templates(request):
     """Active clinical templates, one per professional type."""
+    services.ensure_templates()
     return ClinicalTemplate.objects.filter(is_active=True)
 
 

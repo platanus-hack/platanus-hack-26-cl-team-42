@@ -5,6 +5,8 @@ from django.db.models import CharField, EmailField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from apps.clinical_templates.models import ClinicalTemplate
+
 from .managers import UserManager
 
 
@@ -19,6 +21,13 @@ class User(AbstractUser):
     name = CharField(_("Name of User"), blank=True, max_length=255)
     first_name = None  # type: ignore[assignment]
     last_name = None  # type: ignore[assignment]
+    # Tipo de profesional de la cuenta: decide la plantilla clínica de sus dictados.
+    profession = CharField(
+        _("Professional type"),
+        max_length=32,
+        choices=ClinicalTemplate.Profession.choices,
+        blank=True,
+    )
     email = EmailField(_("email address"), unique=True)
     username = None  # type: ignore[assignment]
 

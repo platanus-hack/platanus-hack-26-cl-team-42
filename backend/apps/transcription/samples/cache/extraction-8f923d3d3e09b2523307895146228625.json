@@ -1,0 +1,208 @@
+{
+  "metadatos": {
+    "tipo_profesional": "especialista",
+    "nombre_profesional": null,
+    "especialidad": "cardiología",
+    "fecha_hora_registro": "2026-11-21T08:28:45+00:00",
+    "tipo_registro": "interconsulta",
+    "turno": null,
+    "dia_estada_uci": null,
+    "cama": "7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": null,
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": null,
+      "frecuencia_cardiaca": 100,
+      "ritmo": "regular",
+      "pvc": 16,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "frecuencia cardíaca cien latidos por minuto, ritmo regular sin soplos auscultables"
+    }
+  ],
+  "control_respiratorio": [],
+  "drogas_infusion": [],
+  "medicamentos": [
+    {
+      "nombre": "lisinopril",
+      "principio_activo": "lisinopril",
+      "dosis": 10,
+      "unidad": "mg",
+      "via": null,
+      "frecuencia": "diario",
+      "accion": "indicado",
+      "hora": null,
+      "evidencia": "paciente recibe lisinopril diez miligramos diarios"
+    },
+    {
+      "nombre": "carvedilol",
+      "principio_activo": "carvedilol",
+      "dosis": 25,
+      "unidad": "mg",
+      "via": null,
+      "frecuencia": "dos veces al día",
+      "accion": "indicado",
+      "hora": null,
+      "evidencia": "carvedilol veinticinco miligramos dos veces al día"
+    },
+    {
+      "nombre": "furosemida",
+      "principio_activo": "furosemida",
+      "dosis": 40,
+      "unidad": "mg",
+      "via": null,
+      "frecuencia": null,
+      "accion": "indicado",
+      "hora": null,
+      "evidencia": "se agregó furosemida cuarenta miligramos para manejo de congestión"
+    }
+  ],
+  "escalas": [],
+  "dispositivos_invasivos": [],
+  "alergias": [],
+  "alertas": [
+    {
+      "descripcion": "Presión venosa central elevada (16 cmH2O) con congestión en paciente con insuficiencia cardíaca sistólica (FE 35%)",
+      "severidad": null,
+      "sistema": "hemodinamico",
+      "evidencia": "presión venosa central elevada en dieciséis centímetros de agua"
+    }
+  ],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": "Cama indicada en los datos del dictado como 'test'; en la transcripción se menciona 'cama siete'. Antecedente de revascularización coronaria percutánea con stent de metal. Insuficiencia cardíaca descrita como 'sistólica leve' con fracción de eyección de 35% según último ecocardiograma. La evaluación se solicita en contexto pre-extubación y destete ventilatorio; no se informan parámetros respiratorios ni detalles del soporte ventilatorio o de la vía aérea.",
+  "motivo_interconsulta": "Paciente post operatorio de laparotomía exploratoria por sepsis abdominal; requiere evaluación cardiovascular pre-extubación.",
+  "solicitado_por": "UCI",
+  "evaluacion": "Paciente sedado, FC 100 lpm, ritmo regular sin soplos, PVC elevada en 16 cmH2O. ECG con cambios de repolarización en cara inferior, sin cambios agudos respecto a ECG previo de hace un año. Se agregó furosemida para manejo de congestión. Se considera que el paciente está en condiciones cardiológicas aceptables para destete ventilatorio progresivo.",
+  "hallazgos": [
+    {
+      "descripcion": "Paciente sedado",
+      "certeza": "afirmado",
+      "evidencia": "paciente sedado"
+    },
+    {
+      "descripcion": "Frecuencia cardíaca 100 lpm, ritmo regular",
+      "certeza": "afirmado",
+      "evidencia": "frecuencia cardíaca cien latidos por minuto, ritmo regular"
+    },
+    {
+      "descripcion": "Soplos cardíacos",
+      "certeza": "negado",
+      "evidencia": "sin soplos auscultables"
+    },
+    {
+      "descripcion": "Presión venosa central elevada en 16 cmH2O",
+      "certeza": "afirmado",
+      "evidencia": "presión venosa central elevada en dieciséis centímetros de agua"
+    },
+    {
+      "descripcion": "Cambios de repolarización en cara inferior en ECG",
+      "certeza": "afirmado",
+      "evidencia": "se observan cambios de repolarización en cara inferior"
+    },
+    {
+      "descripcion": "Cambios agudos en ECG respecto a ECG previo",
+      "certeza": "negado",
+      "evidencia": "sin cambios agudos comparado con electrocardiograma previo de hace un año"
+    }
+  ],
+  "diagnosticos": [
+    {
+      "descripcion": "Sepsis abdominal, post operatorio de laparotomía exploratoria",
+      "codigo_cie10": null,
+      "estado": "confirmado",
+      "evidencia": "post operatorio de laparotomía exploratoria por sepsis abdominal"
+    },
+    {
+      "descripcion": "Hipertensión arterial crónica en tratamiento",
+      "codigo_cie10": "I10",
+      "estado": "antecedente",
+      "evidencia": "hipertensión arterial crónica en tratamiento"
+    },
+    {
+      "descripcion": "Infarto agudo al miocardio hace cuatro años",
+      "codigo_cie10": "I25.2",
+      "estado": "antecedente",
+      "evidencia": "infarto agudo al miocardio hace cuatro años"
+    },
+    {
+      "descripcion": "Revascularización coronaria percutánea con stent de metal",
+      "codigo_cie10": "Z95.5",
+      "estado": "antecedente",
+      "evidencia": "revascularización coronaria percutánea con stent de metal"
+    },
+    {
+      "descripcion": "Insuficiencia cardíaca sistólica leve, FE 35%",
+      "codigo_cie10": null,
+      "estado": "antecedente",
+      "evidencia": "Insuficiencia cardíaca sistólica leve, fracción de eyección treinta y cinco por ciento"
+    },
+    {
+      "descripcion": "Congestión",
+      "codigo_cie10": null,
+      "estado": "confirmado",
+      "evidencia": "se agregó furosemida cuarenta miligramos para manejo de congestión"
+    }
+  ],
+  "examenes_revisados": [
+    {
+      "examen": "electrocardiograma",
+      "valor": "cambios de repolarización en cara inferior",
+      "unidad": null,
+      "hora": null,
+      "interpretacion": "sin cambios agudos comparado con ECG previo de hace un año",
+      "evidencia": "cambios de repolarización en cara inferior, sin cambios agudos comparado con electrocardiograma previo"
+    },
+    {
+      "examen": "ecocardiograma (último)",
+      "valor": 35,
+      "unidad": "% (fracción de eyección)",
+      "hora": null,
+      "interpretacion": "insuficiencia cardíaca sistólica leve",
+      "evidencia": "fracción de eyección treinta y cinco por ciento según último ecocardiograma"
+    }
+  ],
+  "examenes_sugeridos": [
+    "Ecocardiografía transtorácica para evaluación de función ventricular actual"
+  ],
+  "recomendaciones_al_tratante": [
+    {
+      "descripcion": "Mantener medicación cardiovascular actual",
+      "responsable_sugerido": "medico",
+      "plazo": null,
+      "evidencia": "mantener medicación cardiovascular actual"
+    },
+    {
+      "descripcion": "Monitoreo cercano de presión venosa central",
+      "responsable_sugerido": "equipo",
+      "plazo": null,
+      "evidencia": "monitoreo cercano de presión venosa central"
+    },
+    {
+      "descripcion": "Paciente en condiciones cardiológicas aceptables para destete ventilatorio progresivo",
+      "responsable_sugerido": "equipo",
+      "plazo": null,
+      "evidencia": "condiciones cardiológicas aceptables para destete ventilatorio progresivo"
+    },
+    {
+      "descripcion": "Realizar ecocardiografía transtorácica para evaluación de función ventricular actual",
+      "responsable_sugerido": "medico",
+      "plazo": "cuando sea posible",
+      "evidencia": "Realizar ecocardiografía transtorácica cuando sea posible"
+    },
+    {
+      "descripcion": "Rehabilitación cardíaca en fase de convalecencia post alta hospitalaria",
+      "responsable_sugerido": "otro",
+      "plazo": "post alta hospitalaria",
+      "evidencia": "Recomendamos rehabilitación cardíaca en fase de convalecencia post alta hospitalaria"
+    }
+  ],
+  "seguimiento": {
+    "requiere": true,
+    "plazo": "dentro de dos a tres semanas",
+    "modalidad": "ambulatorio"
+  }
+}

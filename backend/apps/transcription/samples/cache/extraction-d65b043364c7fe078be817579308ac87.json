@@ -1,0 +1,422 @@
+{
+  "metadatos": {
+    "tipo_profesional": "medico",
+    "nombre_profesional": null,
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-21T08:28:45",
+    "tipo_registro": "evolucion",
+    "turno": null,
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": null,
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": 68,
+      "frecuencia_cardiaca": 102,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "Frecuencia cardíaca ciento dos latidos por minuto. Presión arterial media sesenta y ocho milímetros de mercurio"
+    }
+  ],
+  "control_respiratorio": [
+    {
+      "hora": null,
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 95,
+      "soporte": null,
+      "fio2": null,
+      "flujo_l_min": null,
+      "evidencia": "bajo soporte ventilatorio controlado. Saturación de oxígeno noventa y cinco por ciento"
+    }
+  ],
+  "drogas_infusion": [
+    {
+      "farmaco": "noradrenalina",
+      "categoria": "vasoactivo",
+      "dosis": 0.1,
+      "unidad": "mcg/kg/min",
+      "tendencia": null,
+      "hora": null,
+      "evidencia": "noradrenalina punto uno microgramos por kilogramo por minuto, con adecuada respuesta hemodinámica"
+    }
+  ],
+  "medicamentos": [],
+  "escalas": [],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "CVC",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": null,
+      "signos_infeccion": null,
+      "accion": null,
+      "evidencia": "pendientes cultivos de sangre periférica, líquido peritoneal y catéter venoso central"
+    },
+    {
+      "tipo": "drenaje",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "débito serohemático moderado",
+      "signos_infeccion": null,
+      "accion": null,
+      "evidencia": "Drenaje serohemático moderado."
+    }
+  ],
+  "alergias": [],
+  "alertas": [
+    {
+      "descripcion": "Descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio",
+      "severidad": null,
+      "sistema": "respiratorio",
+      "evidencia": "descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio"
+    }
+  ],
+  "indicaciones": [
+    {
+      "descripcion": "Mantener antibioticoterapia con piperacilina-tazobactam",
+      "responsable_sugerido": null,
+      "plazo": null,
+      "evidencia": "se mantiene antibioticoterapia con piperacilina tazobactam cada cuatro horas"
+    },
+    {
+      "descripcion": "Mantener sedación profunda",
+      "responsable_sugerido": null,
+      "plazo": null,
+      "evidencia": "Mantener sedación profunda"
+    },
+    {
+      "descripcion": "Considerar nuevo lavado peritoneal si no hay mejora clínica",
+      "responsable_sugerido": null,
+      "plazo": null,
+      "evidencia": "considerar nuevo lavado peritoneal si no hay mejora clínica"
+    },
+    {
+      "descripcion": "Descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio",
+      "responsable_sugerido": null,
+      "plazo": null,
+      "evidencia": "descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio"
+    }
+  ],
+  "pendientes": [
+    {
+      "descripcion": "Próxima evaluación del paciente",
+      "responsable_sugerido": "medico",
+      "plazo": "en 6 horas",
+      "evidencia": "próxima evaluación en seis horas"
+    },
+    {
+      "descripcion": "Resultado de cultivos de sangre periférica, líquido peritoneal y catéter venoso central",
+      "responsable_sugerido": null,
+      "plazo": null,
+      "evidencia": "pendientes cultivos de sangre periférica, líquido peritoneal y catéter venoso central"
+    }
+  ],
+  "observaciones_no_estructuradas": "Lactato, bicarbonato, hemoglobina, plaquetas, creatinina y urea dictados sin unidad; se registran los valores numéricos sin unidad. Piperacilina-tazobactam dictada 'cada cuatro horas' (se registra tal como se dijo, sin dosis). Soporte ventilatorio descrito como 'controlado' sin especificar si es invasivo ni parámetros. Fecha/hora del registro tomada de los datos del dictado.",
+  "ingreso": null,
+  "resumen_24h": "Día 3 UCI. Paciente con sepsis de origen abdominal por peritonitis secundaria a perforación de víscera hueca, en sedación profunda y soporte ventilatorio controlado, con noradrenalina 0,1 mcg/kg/min con adecuada respuesta. Nutrición parenteral total iniciada ayer. Compromiso de función renal. Cultivos pendientes; hemocultivos previos negativos.",
+  "valoracion_por_sistemas": {
+    "neurologico": {
+      "hallazgos": [
+        {
+          "descripcion": "Sedación profunda",
+          "certeza": "afirmado",
+          "evidencia": "paciente con sedación profunda"
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Mantener sedación profunda",
+      "evidencia": "Mantener sedación profunda"
+    },
+    "respiratorio": {
+      "hallazgos": [
+        {
+          "descripcion": "Bajo soporte ventilatorio controlado, SatO2 95%",
+          "certeza": "afirmado",
+          "evidencia": "bajo soporte ventilatorio controlado. Saturación de oxígeno noventa y cinco por ciento"
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio",
+      "evidencia": "descartar tromboembolismo pulmonar ante cualquier deterioro respiratorio"
+    },
+    "hemodinamico": {
+      "hallazgos": [
+        {
+          "descripcion": "FC 102 lpm",
+          "certeza": "afirmado",
+          "evidencia": "Frecuencia cardíaca ciento dos latidos por minuto"
+        },
+        {
+          "descripcion": "PAM 68 mmHg bajo noradrenalina continua",
+          "certeza": "afirmado",
+          "evidencia": "Presión arterial media sesenta y ocho milímetros de mercurio bajo soporte vasopressor continuo"
+        },
+        {
+          "descripcion": "Lactato arterial 2,5",
+          "certeza": "afirmado",
+          "evidencia": "lactato arterial dos punto cinco"
+        }
+      ],
+      "evaluacion": "Adecuada respuesta hemodinámica a noradrenalina 0,1 mcg/kg/min",
+      "plan": null,
+      "evidencia": "con adecuada respuesta hemodinámica"
+    },
+    "renal_metabolico": {
+      "hallazgos": [
+        {
+          "descripcion": "Creatinina 2,1, urea 65",
+          "certeza": "afirmado",
+          "evidencia": "Función renal comprometida: creatinina dos punto uno, urea sesenta y cinco"
+        },
+        {
+          "descripcion": "Bicarbonato 19",
+          "certeza": "afirmado",
+          "evidencia": "bicarbonato diecinueve"
+        }
+      ],
+      "evaluacion": "Función renal comprometida",
+      "plan": null,
+      "evidencia": "Función renal comprometida"
+    },
+    "infeccioso": {
+      "hallazgos": [
+        {
+          "descripcion": "Sepsis de origen abdominal",
+          "certeza": "afirmado",
+          "evidencia": "sepsis de origen abdominal, peritonitis secundaria a perforación de víscera hueca"
+        },
+        {
+          "descripcion": "Hemocultivos previos negativos",
+          "certeza": "afirmado",
+          "evidencia": "Hemocultivos previos negativos a esta fecha"
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Mantener piperacilina-tazobactam y vancomicina; cultivos pendientes",
+      "evidencia": "se mantiene antibioticoterapia con piperacilina tazobactam"
+    },
+    "digestivo_nutricional": {
+      "hallazgos": [
+        {
+          "descripcion": "Abdomen distendido",
+          "certeza": "afirmado",
+          "evidencia": "abdomen distendido"
+        },
+        {
+          "descripcion": "Herida quirúrgica de línea media limpia",
+          "certeza": "afirmado",
+          "evidencia": "herida quirúrgica de línea media limpia"
+        },
+        {
+          "descripcion": "Dehiscencia de herida",
+          "certeza": "negado",
+          "evidencia": "sin dehiscencia"
+        },
+        {
+          "descripcion": "Drenaje serohemático moderado",
+          "certeza": "afirmado",
+          "evidencia": "Drenaje serohemático moderado."
+        },
+        {
+          "descripcion": "Equimosis periumbilical",
+          "certeza": "afirmado",
+          "evidencia": "Presencia de equimosis periumbilical."
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Nutrición parenteral total; considerar nuevo lavado peritoneal si no hay mejora clínica",
+      "evidencia": "considerar nuevo lavado peritoneal si no hay mejora clínica"
+    },
+    "hematologico": {
+      "hallazgos": [
+        {
+          "descripcion": "Hemoglobina 8,3",
+          "certeza": "afirmado",
+          "evidencia": "Hemoglobina ocho punto tres"
+        },
+        {
+          "descripcion": "Plaquetas 92.000",
+          "certeza": "afirmado",
+          "evidencia": "plaquetas noventa y dos mil"
+        }
+      ],
+      "evaluacion": null,
+      "plan": null,
+      "evidencia": "Hemoglobina ocho punto tres, plaquetas noventa y dos mil"
+    },
+    "piel_tegumentos": null
+  },
+  "ventilacion_mecanica": {
+    "via_aerea": null,
+    "modo": "ventilación controlada",
+    "volumen_corriente_ml": null,
+    "peep_cmh2o": null,
+    "fio2": null,
+    "fr_programada": null,
+    "presion_soporte_cmh2o": null,
+    "presion_plateau_cmh2o": null,
+    "presion_peak_cmh2o": null,
+    "driving_pressure_cmh2o": null,
+    "pafi": null,
+    "posicion_prono": null,
+    "weaning": null,
+    "evidencia": "bajo soporte ventilatorio controlado"
+  },
+  "sedoanalgesia_neuro": {
+    "rass_actual": null,
+    "rass_objetivo": null,
+    "dolor": null,
+    "cam_icu": null,
+    "glasgow": null,
+    "pupilas": null,
+    "focalidad": null,
+    "evidencia": "paciente con sedación profunda"
+  },
+  "terapia_reemplazo_renal": null,
+  "balance_hidrico": null,
+  "nutricion": {
+    "via": "parenteral",
+    "formula": "nutrición parenteral total",
+    "velocidad_ml_h": null,
+    "meta_kcal": null,
+    "aporte_kcal": null,
+    "tolerancia": null,
+    "residuo_gastrico_ml": null,
+    "evidencia": "Nutrición parenteral total iniciada ayer."
+  },
+  "antimicrobianos": [
+    {
+      "farmaco": "piperacilina-tazobactam",
+      "dosis": "cada 4 h",
+      "dia_tratamiento": null,
+      "indicacion": "sepsis de origen abdominal",
+      "accion": "continua",
+      "evidencia": "se mantiene antibioticoterapia con piperacilina tazobactam cada cuatro horas"
+    },
+    {
+      "farmaco": "vancomicina",
+      "dosis": null,
+      "dia_tratamiento": null,
+      "indicacion": "cobertura de grampositivos",
+      "accion": null,
+      "evidencia": "se administra vancomicina por cobertura de grampositivos"
+    }
+  ],
+  "cultivos": [
+    {
+      "muestra": "hemocultivo (sangre periférica)",
+      "fecha_toma": null,
+      "estado": "pendiente",
+      "microorganismo": null,
+      "sensibilidad": null,
+      "evidencia": "pendientes cultivos de sangre periférica"
+    },
+    {
+      "muestra": "cultivo de líquido peritoneal",
+      "fecha_toma": null,
+      "estado": "pendiente",
+      "microorganismo": null,
+      "sensibilidad": null,
+      "evidencia": "pendientes cultivos de sangre periférica, líquido peritoneal"
+    },
+    {
+      "muestra": "cultivo de catéter venoso central",
+      "fecha_toma": null,
+      "estado": "pendiente",
+      "microorganismo": null,
+      "sensibilidad": null,
+      "evidencia": "líquido peritoneal y catéter venoso central"
+    },
+    {
+      "muestra": "hemocultivos previos",
+      "fecha_toma": null,
+      "estado": "negativo",
+      "microorganismo": null,
+      "sensibilidad": null,
+      "evidencia": "Hemocultivos previos negativos a esta fecha"
+    }
+  ],
+  "examenes": [
+    {
+      "examen": "lactato arterial",
+      "valor": 2.5,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": null,
+      "evidencia": "lactato arterial dos punto cinco"
+    },
+    {
+      "examen": "bicarbonato",
+      "valor": 19,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": null,
+      "evidencia": "bicarbonato diecinueve"
+    },
+    {
+      "examen": "hemoglobina",
+      "valor": 8.3,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": null,
+      "evidencia": "Hemoglobina ocho punto tres"
+    },
+    {
+      "examen": "plaquetas",
+      "valor": 92000,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": null,
+      "evidencia": "plaquetas noventa y dos mil"
+    },
+    {
+      "examen": "creatinina",
+      "valor": 2.1,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": "función renal comprometida",
+      "evidencia": "Función renal comprometida: creatinina dos punto uno"
+    },
+    {
+      "examen": "urea",
+      "valor": 65,
+      "unidad": null,
+      "hora": null,
+      "interpretacion": "función renal comprometida",
+      "evidencia": "urea sesenta y cinco"
+    }
+  ],
+  "diagnosticos": [
+    {
+      "descripcion": "Sepsis de origen abdominal",
+      "codigo_cie10": null,
+      "estado": "confirmado",
+      "evidencia": "Diagnóstico de entrada: sepsis de origen abdominal"
+    },
+    {
+      "descripcion": "Peritonitis secundaria a perforación de víscera hueca",
+      "codigo_cie10": null,
+      "estado": "confirmado",
+      "evidencia": "peritonitis secundaria a perforación de víscera hueca"
+    },
+    {
+      "descripcion": "Función renal comprometida",
+      "codigo_cie10": null,
+      "estado": "confirmado",
+      "evidencia": "Función renal comprometida: creatinina dos punto uno"
+    }
+  ],
+  "procedimientos": [],
+  "profilaxis": null,
+  "metas_del_dia": [],
+  "interconsultas_solicitadas": [],
+  "comunicacion_familia": null,
+  "egreso": null
+}

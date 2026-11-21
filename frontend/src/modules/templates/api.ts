@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../../services/api/client";
 import { extensionFor } from "../recordings/recorderFormat";
+import { reportKeys } from "../reports/api";
 
 // Módulo 3 · Parseo del texto transcrito a plantillas clínicas.
 // Backend: `backend/apps/clinical_templates` (plantillas) y
@@ -122,7 +123,11 @@ export function useComplementSection() {
       ...complement
     }: { extractionId: string; section: string } & SectionComplement) =>
       templatesGateway.complement(extractionId, section, complement),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: extractionKeys }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: extractionKeys });
+      // El informe se vuelve a generar con la información nueva.
+      void queryClient.invalidateQueries({ queryKey: reportKeys });
+    },
   });
 }
 

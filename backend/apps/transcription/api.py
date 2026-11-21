@@ -15,6 +15,7 @@ from ninja.files import UploadedFile
 from apps.recordings.models import Recording
 from apps.recordings.services import ALLOWED_MIME_TYPES, MAX_AUDIO_BYTES, base_mime_type
 
+from . import report_assistant, report_services
 from .extraction_services import (
     ExtractionError,
     ExtractionOut,
@@ -23,10 +24,21 @@ from .extraction_services import (
     request_section_update,
 )
 from .extraction_services import to_out as extraction_to_out
+from .homologation_services import list_mappings
 from .models import ExtractedRecord, Transcription
+from .report_services import PipelineOut, ReportOut, get_pipeline, get_report, list_reports
 from .services import TranscriptionOut, list_transcriptions, request_transcription, to_out
 
 router = Router(tags=["transcription"])
+
+
+class ConceptMappingOut(Schema):
+    id: str
+    sourceTerm: str
+    sourceProfessional: str
+    suggestedConcept: str | None
+    approvedConcept: str | None
+    status: str
 
 
 class ComplementIn(Schema):
@@ -107,3 +119,86 @@ def complement_extraction(
     except ExtractionError as error:
         raise HttpError(409, str(error)) from error
     return 202, extraction_to_out(record)
+
+
+@router.get("/recordings/{recording_id}/pipeline", response=PipelineOut)
+def get_recording_pipeline(request, recording_id: UUID):
+    """Estado de transcripción, parseo e informe de un dictado, en una sola consulta."""
+    get_object_or_404(Recording, pk=recording_id, professional=request.user)
+    return get_pipeline(recording_id, request.user)
+
+
+@router.get("/reports", response=list[ReportOut])
+def list_user_reports(request, patient_id: int | None = None):
+    """Informes de tus pacientes (de todos los profesionales) y los tuyos; filtra por paciente."""
+    return list_reports(request.user, patient_id)
+
+
+@router.get("/reports/{report_id}", response=ReportOut)
+def get_user_report(request, report_id: int):
+    report = get_report(request.user, report_id)
+    if report is None:
+        raise HttpError(404, "Informe no encontrado.")
+    return report
+
+
+@router.get("/concepts", response=list[ConceptMappingOut])
+def list_concept_mappings(request):
+    """Términos homologados y el representante común al que se llevan."""
+    return [
+        ConceptMappingOut(
+            id=str(mapping.id),
+            sourceTerm=mapping.original_term,
+            sourceProfessional=mapping.profession,
+            suggestedConcept=mapping.concept.canonical,
+            approvedConcept=(
+                mapping.concept.canonical if mapping.status == mapping.Status.APPROVED else None
+            ),
+            status=mapping.status,
+        )
+        for mapping in list_mappings()
+    ]
+
+
+class AskIn(Schema):
+    question: str
+    patient_id: int | None = None
+
+
+@router.post("/assistant/ask", response=report_assistant.AssistantAnswer)
+def ask_assistant(request, payload: AskIn):
+    """Responde sobre tus informes (o los de un paciente) citando informe y sección."""
+    try:
+        return report_assistant.ask(request.user, payload.question, payload.patient_id)
+    except report_assistant.AssistantError as error:
+        raise HttpError(422, str(error)) from error
+
+
+@router.post("/reports/{report_id}/validate", response=ReportOut)
+def validate_user_report(request, report_id: int):
+    """El autor guarda el informe con todos sus temas validados: ya no se puede editar."""
+    report = get_object_or_404(
+        report_services.visible_reports(request.user), pk=report_id, author=request.user
+    )
+    try:
+        report_services.validate_report(report)
+    except report_services.ValidationError as error:
+        raise HttpError(409, str(error)) from error
+    return report_services.to_out(report, request.user)
+
+
+class TopicValidationIn(Schema):
+    validated: bool = True
+
+
+@router.put("/reports/{report_id}/topics/{topic_id}", response=ReportOut)
+def validate_report_topic(request, report_id: int, topic_id: str, payload: TopicValidationIn):
+    """El autor valida un tema del informe (o quita la validación)."""
+    report = get_object_or_404(
+        report_services.visible_reports(request.user), pk=report_id, author=request.user
+    )
+    try:
+        report_services.set_topic_validated(report, topic_id, payload.validated)
+    except report_services.ValidationError as error:
+        raise HttpError(409, str(error)) from error
+    return report_services.to_out(report, request.user)

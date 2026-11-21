@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from io import StringIO
+
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -112,3 +115,49 @@ def test_delete_removes_row_and_file(nurse, client_for, django_capture_on_commit
 
 def test_requires_authentication(db):
     assert Client().get(URL).status_code == 401
+
+
+@pytest.mark.django_db
+def test_recording_name_and_profession_come_from_the_account():
+    from apps.recordings.services import create_recording
+
+    user = User.objects.create_user(email="k@example.com", password="pw", name="Klgo. Muñoz")
+    user.profession = "kinesiologia"
+    user.save()
+
+    recording = create_recording(
+        professional=user,
+        audio=SimpleUploadedFile("a.wav", b"x", content_type="audio/wav"),
+        source=Recording.Source.IN_APP,
+        recorded_at=datetime(2026, 1, 21, 13, 30, tzinfo=UTC),
+    )
+
+    assert recording.profession == "kinesiologia"
+    assert recording.name.startswith("Klgo. Muñoz · Kinesiología · 21-01-2026")
+
+
+def test_profession_is_read_from_the_file_name():
+    from apps.recordings.services import profession_from_name
+
+    assert profession_from_name("Dr. Rojas - Médico UCI - 18-11-2026 09-30.wav") == "medico"
+    assert (
+        profession_from_name("Klgo. Muñoz - Kinesiología - 18-11-2026 12-00.wav") == "kinesiologia"
+    )
+    assert profession_from_name("EU Soto - Enfermería - 18-11-2026 11-00.wav") == "enfermeria"
+    assert profession_from_name("TENS Pérez - TENS - 18-11-2026 15-00.wav") == "tens"
+    assert profession_from_name("Dra. Fuentes - Especialista - 18-11-2026.wav") == "especialista"
+    assert profession_from_name("dictado.webm") == ""
+
+
+@pytest.mark.django_db
+def test_demo_patients_are_assigned_and_loading_is_idempotent():
+    from django.core.management import call_command
+
+    from apps.recordings.services import patients_of
+
+    user = User.objects.create_user(email="demo@example.com", password="pw")
+
+    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
+    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
+
+    assert patients_of(user).count() == 6

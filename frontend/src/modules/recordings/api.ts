@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, apiUrl } from "../../services/api/client";
 import { transcriptKeys } from "../transcription/api";
+import type { Patient } from "../patients/api";
 import { extensionFor } from "./recorderFormat";
 
 // Módulo 1 · Obtención de datos: dictados de audio por profesional.
@@ -10,8 +11,12 @@ export type RecordingSource = "in_app" | "upload";
 
 export interface Recording {
   id: string;
+  /** Nombre automático: cuenta · tipo de profesional · fecha y hora de la grabación. */
+  name: string;
   professionalName: string;
   patientReference: string;
+  /** Paciente al que pertenece el dictado (identifica de quién es). */
+  patient: Patient | null;
   note: string;
   profession: string;
   specialty: string;
@@ -32,9 +37,8 @@ export interface NewRecording {
   filename?: string;
   recordedAt?: Date;
   durationSeconds?: number | null;
-  patientReference?: string;
+  patientId?: number;
   note?: string;
-  profession?: string;
   specialty?: string;
 }
 
@@ -82,8 +86,10 @@ export function useDeleteRecording() {
 
 interface RecordingDto {
   id: string;
+  name: string;
   professional_name: string;
   patient_reference: string;
+  patient: Patient | null;
   note: string;
   profession: string;
   specialty: string;
@@ -99,8 +105,10 @@ interface RecordingDto {
 function fromDto(dto: RecordingDto): Recording {
   return {
     id: dto.id,
+    name: dto.name,
     professionalName: dto.professional_name,
     patientReference: dto.patient_reference,
+    patient: dto.patient,
     note: dto.note,
     profession: dto.profession,
     specialty: dto.specialty,
@@ -121,9 +129,8 @@ function toFormData(recording: NewRecording): FormData {
   form.append("source", recording.source);
   if (recording.recordedAt) form.append("recorded_at", recording.recordedAt.toISOString());
   if (recording.durationSeconds != null) form.append("duration_seconds", String(recording.durationSeconds));
-  if (recording.patientReference) form.append("patient_reference", recording.patientReference);
+  if (recording.patientId !== undefined) form.append("patient_id", String(recording.patientId));
   if (recording.note) form.append("note", recording.note);
-  if (recording.profession) form.append("profession", recording.profession);
   if (recording.specialty) form.append("specialty", recording.specialty);
   return form;
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notConnected } from "../../services/api/client";
+import { apiRequest, notConnected } from "../../services/api/client";
 
 // Módulo 4 · Homologación de conceptos entre profesionales.
 
@@ -23,7 +23,7 @@ export interface ConceptsGateway {
 }
 
 export const conceptsGateway: ConceptsGateway = {
-  list: async () => [],
+  list: () => apiRequest<ConceptMapping[]>("/transcription/concepts"),
   approve: notConnected("concepts.approve"),
 };
 

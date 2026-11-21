@@ -134,7 +134,7 @@ function PendingChip() {
   );
 }
 
-function RecordValue({ value }: { value: unknown }) {
+export function RecordValue({ value }: { value: unknown }) {
   if (isEmptyValue(value)) return <PendingChip />;
   if (Array.isArray(value)) {
     return (

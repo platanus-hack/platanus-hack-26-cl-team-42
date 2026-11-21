@@ -1,0 +1,538 @@
+{
+ "Ventilación mecánica invasiva": {
+  "category": "soporte",
+  "aliases": [
+   "VMI",
+   "VM invasiva",
+   "ventilación mecánica",
+   "ventilacion mecanica",
+   "ventilador",
+   "conectado a ventilador",
+   "intubado",
+   "vcv",
+   "ventilación controlada por volumen"
+  ]
+ },
+ "Ventilación mecánica no invasiva": {
+  "category": "soporte",
+  "aliases": [
+   "VMNI",
+   "VNI",
+   "ventilación no invasiva",
+   "bipap",
+   "cpap"
+  ]
+ },
+ "Cánula nasal de alto flujo": {
+  "category": "soporte",
+  "aliases": [
+   "CNAF",
+   "alto flujo",
+   "naricera de alto flujo",
+   "oxígeno de alto flujo"
+  ]
+ },
+ "Oxigenoterapia convencional": {
+  "category": "soporte",
+  "aliases": [
+   "naricera",
+   "cánula nasal",
+   "mascarilla de oxígeno",
+   "mascarilla venturi",
+   "oxígeno suplementario"
+  ]
+ },
+ "Tubo endotraqueal": {
+  "category": "dispositivo",
+  "aliases": [
+   "TET",
+   "TOT",
+   "tubo orotraqueal",
+   "tubo endotraqueal"
+  ]
+ },
+ "Catéter venoso central": {
+  "category": "dispositivo",
+  "aliases": [
+   "CVC",
+   "vía central",
+   "via central",
+   "catéter central",
+   "cateter venoso central",
+   "línea central"
+  ]
+ },
+ "Línea arterial": {
+  "category": "dispositivo",
+  "aliases": [
+   "línea arterial",
+   "linea arterial",
+   "catéter arterial",
+   "vía arterial",
+   "arterial radial"
+  ]
+ },
+ "Sonda nasogástrica": {
+  "category": "dispositivo",
+  "aliases": [
+   "SNG",
+   "sonda nasogástrica",
+   "sonda nasogastrica",
+   "sonda gástrica"
+  ]
+ },
+ "Sonda vesical": {
+  "category": "dispositivo",
+  "aliases": [
+   "foley",
+   "sonda foley",
+   "CUP",
+   "catéter urinario permanente",
+   "sonda urinaria",
+   "sonda vesical"
+  ]
+ },
+ "Vía venosa periférica": {
+  "category": "dispositivo",
+  "aliases": [
+   "VVP",
+   "vía periférica",
+   "via periferica",
+   "vía venosa periférica",
+   "branula",
+   "bránula"
+  ]
+ },
+ "Traqueostomía": {
+  "category": "dispositivo",
+  "aliases": [
+   "TQT",
+   "traqueo",
+   "traqueostomia"
+  ]
+ },
+ "Presión arterial media": {
+  "category": "parametro",
+  "aliases": [
+   "PAM",
+   "presión media",
+   "presion arterial media"
+  ]
+ },
+ "Frecuencia cardíaca": {
+  "category": "parametro",
+  "aliases": [
+   "FC",
+   "frecuencia cardiaca",
+   "pulso",
+   "latidos"
+  ]
+ },
+ "Frecuencia respiratoria": {
+  "category": "parametro",
+  "aliases": [
+   "FR",
+   "frecuencia respiratoria",
+   "respiraciones"
+  ]
+ },
+ "Saturación de oxígeno": {
+  "category": "parametro",
+  "aliases": [
+   "SatO2",
+   "SpO2",
+   "sat O2",
+   "saturación",
+   "saturacion",
+   "saturación de oxígeno",
+   "saturacion de oxigeno"
+  ]
+ },
+ "Fracción inspirada de oxígeno": {
+  "category": "parametro",
+  "aliases": [
+   "FiO2",
+   "fio2",
+   "fracción inspirada de oxígeno"
+  ]
+ },
+ "Presión venosa central": {
+  "category": "parametro",
+  "aliases": [
+   "PVC",
+   "presión venosa central"
+  ]
+ },
+ "Temperatura": {
+  "category": "parametro",
+  "aliases": [
+   "temp",
+   "temperatura axilar",
+   "temperatura corporal"
+  ]
+ },
+ "Balance hídrico": {
+  "category": "parametro",
+  "aliases": [
+   "BH",
+   "balance hidrico",
+   "balance hídrico",
+   "balance de líquidos"
+  ]
+ },
+ "Diuresis": {
+  "category": "parametro",
+  "aliases": [
+   "diuresis",
+   "débito urinario",
+   "debito urinario",
+   "orina"
+  ]
+ },
+ "Glicemia": {
+  "category": "parametro",
+  "aliases": [
+   "HGT",
+   "hemoglucotest",
+   "glucosa capilar",
+   "glicemia capilar",
+   "glicemia",
+   "glucemia"
+  ]
+ },
+ "Lactato": {
+  "category": "examen",
+  "aliases": [
+   "lactato",
+   "ácido láctico",
+   "acido lactico",
+   "lactacidemia"
+  ]
+ },
+ "Proteína C reactiva": {
+  "category": "examen",
+  "aliases": [
+   "PCR",
+   "proteína c reactiva",
+   "proteina c reactiva"
+  ]
+ },
+ "Creatinina": {
+  "category": "examen",
+  "aliases": [
+   "creatinina",
+   "creat"
+  ]
+ },
+ "Gases arteriales": {
+  "category": "examen",
+  "aliases": [
+   "GSA",
+   "gases arteriales",
+   "gasometría arterial",
+   "gasometria",
+   "AGA"
+  ]
+ },
+ "Hemocultivos": {
+  "category": "examen",
+  "aliases": [
+   "hemocultivo",
+   "hemocultivos",
+   "cultivo de sangre"
+  ]
+ },
+ "Relación PaO2/FiO2": {
+  "category": "parametro",
+  "aliases": [
+   "PaFi",
+   "PaFiO2",
+   "pafi",
+   "relación pafi",
+   "PaO2/FiO2"
+  ]
+ },
+ "Escala de agitación y sedación de Richmond (RASS)": {
+  "category": "escala",
+  "aliases": [
+   "RASS",
+   "richmond",
+   "escala de richmond"
+  ]
+ },
+ "Evaluación secuencial de falla orgánica (SOFA)": {
+  "category": "escala",
+  "aliases": [
+   "SOFA",
+   "puntaje sofa"
+  ]
+ },
+ "Escala de Braden": {
+  "category": "escala",
+  "aliases": [
+   "Braden",
+   "escala braden"
+  ]
+ },
+ "Escala CPOT": {
+  "category": "escala",
+  "aliases": [
+   "CPOT",
+   "escala cpot",
+   "dolor cpot"
+  ]
+ },
+ "Escala de movilidad en UCI (IMS)": {
+  "category": "escala",
+  "aliases": [
+   "IMS",
+   "ICU mobility scale",
+   "escala de movilidad"
+  ]
+ },
+ "Escala de coma de Glasgow": {
+  "category": "escala",
+  "aliases": [
+   "Glasgow",
+   "ECG glasgow",
+   "GCS",
+   "escala de glasgow"
+  ]
+ },
+ "Noradrenalina": {
+  "category": "farmaco",
+  "aliases": [
+   "norepinefrina",
+   "noradrenalina",
+   "nora",
+   "noradrenalina en infusión"
+  ]
+ },
+ "Adrenalina": {
+  "category": "farmaco",
+  "aliases": [
+   "epinefrina",
+   "adrenalina"
+  ]
+ },
+ "Vasopresina": {
+  "category": "farmaco",
+  "aliases": [
+   "vasopresina",
+   "pitresina"
+  ]
+ },
+ "Dobutamina": {
+  "category": "farmaco",
+  "aliases": [
+   "dobutamina"
+  ]
+ },
+ "Fentanilo": {
+  "category": "farmaco",
+  "aliases": [
+   "fentanilo",
+   "fentanil",
+   "fentanyl"
+  ]
+ },
+ "Propofol": {
+  "category": "farmaco",
+  "aliases": [
+   "propofol",
+   "diprivan"
+  ]
+ },
+ "Midazolam": {
+  "category": "farmaco",
+  "aliases": [
+   "midazolam",
+   "dormicum"
+  ]
+ },
+ "Dexmedetomidina": {
+  "category": "farmaco",
+  "aliases": [
+   "dexmedetomidina",
+   "precedex",
+   "dexme"
+  ]
+ },
+ "Paracetamol": {
+  "category": "farmaco",
+  "aliases": [
+   "paracetamol",
+   "acetaminofén",
+   "acetaminofen"
+  ]
+ },
+ "Metamizol": {
+  "category": "farmaco",
+  "aliases": [
+   "metamizol",
+   "dipirona",
+   "novalgina"
+  ]
+ },
+ "Furosemida": {
+  "category": "farmaco",
+  "aliases": [
+   "furosemida",
+   "lasix",
+   "furosemide"
+  ]
+ },
+ "Omeprazol": {
+  "category": "farmaco",
+  "aliases": [
+   "omeprazol",
+   "omeprazole"
+  ]
+ },
+ "Enoxaparina": {
+  "category": "farmaco",
+  "aliases": [
+   "enoxaparina",
+   "clexane",
+   "heparina de bajo peso molecular",
+   "HBPM"
+  ]
+ },
+ "Insulina": {
+  "category": "farmaco",
+  "aliases": [
+   "insulina",
+   "insulina cristalina",
+   "insulina regular"
+  ]
+ },
+ "Ceftriaxona": {
+  "category": "farmaco",
+  "aliases": [
+   "ceftriaxona",
+   "ceftriaxone",
+   "rocephin"
+  ]
+ },
+ "Piperacilina/tazobactam": {
+  "category": "farmaco",
+  "aliases": [
+   "piperacilina tazobactam",
+   "pip/tazo",
+   "tazocin",
+   "piperacilina-tazobactam"
+  ]
+ },
+ "Meropenem": {
+  "category": "farmaco",
+  "aliases": [
+   "meropenem",
+   "meronem"
+  ]
+ },
+ "Vancomicina": {
+  "category": "farmaco",
+  "aliases": [
+   "vancomicina",
+   "vanco"
+  ]
+ },
+ "Hidrocortisona": {
+  "category": "farmaco",
+  "aliases": [
+   "hidrocortisona",
+   "hidrocortisona ev"
+  ]
+ },
+ "Cristaloides": {
+  "category": "farmaco",
+  "aliases": [
+   "cristaloides",
+   "suero fisiológico",
+   "suero fisiologico",
+   "ringer lactato",
+   "solución salina"
+  ]
+ },
+ "Endovenosa": {
+  "category": "via",
+  "aliases": [
+   "EV",
+   "IV",
+   "endovenoso",
+   "endovenosa",
+   "intravenoso",
+   "intravenosa"
+  ]
+ },
+ "Subcutánea": {
+  "category": "via",
+  "aliases": [
+   "SC",
+   "subcutáneo",
+   "subcutanea",
+   "subcutánea",
+   "subcutaneo"
+  ]
+ },
+ "Oral": {
+  "category": "via",
+  "aliases": [
+   "VO",
+   "vía oral",
+   "via oral",
+   "oral"
+  ]
+ },
+ "Inhalatoria": {
+  "category": "via",
+  "aliases": [
+   "inhalado",
+   "nebulizado",
+   "nebulización",
+   "inh"
+  ]
+ },
+ "Streptococcus pneumoniae": {
+  "category": "microorganismo",
+  "aliases": [
+   "neumococo",
+   "s. pneumoniae",
+   "streptococcus pneumoniae",
+   "estreptococo pneumoniae"
+  ]
+ },
+ "Staphylococcus aureus": {
+  "category": "microorganismo",
+  "aliases": [
+   "s. aureus",
+   "staphylococcus aureus",
+   "estafilococo aureus",
+   "SAMR"
+  ]
+ },
+ "Escherichia coli": {
+  "category": "microorganismo",
+  "aliases": [
+   "e. coli",
+   "escherichia coli",
+   "ecoli"
+  ]
+ },
+ "Klebsiella pneumoniae": {
+  "category": "microorganismo",
+  "aliases": [
+   "klebsiella",
+   "k. pneumoniae",
+   "klebsiella pneumoniae"
+  ]
+ },
+ "Pseudomonas aeruginosa": {
+  "category": "microorganismo",
+  "aliases": [
+   "pseudomonas",
+   "p. aeruginosa",
+   "pseudomonas aeruginosa"
+  ]
+ }
+}
