@@ -132,6 +132,7 @@ def transcribe(source: str | Path | BinaryIO) -> str:
     output: dict[str, Any] = transcriber(
         _load_audio(source),
         generate_kwargs={"language": DEFAULT_LANGUAGE, "task": "transcribe"},
+        return_timestamps=True,  # Soporte para audios largos (> 30s)
     )
     return str(output["text"]).strip()
 
