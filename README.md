@@ -1,4 +1,4 @@
-# team-42 Platanus Hack 26: Santiago ft. Buk Project
+# Dendrita — Platanus Hack 26: Santiago ft. Buk Project
 
 **Current project logo:** project-logo.png
 
@@ -6,7 +6,9 @@
 
 Track: 🔗 Multiplayer
 
-team-42
+Dendrita es una plataforma de coordinación clínica interdisciplinaria para la gestión de pacientes hospitalizados. Ver [project-description.md](./project-description.md).
+
+Equipo Dendrita
 
 - Clemente Vial Banduc ([@clemevial](https://github.com/clemevial))
 - Cristóbal Tubino ([@ctubito](https://github.com/ctubito))
