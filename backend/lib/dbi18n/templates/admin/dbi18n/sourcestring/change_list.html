@@ -1,0 +1,56 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  <li>
+    {% if dbi18n_sync_needed %}
+      <a href="{{ dbi18n_sync_url }}" style="background:#e65c00;color:#fff;font-weight:bold;">
+        {% blocktranslate with count=dbi18n_changed_files %}Sync with .po ({{ count }} changed){% endblocktranslate %}
+      </a>
+    {% else %}
+      <a href="{{ dbi18n_sync_url }}" style="opacity:0.5;" title="{% translate 'Catalogs are up to date' %}">
+        {% translate "Sync with .po" %} ✓
+      </a>
+    {% endif %}
+  </li>
+  <li>
+    <a href="{{ dbi18n_export_url }}">{% translate "Export messages.tar.gz" %}</a>
+  </li>
+  <li>
+    {# Styled as a normal object-tools link; a hidden form does the CSRF POST. #}
+    <a href="#" onclick="if(confirm('{% translate "Delete DB translations equal to the committed catalog, and stale source strings?" %}')){this.nextElementSibling.submit();}return false;">
+      {% translate "Prune redundant" %}
+    </a>
+    <form method="post" action="{{ dbi18n_prune_url }}" style="display:none;">{% csrf_token %}</form>
+  </li>
+  {{ block.super }}
+{% endblock %}
+
+{# Insert help text + sync info below the toolbar, clearing the float. #}
+{% block content %}
+  {{ block.super }}
+{% endblock %}
+
+{% block result_list %}
+  <div style="clear:both; margin-bottom:1em;">
+    <p class="help">
+      {% translate "Translation status per language:" %}
+      <strong>—</strong> {% translate "Not translated" %} &nbsp;·&nbsp;
+      <strong style="color:#2e7d32;">✓</strong> {% translate "Translated (committed .po)" %} &nbsp;·&nbsp;
+      <strong style="color:#e65c00;">✎</strong> {% translate "Modified — live DB override, pending export" %}
+    </p>
+    <p class="help">
+      {% blocktranslate %}
+        <strong>Modified</strong> edits are live immediately (DB wins).
+        To make them permanent: <em>Export messages.tar.gz</em> → run
+        <code>just backend i18n-import messages.tar.gz</code> on your
+        development machine → commit the updated <code>django.po</code> files →
+        deploy → click <strong>Prune redundant</strong>.
+      {% endblocktranslate %}
+    </p>
+    {% if dbi18n_sync_info %}
+      <p class="help" style="color:#666;">{{ dbi18n_sync_info }}</p>
+    {% endif %}
+  </div>
+  {{ block.super }}
+{% endblock %}

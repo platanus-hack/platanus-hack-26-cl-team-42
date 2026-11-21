@@ -1,0 +1,7 @@
+# Template contribution working area (candidates, analyses, pristine renders, clones)
+tmpl/tmp/*
+!tmpl/tmp/.gitkeep
+
+# >>> bundle (managed — do not edit by hand) >>>
+bundle.manifest
+# <<< bundle (managed) <<<>

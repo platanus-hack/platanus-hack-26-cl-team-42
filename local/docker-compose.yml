@@ -1,0 +1,147 @@
+volumes:
+  postgres_data: {}
+  postgres_data_backups: {}
+  redis_data: {}
+  node_modules: {}
+  docs_node_modules: {}
+
+services:
+  ingress:
+    image: traefik:v3
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # Traefik watches the shared Docker socket and sees containers from EVERY
+      # running compose project. OrbStack also makes all container IPs routable
+      # across projects, so without this constraint a second `just preview` stack
+      # whose backend/frontend declare the same router names + PathPrefix rules
+      # gets merged into this ingress and round-robined into — breaking sessions
+      # (each backend has its own DB). Scope discovery to this project only.
+      - "--providers.docker.constraints=Label(`com.docker.compose.project`,`${COMPOSE_PROJECT_NAME}`)"
+      - "--entrypoints.web.address=:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "dev.orbstack.domains=${COMPOSE_PROJECT_NAME}.orb.local"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../backend/docker/Dockerfile
+      target: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+    environment:
+      - DJANGO_FRONTEND_URL=http://localhost:3000
+    env_file:
+      - ./conf/${LOCAL_ENV:-default}
+    labels:
+      - "traefik.enable=true"
+      # All backend routes live under DJANGO_URL_PREFIX ("/-/"), see conf/urls.py.
+      # The /-/, /-docs and / prefixes are disjoint, so Traefik's default
+      # longest-prefix match routes correctly without explicit priorities.
+      - "traefik.http.routers.backend.rule=PathPrefix(`/-/`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ./docker/Dockerfile
+      target: development
+    # The named `node_modules` volume persists across `down`/`up` and is only
+    # seeded from the image on first creation, so it goes stale when dependencies
+    # change (a new package in package.json/lockfile is absent from the volume and
+    # the dev server fails to resolve it). Reconcile the volume against the
+    # bind-mounted lockfile on every start, then hand off to the dev server.
+    # `--frozen-lockfile` is a fast no-op when already in sync; `exec` lets the
+    # dev process receive signals directly. `CI=true` is scoped to the install so
+    # pnpm may purge an incompatible (stale) modules dir without a TTY prompt.
+    command: sh -c "CI=true pnpm install --frozen-lockfile && exec pnpm dev"
+    env_file:
+      - ./conf/${LOCAL_ENV:-default}
+    volumes:
+      - node_modules:/app/node_modules
+      - ../frontend:/app
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+  docs:
+    build:
+      context: ../docs
+      dockerfile: ./docker/Dockerfile
+      target: development
+      # Vendored library READMEs are surfaced as docs pages (docs/dev/lib/*.md) via
+      # VitePress @include. Expose them as a named build context so the static
+      # `build` stage can COPY them in (see docs/docker/Dockerfile).
+      additional_contexts:
+        libs: ../backend/lib
+    volumes:
+      - docs_node_modules:/app/node_modules
+      - ../docs:/app
+      # The dev server resolves the @include sources at request time, so the
+      # libs must be present at the path those includes point to.
+      - ../backend/lib:/backend/lib:ro
+    labels:
+      - "traefik.enable=true"
+      # Served under /-docs/, a sibling of the backend's /-/ namespace. VitePress
+      # sets a matching `base` (see docs/.vitepress/config.ts) so assets resolve
+      # under the path.
+      - "traefik.http.routers.docs.rule=PathPrefix(`/-docs`)"
+      - "traefik.http.routers.docs.entrypoints=web"
+      - "traefik.http.services.docs.loadbalancer.server.port=5173"
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-16}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_backups:/backups
+    env_file:
+      - ./conf/${LOCAL_ENV:-default}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: ../backend/docker/Dockerfile
+      target: development
+    # watchmedo (watchdog, dev dependency) restarts the worker when mounted code changes
+    command: >
+      watchmedo auto-restart --directory=/app --pattern=*.py --recursive
+      --signal SIGTERM --debounce-interval 1 --
+      celery -A conf worker --loglevel=info --concurrency=2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+    environment:
+      - DJANGO_FRONTEND_URL=http://localhost:3000
+    env_file:
+      - ./conf/${LOCAL_ENV:-default}

@@ -1,0 +1,5 @@
+*
+**/*
+!deploy/terraform/**/*
+!deploy/.image.lock
+.terraform/**/*

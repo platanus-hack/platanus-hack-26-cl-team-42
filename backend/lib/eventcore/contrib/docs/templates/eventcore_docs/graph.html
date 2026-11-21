@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eventcore flow graph</title>
+  <style>
+    :root {
+      --bg: #f0f1f3;
+      --panel: #fff;
+      --text: #1c2024;
+      --muted: #60646c;
+      --border: #e0e1e6;
+      --command: #0588f0;
+      --event: #30a46c;
+      --policy: #f76b15;
+      --unlock: #8b5cf6;
+      --invokes: #0f766e;
+      --accent: #3e63dd;
+      --side-w: clamp(420px, 42vw, 640px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      flex: 0 0 auto;
+      padding: .85rem 1.25rem;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem 1.25rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .titles h1 { margin: 0; font-size: 1.1rem; }
+    header .titles p { margin: .2rem 0 0; color: var(--muted); font-size: .8rem; max-width: 44rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    select, button {
+      font: inherit; padding: .4rem .7rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--panel); cursor: pointer;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .legend { display: flex; gap: .75rem; font-size: .72rem; color: var(--muted); flex-wrap: wrap; }
+    .legend i {
+      display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+      margin-right: .25rem; vertical-align: -1px;
+    }
+    .legend i.line { width: 18px; height: 3px; border-radius: 2px; }
+    .workspace {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 6px var(--side-w);
+      min-height: 0;
+    }
+    @media (max-width: 860px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 6px minmax(42vh, 48vh);
+      }
+      .side-resizer {
+        display: block;
+        width: auto;
+        height: 6px;
+        margin: 0 .75rem;
+        cursor: row-resize;
+      }
+      .side-resizer::after {
+        top: 2px; bottom: auto; left: 20%; right: 20%; width: auto; height: 2px;
+      }
+      .side { margin: 0 .75rem .75rem; }
+    }
+    .canvas-card {
+      margin: .75rem;
+      background: radial-gradient(circle at 30% 40%, #fff 0%, #f7f8fa 50%, #eef0f3 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      min-height: 0;
+    }
+    #canvas-wrap { width: 100%; height: 100%; overflow: auto; cursor: grab; }
+    #canvas-wrap.dragging { cursor: grabbing; }
+    svg#graph { display: block; }
+    .hint {
+      position: absolute; left: .75rem; bottom: .75rem;
+      background: rgba(255,255,255,.94); border: 1px solid var(--border);
+      border-radius: 8px; padding: .4rem .65rem; font-size: .72rem; color: var(--muted);
+      pointer-events: none; max-width: 22rem;
+    }
+    .side-resizer {
+      width: 6px;
+      margin: .75rem 0;
+      cursor: col-resize;
+      border-radius: 4px;
+      background: transparent;
+      position: relative;
+      z-index: 2;
+      justify-self: stretch;
+    }
+    .side-resizer::after {
+      content: "";
+      position: absolute;
+      top: 20%; bottom: 20%;
+      left: 2px;
+      width: 2px;
+      border-radius: 2px;
+      background: var(--border);
+    }
+    .side-resizer:hover::after,
+    body.resizing-side .side-resizer::after { background: var(--accent); }
+    body.resizing-side { cursor: col-resize; user-select: none; }
+    body.resizing-side #canvas-wrap { pointer-events: none; }
+    .side {
+      margin: .75rem .75rem .75rem 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      overflow: auto;
+      min-height: 0;
+      min-width: 0;
+    }
+    .side h2 { margin: .35rem 0 .5rem; font-size: 1.05rem; }
+    .side .doc { color: var(--muted); white-space: pre-wrap; font-size: .84rem; }
+    .kind {
+      display: inline-block; font-size: .66rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .03em;
+      padding: .15rem .45rem; border-radius: 999px;
+    }
+    .kind.command { background: #e1f0ff; color: #0d74ce; }
+    .kind.event { background: #e1f7ed; color: #218358; }
+    .kind.policy { background: #ffefd6; color: #cc4e00; }
+    .kind.entry { background: #e8e8ff; color: #3e63dd; }
+    .kind.unlock { background: #f3e8ff; color: #6d28d9; }
+    .meta { font-size: .76rem; color: var(--muted); word-break: break-all; margin-top: .5rem; }
+    .badge {
+      display: inline-block; font-size: .68rem; padding: .12rem .4rem;
+      border-radius: 999px; background: #eeeef0; margin: .15rem .15rem 0 0;
+    }
+    .badge.err { background: #ffe5e5; color: #c10007; }
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; margin-top: .5rem; }
+    th, td { text-align: left; padding: .3rem .2rem; border-bottom: 1px solid var(--border); }
+    code { font-size: .85em; background: var(--bg); padding: .1rem .3rem; border-radius: 4px; }
+    .code-preview-wrap {
+      margin-top: .75rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f7f8fa;
+    }
+    .code-preview-head {
+      display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+      padding: .35rem .55rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .68rem; color: var(--muted);
+      background: #eef0f3;
+    }
+    .code-preview {
+      margin: 0;
+      padding: .65rem .75rem;
+      overflow: auto;
+      max-height: min(55vh, 32rem);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .82rem;
+      line-height: 1.5;
+      color: #1c2024;
+      white-space: pre;
+      tab-size: 4;
+    }
+    .code-preview .ln {
+      display: inline-block;
+      min-width: 2.6rem;
+      margin-right: .75rem;
+      text-align: right;
+      color: #8b909a;
+      user-select: none;
+    }
+    a.btn, button.btn {
+      display: inline-block; margin-top: .55rem; padding: .4rem .7rem;
+      border-radius: 8px; border: 1px solid var(--border); text-decoration: none;
+      color: inherit; background: var(--bg); font-size: .82rem; cursor: pointer; font: inherit;
+    }
+    a.btn.primary, button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.btn.ghost { margin-top: 0; padding: .2rem .45rem; font-size: .68rem; }
+    .empty { color: var(--muted); font-size: .88rem; }
+    .node-label {
+      font-size: 11px; fill: var(--text); pointer-events: none;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .wave-label {
+      font-size: 10px; fill: var(--muted);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: .03em;
+    }
+    .error { color: #c10007; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="titles">
+      <h1>Eventcore flow graph</h1>
+      <p>
+        Exploration grows only to the right. Clicking an earlier step clears
+        everything after it. The same event/command can appear again as a new
+        card so arrows never go backward.
+      </p>
+    </div>
+    <div class="controls">
+      <label>App <select id="app-filter"><option value="all">All</option></select></label>
+      <button type="button" id="reset">Reset</button>
+      <button type="button" id="refresh" class="primary">Refresh</button>
+      <div class="legend">
+        <span><i style="background:var(--command)"></i>command</span>
+        <span><i style="background:var(--event)"></i>event</span>
+        <span><i style="background:var(--policy)"></i>policy</span>
+        <span><i class="line" style="background:var(--command)"></i>applies</span>
+        <span><i class="line" style="background:var(--unlock)"></i>unlocks</span>
+        <span><i class="line" style="background:var(--policy)"></i>policy</span>
+        <span><i class="line" style="background:var(--invokes)"></i>invokes</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace" id="workspace">
+    <div class="canvas-card">
+      <div id="canvas-wrap"><svg id="graph"></svg></div>
+      <div class="hint" id="hint">Click an entry command — its events appear to the right.</div>
+    </div>
+    <div class="side-resizer" id="side-resizer" title="Drag to resize" role="separator" aria-orientation="vertical"></div>
+    <aside class="side" id="detail"><p class="empty">Select a node.</p></aside>
+  </div>
+
+  <script>
+    const GRAPH_API_URL = "{{ graph_api_url|escapejs }}";
+    const KIND_COLOR = { command: "#0588f0", event: "#30a46c", policy: "#f76b15" };
+    const EDGE_COLOR = {
+      applies: "#0588f0",
+      policy: "#f76b15",
+      unlocks: "#8b5cf6",
+      invokes: "#0f766e",
+    };
+    const NODE_W = 148;
+    const NODE_H = 44;
+    const COL_GAP = 210;
+    const ROW = 62;
+
+    let graph = null;
+    let byId = new Map();
+    let appFilter = "all";
+
+    /**
+     * Exploration tree (not the full domain graph).
+     * instances: iid → { iid, refId, col, row, parentIid, edgeKind }
+     * treeEdges: { fromIid, toIid, kind } — always left → right
+     */
+    let instances = new Map();
+    let treeEdges = [];
+    let focusedIid = null;
+    let seq = 0;
+    let colRow = new Map();
+
+    const $svg = document.getElementById("graph");
+    const $wrap = document.getElementById("canvas-wrap");
+    const $detail = document.getElementById("detail");
+    const $app = document.getElementById("app-filter");
+    const $hint = document.getElementById("hint");
+    const $workspace = document.getElementById("workspace");
+    const $resizer = document.getElementById("side-resizer");
+
+    const SIDE_MIN = 380;
+    const SIDE_MAX_RATIO = 0.62;
+    let sidePinned = false;
+    let resizingSide = false;
+
+    function setSideWidth(px) {
+      const max = Math.floor(window.innerWidth * SIDE_MAX_RATIO);
+      const w = Math.max(SIDE_MIN, Math.min(max, Math.round(px)));
+      document.documentElement.style.setProperty("--side-w", `${w}px`);
+    }
+
+    function fitSideToPreview() {
+      if (sidePinned) return;
+      if (window.matchMedia("(max-width: 860px)").matches) return;
+      const pre = $detail.querySelector(".code-preview");
+      if (!pre) return;
+      // Grow to fit the longest visible line (plus chrome), capped by viewport.
+      const needed = pre.scrollWidth + 64;
+      setSideWidth(Math.max(460, needed));
+    }
+
+    $resizer.addEventListener("mousedown", (e) => {
+      if (window.matchMedia("(max-width: 860px)").matches) return;
+      e.preventDefault();
+      resizingSide = true;
+      sidePinned = true;
+      document.body.classList.add("resizing-side");
+    });
+    $resizer.addEventListener("dblclick", () => {
+      sidePinned = false;
+      document.documentElement.style.removeProperty("--side-w");
+      fitSideToPreview();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!resizingSide) return;
+      const rect = $workspace.getBoundingClientRect();
+      setSideWidth(rect.right - e.clientX - 10);
+    });
+    window.addEventListener("mouseup", () => {
+      if (!resizingSide) return;
+      resizingSide = false;
+      document.body.classList.remove("resizing-side");
+    });
+
+    document.getElementById("refresh").onclick = load;
+    document.getElementById("reset").onclick = resetView;
+    $app.onchange = () => { appFilter = $app.value; resetView(); };
+
+    let panning = false, startX = 0, startY = 0, scrollL = 0, scrollT = 0;
+    $wrap.addEventListener("mousedown", (e) => {
+      if (e.target.closest("g.node")) return;
+      panning = true; $wrap.classList.add("dragging");
+      startX = e.clientX; startY = e.clientY;
+      scrollL = $wrap.scrollLeft; scrollT = $wrap.scrollTop;
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!panning) return;
+      $wrap.scrollLeft = scrollL - (e.clientX - startX);
+      $wrap.scrollTop = scrollT - (e.clientY - startY);
+    });
+    window.addEventListener("mouseup", () => {
+      panning = false; $wrap.classList.remove("dragging");
+    });
+
+    async function load() {
+      try {
+        const res = await fetch(GRAPH_API_URL, { credentials: "include", cache: "no-store" });
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        graph = await res.json();
+        byId = new Map(graph.nodes.map(n => [n.id, n]));
+        populateApps();
+        resetView();
+      } catch (err) {
+        $detail.innerHTML = `<p class="error">${esc(err.message)}</p>`;
+      }
+    }
+
+    function populateApps() {
+      const apps = graph.flow?.apps || [];
+      const cur = appFilter;
+      $app.innerHTML = `<option value="all">All</option>` +
+        apps.map(a => `<option value="${escAttr(a)}">${esc(a)}</option>`).join("");
+      $app.value = apps.includes(cur) ? cur : "all";
+      appFilter = $app.value;
+    }
+
+    function entryRefIds() {
+      return (graph.flow?.entry_command_ids || []).filter((id) => {
+        const n = byId.get(id);
+        return n && (appFilter === "all" || n.app === appFilter);
+      });
+    }
+
+    function nextRow(col) {
+      const r = colRow.get(col) || 0;
+      colRow.set(col, r + 1);
+      return r;
+    }
+
+    function addInstance(refId, col, parentIid, edgeKind) {
+      const iid = `i${++seq}`;
+      instances.set(iid, {
+        iid,
+        refId,
+        col,
+        row: nextRow(col),
+        parentIid: parentIid || null,
+        edgeKind: edgeKind || null,
+      });
+      if (parentIid) {
+        treeEdges.push({ fromIid: parentIid, toIid: iid, kind: edgeKind || "applies" });
+      }
+      return iid;
+    }
+
+    function resetView() {
+      instances = new Map();
+      treeEdges = [];
+      focusedIid = null;
+      seq = 0;
+      colRow = new Map();
+      for (const refId of entryRefIds()) {
+        addInstance(refId, 0, null, null);
+      }
+      $hint.textContent = "Click an entry command — its events appear to the right.";
+      render();
+      centerScroll();
+      $detail.innerHTML = `<p class="empty">Only starting commands. Click to grow the flow rightward.</p>`;
+    }
+
+    function allowReveal(refId) {
+      const n = byId.get(refId);
+      if (!n) return false;
+      if (appFilter === "all") return true;
+      if (n.kind !== "command") return true;
+      return n.app === appFilter;
+    }
+
+    /** Logical children + edge kind from a domain node. */
+    function childSpecs(refId) {
+      const n = byId.get(refId);
+      if (!n) return [];
+      const out = [];
+      if (n.kind === "command") {
+        for (const evName of n.applies_events || []) {
+          out.push({ refId: `event:${evName}`, kind: "applies" });
+        }
+      } else if (n.kind === "event") {
+        for (const id of graph.flow?.event_unlocks_commands?.[n.name] || []) {
+          out.push({ refId: id, kind: "unlocks" });
+        }
+        for (const id of graph.flow?.event_policies?.[n.name] || []) {
+          out.push({ refId: id, kind: "policy" });
+        }
+      } else if (n.kind === "policy") {
+        for (const id of graph.flow?.policy_invokes_commands?.[n.id] || []) {
+          out.push({ refId: id, kind: "invokes" });
+        }
+      }
+      return out.filter(s => allowReveal(s.refId) && byId.has(s.refId));
+    }
+
+    /** Drop every instance strictly to the right of col (and their tree edges). */
+    function pruneAfterCol(col) {
+      const keep = new Set();
+      for (const inst of instances.values()) {
+        if (inst.col <= col) keep.add(inst.iid);
+      }
+      instances = new Map([...instances].filter(([iid]) => keep.has(iid)));
+      treeEdges = treeEdges.filter(e => keep.has(e.fromIid) && keep.has(e.toIid));
+      // Rebuild colRow occupancy for kept columns so new siblings pack cleanly
+      colRow = new Map();
+      const byCol = new Map();
+      for (const inst of instances.values()) {
+        if (!byCol.has(inst.col)) byCol.set(inst.col, []);
+        byCol.get(inst.col).push(inst);
+      }
+      for (const [c, list] of byCol) {
+        list.sort((a, b) => a.row - b.row);
+        list.forEach((inst, i) => { inst.row = i; });
+        colRow.set(c, list.length);
+      }
+    }
+
+    function onInstanceClick(iid) {
+      const inst = instances.get(iid);
+      if (!inst) return;
+      focusedIid = iid;
+
+      // Going back: delete everything to the right of this step
+      pruneAfterCol(inst.col);
+
+      // Always spawn fresh children to the right (duplicates OK → arrows only forward)
+      const childCol = inst.col + 1;
+      const specs = childSpecs(inst.refId);
+      let added = 0;
+      for (const spec of specs) {
+        addInstance(spec.refId, childCol, iid, spec.kind);
+        added += 1;
+      }
+
+      const n = byId.get(inst.refId);
+      if (n?.kind === "command") {
+        $hint.textContent = added
+          ? "Events opened on the right. Click one to continue — or click this command again to reset its branch."
+          : "No events detected from this command’s perform().";
+      } else if (n?.kind === "event") {
+        $hint.textContent = added
+          ? "Follow-up commands / policies opened on the right."
+          : "No follow-ups for this event.";
+      } else if (n?.kind === "policy") {
+        $hint.textContent = added
+          ? "Cascaded commands (invoke) opened on the right."
+          : "Policy leaf — no invoke() detected. Click an earlier step to change path.";
+      } else {
+        $hint.textContent = "Click a node to continue the flow.";
+      }
+
+      render();
+      centerScroll(iid);
+      showDetail(iid);
+    }
+
+    function xy(inst) {
+      return { x: inst.col * COL_GAP, y: inst.row * ROW };
+    }
+
+    function render() {
+      if (!graph) return;
+      const list = [...instances.values()];
+      if (!list.length) { $svg.innerHTML = ""; return; }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const inst of list) {
+        const p = xy(inst);
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + NODE_W);
+        maxY = Math.max(maxY, p.y + NODE_H);
+      }
+      const pad = 80;
+      const bw = maxX - minX, bh = maxY - minY;
+      const viewW = Math.max(bw + pad * 2, 720);
+      const viewH = Math.max(bh + pad * 2, 380);
+      const ox = (viewW - bw) / 2 - minX;
+      const oy = (viewH - bh) / 2 - minY;
+      const at = (inst) => { const p = xy(inst); return { x: p.x + ox, y: p.y + oy }; };
+
+      const maxCol = Math.max(...list.map(i => i.col));
+      const waveLabels = [];
+      for (let c = 0; c <= maxCol; c++) {
+        const label = c === 0 ? "start" : `step ${c}`;
+        waveLabels.push(
+          `<text class="wave-label" x="${c * COL_GAP + ox + NODE_W / 2}" y="${Math.max(20, minY + oy - 32)}" text-anchor="middle">${label}</text>`
+        );
+      }
+
+      // Only tree edges — always parent (left) → child (right)
+      const edgeSvg = treeEdges.map((e) => {
+        const a = instances.get(e.fromIid);
+        const b = instances.get(e.toIid);
+        if (!a || !b) return "";
+        const pa = at(a), pb = at(b);
+        const x1 = pa.x + NODE_W, y1 = pa.y + NODE_H / 2;
+        const x2 = pb.x, y2 = pb.y + NODE_H / 2;
+        const mx = (x1 + x2) / 2;
+        const hot = !focusedIid || e.fromIid === focusedIid || e.toIid === focusedIid
+          || a.parentIid === focusedIid;
+        // Soft-focus: emphasize edges out of focused node
+        const strong = !focusedIid || e.fromIid === focusedIid;
+        const dash = e.kind === "unlocks" ? "6 4" : "none";
+        return `<path d="M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}"
+          fill="none" stroke="${EDGE_COLOR[e.kind] || "#888"}"
+          stroke-width="${strong ? 2.4 : 1.5}"
+          stroke-dasharray="${dash}"
+          opacity="${strong ? 0.95 : 0.35}"
+          marker-end="url(#arrow-${e.kind})" />`;
+      }).join("");
+
+      const nodeSvg = list.map((inst) => {
+        const n = byId.get(inst.refId);
+        if (!n) return "";
+        const p = at(inst);
+        const isFocus = inst.iid === focusedIid;
+        return `<g class="node" data-iid="${escAttr(inst.iid)}" transform="translate(${p.x},${p.y})"
+          style="cursor:pointer">
+          <rect width="${NODE_W}" height="${NODE_H}" rx="10"
+            fill="#fff" stroke="${KIND_COLOR[n.kind]}"
+            stroke-width="${isFocus ? 3 : 1.5}" />
+          <text class="node-label" x="${NODE_W / 2}" y="${NODE_H / 2 + 4}" text-anchor="middle">
+            ${esc(truncate(n.name, 16))}
+          </text>
+        </g>`;
+      }).join("");
+
+      $svg.setAttribute("width", viewW);
+      $svg.setAttribute("height", viewH);
+      $svg.setAttribute("viewBox", `0 0 ${viewW} ${viewH}`);
+      $svg.innerHTML = `
+        <defs>
+          <marker id="arrow-applies" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="${EDGE_COLOR.applies}" />
+          </marker>
+          <marker id="arrow-policy" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="${EDGE_COLOR.policy}" />
+          </marker>
+          <marker id="arrow-unlocks" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="${EDGE_COLOR.unlocks}" />
+          </marker>
+          <marker id="arrow-invokes" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="${EDGE_COLOR.invokes}" />
+          </marker>
+        </defs>
+        ${waveLabels.join("")}
+        ${edgeSvg}
+        ${nodeSvg}
+      `;
+      $svg.querySelectorAll("g.node").forEach((g) => {
+        g.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          onInstanceClick(g.getAttribute("data-iid"));
+        });
+      });
+    }
+
+    function centerScroll(iid) {
+      requestAnimationFrame(() => {
+        if (iid) {
+          const g = $svg.querySelector(`g.node[data-iid="${CSS.escape(iid)}"]`);
+          if (g) {
+            const rect = g.getBoundingClientRect();
+            const wrapRect = $wrap.getBoundingClientRect();
+            $wrap.scrollBy({
+              left: rect.left + rect.width / 2 - (wrapRect.left + wrapRect.width / 2),
+              top: rect.top + rect.height / 2 - (wrapRect.top + wrapRect.height / 2),
+              behavior: "smooth",
+            });
+            return;
+          }
+        }
+        $wrap.scrollTo({
+          left: Math.max(0, ($svg.width.baseVal.value - $wrap.clientWidth) / 2),
+          top: Math.max(0, ($svg.height.baseVal.value - $wrap.clientHeight) / 2),
+          behavior: "smooth",
+        });
+      });
+    }
+
+    function showDetail(iid) {
+      const inst = instances.get(iid);
+      if (!inst) return;
+      const n = byId.get(inst.refId);
+      if (!n) return;
+      const src = n.source || {};
+      const kids = childSpecs(inst.refId);
+
+      let flowHint = "";
+      if (n.kind === "command") {
+        flowHint = `Applies ${(n.applies_events || []).length} event(s). Click to open them on the right (clears anything further right).`;
+      } else if (n.kind === "event") {
+        const u = (graph.flow?.event_unlocks_commands?.[n.name] || []).length;
+        const p = (graph.flow?.event_policies?.[n.name] || []).length;
+        flowHint = `Unlocks ~${u} command(s) (heuristic) · ${p} polic(y/ies).`;
+      } else if (n.kind === "policy") {
+        const inv = (n.invokes_commands || []).length;
+        flowHint = inv
+          ? `Side effect on ${n.subscribed_to || "event"}; invokes ${inv} command(s). Click to open them.`
+          : `Side effect on ${n.subscribed_to || "event"}. No invoke() cascade detected.`;
+      } else {
+        flowHint = "";
+      }
+
+      $detail.innerHTML = `
+        <span class="kind ${n.kind}">${esc(n.kind)}</span>
+        ${n.is_entry ? `<span class="kind entry">entry</span>` : ""}
+        ${n.app ? `<span class="badge">${esc(n.app)}</span>` : ""}
+        <h2>${esc(n.name)}</h2>
+        <p class="doc">${n.doc ? esc(n.doc) : "No docstring."}</p>
+        <p class="meta">${esc(flowHint)}</p>
+        <p class="meta"><code>${esc(n.module)}</code></p>
+        ${(n.errors || []).map(e => `<span class="badge err">${esc(e)}</span>`).join("")}
+        ${n.target_model ? `<p class="meta">Model: <code>${esc(n.target_model)}</code></p>` : ""}
+        ${n.subscribed_to ? `<p class="meta">on(<code>${esc(n.subscribed_to)}</code>)</p>` : ""}
+        ${(n.fields || []).length ? `
+          <table><thead><tr><th>Field</th><th>Type</th></tr></thead>
+          <tbody>${n.fields.map(f => `<tr><td>${esc(f.name)}${f.required ? "" : "?"}</td>
+            <td><code>${esc(f.type)}</code></td></tr>`).join("")}</tbody></table>` : ""}
+        ${src.file_relative && src.line != null ? `
+          <p class="meta"><code>${esc(src.file_relative)}:${src.line}${src.end_line && src.end_line !== src.line ? "–" + src.end_line : ""}</code></p>
+          ${src.preview ? renderCodePreview(src) : ""}
+          <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem">
+            ${src.cursor_url || src.vscode_url ? `
+              <button type="button" class="btn primary" id="open-editor"
+                data-cursor="${escAttr(src.cursor_url || "")}"
+                data-vscode="${escAttr(src.vscode_url || "")}">Open in editor</button>` : ""}
+            <button type="button" class="btn" id="copy-path"
+              data-path="${escAttr((src.file_relative || src.file || "") + ":" + src.line)}">Copy path</button>
+            ${src.preview ? `
+              <button type="button" class="btn" id="copy-preview"
+                data-preview="1">Copy code</button>` : ""}
+          </div>` : ""}
+        ${kids.length ? `<p class="meta" style="margin-top:1rem"><span class="kind unlock">opens next</span></p>
+          <div>${kids.map(s => {
+            const kn = byId.get(s.refId);
+            return `<span class="badge">${esc(kn?.name || s.refId)}</span>`;
+          }).join("")}</div>` : ""}
+      `;
+      const openBtn = document.getElementById("open-editor");
+      if (openBtn) {
+        openBtn.addEventListener("click", () => {
+          window.location.href = openBtn.getAttribute("data-cursor") || openBtn.getAttribute("data-vscode");
+        });
+      }
+      const copyBtn = document.getElementById("copy-path");
+      if (copyBtn) {
+        copyBtn.addEventListener("click", async () => {
+          const text = copyBtn.getAttribute("data-path") || "";
+          try {
+            await navigator.clipboard.writeText(text);
+            copyBtn.textContent = "Copied";
+            setTimeout(() => { copyBtn.textContent = "Copy path"; }, 1200);
+          } catch { copyBtn.textContent = text; }
+        });
+      }
+      const copyPreviewBtn = document.getElementById("copy-preview");
+      if (copyPreviewBtn && src.preview) {
+        copyPreviewBtn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(src.preview);
+            copyPreviewBtn.textContent = "Copied";
+            setTimeout(() => { copyPreviewBtn.textContent = "Copy code"; }, 1200);
+          } catch { /* ignore */ }
+        });
+      }
+      requestAnimationFrame(fitSideToPreview);
+    }
+
+    function renderCodePreview(src) {
+      const start = src.line || 1;
+      const rows = String(src.preview).split("\n").map((line, i) => {
+        const ln = start + i;
+        return `<span class="ln">${ln}</span>${esc(line)}\n`;
+      }).join("");
+      const label = src.preview_truncated
+        ? "Preview (truncated) — open in editor for full file"
+        : "Preview";
+      return `
+        <div class="code-preview-wrap">
+          <div class="code-preview-head"><span>${esc(label)}</span></div>
+          <pre class="code-preview">${rows}</pre>
+        </div>`;
+    }
+
+    function truncate(s, max) { return s.length > max ? s.slice(0, max - 1) + "…" : s; }
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+    function escAttr(s) { return esc(s); }
+
+    load();
+  </script>
+</body>
+</html>

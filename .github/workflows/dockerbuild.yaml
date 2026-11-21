@@ -1,0 +1,55 @@
+name: Push Docker images
+
+on:
+  workflow_dispatch:
+
+  # Runs on release of tag
+  release:
+    types: [released, prereleased]
+
+jobs:
+  detect-environment:
+    name: Detect environment from tag
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/rc-v')
+    outputs:
+      env_suffix: ${{ steps.detect.outputs.env_suffix }}
+      build_args: ${{ steps.detect.outputs.build_args }}
+    steps:
+      - name: Detect environment
+        id: detect
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/rc-v* ]]; then
+            echo "env_suffix=dev" >> $GITHUB_OUTPUT
+            echo "build_args<<EOF" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "env_suffix=prd" >> $GITHUB_OUTPUT
+            echo "build_args<<EOF" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+  # Example job to build and push an image to GHCR:
+  #
+  # build-backend:
+  #   name: Build and push backend image
+  #   needs: detect-environment
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: docker/login-action@v3
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - uses: docker/build-push-action@v6
+  #       with:
+  #         context: ./backend
+  #         file: ./docker/Dockerfile
+  #         push: true
+  #         tags: |
+  #           ghcr.io/${{ github.repository_owner }}/<project>-backend-${{ needs.detect-environment.outputs.env_suffix }}:latest
+  #         build-args: ${{ needs.detect-environment.outputs.build_args }}

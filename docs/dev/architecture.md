@@ -1,0 +1,211 @@
+# Architecture
+
+This project is a web application with a React frontend, a Django backend, and a Docker Compose local environment.
+
+## Layout
+
+```txt
+frontend/   React + TypeScript app (Vite, TanStack)
+backend/    Django app, Ninja API, Celery worker
+local/      Docker Compose dev environment
+deploy/     Terraform infrastructure (AWS)
+docs/       VitePress docs (this site)
+```
+
+## Local runtime
+
+```txt
+browser
+  └─ <project>.orb.local
+        ├─ /-docs/*  -> docs/VitePress (:5173)
+        ├─ /-/*      -> backend (:8000)
+        └─ /*        -> frontend/Vite (:3000)
+
+backend:8000
+  ├─ postgres:5432
+  └─ redis:6379  (celery broker + result backend)
+```
+
+A Traefik ingress fronts the stack and routes by path; no host ports are
+published. The frontend runs on port `3000`, the backend on `8000`, the docs
+site on `5173`, PostgreSQL on `5432`, and Redis on `6379`. Backend routes live
+under the `/-/` prefix; the docs site is served under `/-docs/` (its VitePress
+`base` is set to match).
+
+Local service definitions are in `local/docker-compose.yml`. Default local environment variables are in `local/conf/default`.
+
+## Frontend
+
+The frontend is in `frontend/`.
+
+Main stack:
+
+- React 19
+- TypeScript
+- Vite
+- TanStack Router
+- TanStack React Query
+- Radix Themes (`@radix-ui/themes`)
+- Vitest
+
+Important files:
+
+```txt
+frontend/src/main.tsx
+frontend/src/routes/__root.tsx
+frontend/src/routes/_authenticated.tsx
+frontend/src/services/auth/AllAuthProvider.tsx
+frontend/vite.config.ts
+```
+
+See [Frontend deepdive](./frontend-deepdive.md) for more detail.
+
+## Backend
+
+The backend is in `backend/`.
+
+Main stack:
+
+- Python 3.13
+- Django 5.2
+- Django Ninja
+- Django Allauth headless auth
+- PostgreSQL
+- Celery + Redis (background tasks)
+- Whitenoise
+- Gunicorn
+- uv
+
+Important files:
+
+```txt
+backend/conf/settings.py
+backend/conf/urls.py
+backend/pyproject.toml
+backend/apps/users/
+```
+
+Main URL groups (all mounted under the URL prefix, `/-/` by default):
+
+| Path | Description |
+| --- | --- |
+| `/-/admin/` | Django admin |
+| `/-/users/` | user views |
+| `/-/eventcore-docs/` | Live eventcore command/event/policy graph (login required) |
+| `/-/.auth/accounts/` | Allauth browser/account URLs |
+| `/-/.auth/headless/` | Allauth headless API |
+| `/-/api/` | Django Ninja API |
+| `/-/api/docs` | API docs (Swagger UI) |
+| `/-/_health/` | health check |
+
+Custom API routers currently mounted:
+
+```txt
+/-/api/tracker
+```
+
+See [Backend deepdive](./backend-deepdive.md) for more detail.
+
+## Authentication
+
+Authentication uses Django Allauth headless APIs.
+
+Frontend session state is handled in:
+
+```txt
+frontend/src/services/auth/AllAuthProvider.tsx
+```
+
+It calls the backend under `/-/.auth/headless`, mainly:
+
+```txt
+/browser/v1/config
+/browser/v1/auth/session
+/browser/v1/auth/login
+/browser/v1/auth/provider/redirect
+```
+
+The backend user model is `apps.users.User`. It uses unique email as the login identifier and disables `username`.
+
+## Data model
+
+### User
+
+`apps.users.User` extends Django `AbstractUser`.
+
+Key differences from the default Django user:
+
+- `email` is unique
+- `email` is `USERNAME_FIELD`
+- `username` is disabled
+- `name` is available as a display field
+
+## Background tasks
+
+Asynchronous work runs on Celery with Redis as the broker and result backend.
+The worker is a dedicated service in the local stack (`worker` in
+`local/docker-compose.yml`).
+
+```txt
+backend/conf/celery.py        Celery app (started with `celery -A conf worker`)
+backend/apps/demo/tasks.py    example task (demo.tasks.sample_task)
+backend/lib/tracker/          vendored celery-tracker, exposed via /-/api/tracker
+backend/lib/eventcore/        commands/events + live docs at /-/eventcore-docs/
+```
+
+The `tracker` library records task steps and progress. The frontend `/tracker`
+page (`frontend/src/routes/_authenticated/tracker.tsx`) lists registered tasks,
+runs them, and streams live progress through the `src/services/tracker.ts`
+React Query hooks. See [Backend deepdive](./backend-deepdive.md#background-tasks).
+
+The `eventcore` library models domain commands and events. With
+`eventcore.contrib.docs` installed, open `/-/eventcore-docs/` (while logged in)
+for an interactive graph of commands → events → policies, backed by
+`/-/api/eventcore/graph`.
+
+## Commands
+
+From the repo root:
+
+```sh
+just local up
+just frontend test
+just local test-unit
+```
+
+Each layer's justfile is mounted as a submodule of the root justfile, so
+commands run as `just <layer> <recipe>`. Run `just` to list them all.
+
+Frontend checks:
+
+```sh
+cd frontend
+pnpm lint
+pnpm build
+pnpm test:run
+```
+
+Docs:
+
+```sh
+cd docs
+pnpm dev
+pnpm build
+pnpm preview
+```
+
+## Docker images
+
+Both app layers have multi-stage Dockerfiles.
+
+Frontend:
+
+- development: Vite dev server
+- build: static frontend bundle
+- runtime: serves `dist/`
+
+Backend:
+
+- development: production and dev Python dependencies
+- build: production wheels
+- runtime: production image running as a non-root user

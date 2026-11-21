@@ -1,0 +1,33 @@
+# Spanish translations for the demo app.
+# Generated from the dbi18n seed migration; committed as a standard .po file.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Pending"
+msgstr "Pendiente"
+
+msgid "Shipped"
+msgstr "Enviado"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgid "Order %(order_id)s not found"
+msgstr "No se encontró el pedido %(order_id)s"
+
+msgid "Carrier %(carrier)s is not supported"
+msgstr "El transportista %(carrier)s no es compatible"
+
+msgid "Order %(order_id)s is %(status)s; only pending orders can be shipped"
+msgstr ""
+"El pedido %(order_id)s está %(status)s; solo se pueden enviar pedidos "
+"pendientes"
+
+msgid "Order %(order_id)s is %(status)s; only pending orders can be cancelled"
+msgstr ""
+"El pedido %(order_id)s está %(status)s; solo se pueden cancelar pedidos "
+"pendientes"

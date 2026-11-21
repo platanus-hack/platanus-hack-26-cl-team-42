@@ -1,0 +1,7 @@
+# age public keys allowed to open the development bundle (one key per line).
+#
+# Run `just bundle keygen` to create your identity — your public key is added here
+# automatically. Commit this file after keygen.
+#
+# Example:
+# age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p

@@ -1,0 +1,6 @@
+allowBuilds:
+  '@tailwindcss/oxide': true
+  esbuild: true
+
+# Allow pnpm to recreate node_modules without a TTY prompt (containers, CI)
+confirmModulesPurge: false

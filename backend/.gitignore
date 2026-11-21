@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+
+*.sqlite3
+scripts/
+# Unignore the vendored third-party libraries checked into this tree.
+# (The Python template above has a blanket `lib/` exclusion.)
+!lib/
+!lib/**
+lib/**/__pycache__/
+lib/**/*.pyc
+lib/**/*.pyo
+
+*.mo
+
+# Written by `just local up` so eventcore docs can deep-link into the host IDE
+.eventcore-docs-host-root

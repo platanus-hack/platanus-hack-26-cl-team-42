@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; 
+# NEVER EDIT MANUALLY
+_commit: a6bc2bf
+_src_path: /Users/tomaswerth/Documents/repositorios/web-app-template
+aws_account_id: ''
+aws_region: us-east-2
+bundled: false
+cloud_provider: aws
+create_route53_zone: true
+domain_name: multiplayer-medico.example.cloud
+frontend_framework: react
+github_repository_url: git@github.com:example/multiplayer-medico
+include_pr_preview: false
+one_password_vault_name: multiplayer-medico
+org: example
+project_name: Multiplayer Médico
+project_slug: multiplayer-medico
+tfcloud_organization: example

@@ -1,0 +1,10 @@
+# Git pre-commit hooks. Install them with `just setup`.
+repos:
+  - repo: local
+    hooks:
+      - id: bundle
+        name: sync development bundle
+        entry: just bundle _precommit
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -1,0 +1,50 @@
+# tmpl/exclude-patterns — gitignore-style patterns for template contribution diffing.
+#
+# Used by tmpl/bin/candidate-diff.sh (via rsync --exclude-from) to filter noise
+# from the pristine-vs-local diff. Add patterns here to exclude additional paths
+# from all contribution candidates.
+#
+# Pattern syntax: same as gitignore / rsync --exclude (fnmatch).
+# Directories do NOT need a trailing slash here; rsync matches both.
+
+# Copier state
+.copier-answers.yml
+
+# Lockfiles (auto-generated, repo-specific)
+pnpm-lock.yaml
+uv.lock
+
+# Django migrations (project-specific schema history)
+migrations
+
+# Terraform upstream modules (overwritten by copier update)
+deploy/terraform/webapp
+
+# Secrets
+.env
+.env.*
+
+# Build and runtime artifacts
+dist
+build
+node_modules
+.venv
+*.pyc
+__pycache__
+
+# Template-contribution working area (rendered pristine, triage, analysis, contrib
+# clones). The contribution tooling itself is contributable, but its scratch dir
+# is not. Bare name so it's dropped no matter which path is diffed.
+tmp
+
+# Project-specific generated content
+docs/prd
+frontend/public/ingested
+
+# Snapshots and minified assets
+*.snap
+*.min.js
+*.min.css
+
+# Git internals
+.git

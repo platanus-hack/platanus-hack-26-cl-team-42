@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "images": {
+    "kennethreitz/httpbin": "kennethreitz/httpbin:latest"
+  }
+}
