@@ -3,9 +3,8 @@ import { Badge, Button, Card, Flex, Grid, Heading, Select, Spinner, Text, TextAr
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ModulePage } from "../../components/ModulePage";
 import { EmptyState } from "../../components/EmptyState";
-import { useEpisodeRecord } from "../episode/api";
+import { useEpisodeRecords } from "../episode/api";
 import { CopyButton, DemoEpisodeBanner, OpenConflicts, PendingStatusBadge, SourceLink } from "../episode/components";
-import { DEMO_EPISODE_ID } from "../episode/fixture";
 import { formatClinicalTime } from "../episode/format";
 import type { Encounter, EpisodeRecord, RecordFilter } from "../episode/model";
 import {
@@ -23,7 +22,9 @@ import type { ClinicalRecordSearch } from "../../routes/_authenticated/official-
 const ALL = "all";
 
 export function ClinicalRecordPage({ search }: { search: ClinicalRecordSearch }) {
-  const { data: record, isPending, error } = useEpisodeRecord(DEMO_EPISODE_ID);
+  const { data: records = [], isPending, error } = useEpisodeRecords();
+  const navigate = useNavigate();
+  const record = search.episode ? records.find(({ episode }) => episode.id === search.episode) : records[0];
 
   return (
     <ModulePage stepId="official-form" connected>
@@ -32,9 +33,25 @@ export function ClinicalRecordPage({ search }: { search: ClinicalRecordSearch })
           <Spinner size="3" />
         </Flex>
       ) : !record ? (
-        <EmptyState title="Sin episodio" description={error?.message ?? "No se pudo cargar el episodio de demostración."} />
+        <EmptyState title="Sin episodio" description={error?.message ?? "No se encontró el episodio de demostración."} />
       ) : (
-        <ClinicalRecord record={record} search={search} />
+        <Flex direction="column" gap="4">
+          <Flex direction="column" gap="1">
+            <Text size="2" weight="medium">Paciente</Text>
+            <Select.Root
+              value={record.episode.id}
+              onValueChange={(episode) => navigate({ to: "/official-form", search: { episode } })}
+            >
+              <Select.Trigger aria-label="Paciente" style={{ maxWidth: 360 }} />
+              <Select.Content>
+                {records.map(({ episode }) => (
+                  <Select.Item key={episode.id} value={episode.id}>{episode.label}</Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
+          </Flex>
+          <ClinicalRecord key={record.episode.id} record={record} search={search} />
+        </Flex>
       )}
     </ModulePage>
   );
@@ -58,7 +75,7 @@ function ClinicalRecord({ record, search }: { record: EpisodeRecord; search: Cli
       <DemoEpisodeBanner episode={record.episode}>
         <Button size="2" asChild>
           <Link to="/handoff" search={{ as: filter.professionalId, tab: "send" }}>
-            Traspasar este episodio
+            Preparar traspaso
           </Link>
         </Button>
       </DemoEpisodeBanner>
@@ -220,7 +237,7 @@ function EncounterCard({
 function RecordSidebar({ record, view }: { record: EpisodeRecord; view: RecordView }) {
   return (
     <Flex direction="column" gap="3">
-      <OpenConflicts conflicts={view.openConflicts} />
+      <OpenConflicts episodeId={record.episode.id} conflicts={view.openConflicts} />
       <Card>
         <Flex direction="column" gap="2">
           <Heading size="3">Datos al corte</Heading>
@@ -236,7 +253,7 @@ function RecordSidebar({ record, view }: { record: EpisodeRecord; view: RecordVi
               </Text>
               <Text size="1" color="gray">
                 {formatClinicalTime(datum.observedAt)} · {authorLine(record, datum.source.authorId)} ·{" "}
-                <SourceLink encounterId={datum.source.encounterId}>ver origen</SourceLink>
+                <SourceLink episodeId={record.episode.id} encounterId={datum.source.encounterId}>ver origen</SourceLink>
               </Text>
             </Flex>
           ))}
@@ -255,7 +272,7 @@ function RecordSidebar({ record, view }: { record: EpisodeRecord; view: RecordVi
               <Text size="2">{item.text}</Text>
               <Text size="1" color="gray">
                 {authorLine(record, item.authorId)} · {formatClinicalTime(item.occurredAt)} ·{" "}
-                <SourceLink encounterId={item.encounterId}>ver origen</SourceLink>
+                <SourceLink episodeId={record.episode.id} encounterId={item.encounterId}>ver origen</SourceLink>
               </Text>
             </Flex>
           ))}
@@ -278,7 +295,7 @@ function RecordSidebar({ record, view }: { record: EpisodeRecord; view: RecordVi
               <Text size="1" color="gray">
                 {authorLine(record, pending.ownerId)}
                 {pending.dueAt ? ` · plazo ${formatClinicalTime(pending.dueAt)}` : ""} ·{" "}
-                <SourceLink encounterId={pending.sourceEncounterId}>ver origen</SourceLink>
+                <SourceLink episodeId={record.episode.id} encounterId={pending.sourceEncounterId}>ver origen</SourceLink>
               </Text>
             </Flex>
           ))}

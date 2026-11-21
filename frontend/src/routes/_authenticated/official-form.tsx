@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ClinicalRecordPage } from "../../modules/clinical-record/ClinicalRecordPage";
 
 export interface ClinicalRecordSearch {
+  episode?: string;
   /** Filtro por autor de la atención. */
   professional?: string;
   /** Filtro por turno. */
@@ -12,6 +13,7 @@ export interface ClinicalRecordSearch {
 
 export const Route = createFileRoute("/_authenticated/official-form")({
   validateSearch: (search: Record<string, unknown>): ClinicalRecordSearch => ({
+    episode: optionalString(search.episode),
     professional: optionalString(search.professional),
     shift: optionalString(search.shift),
     encounter: optionalString(search.encounter),

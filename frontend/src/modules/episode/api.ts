@@ -3,30 +3,21 @@ import { DEMO_EPISODE_ID } from "./fixture";
 import { browserStore, createDemoEpisodeGateway, type ClosePendingInput, type EpisodeGateway } from "./gateway";
 import type { SendHandoffInput } from "./model";
 
-// Pasos 7 y 8 · Registro clínico y traspaso sobre un episodio.
-// Sin backend todavía: gateway local de demo limitado al episodio ficticio.
-
-export const episodeGateway: EpisodeGateway = createDemoEpisodeGateway({
+const episodeGateway: EpisodeGateway = createDemoEpisodeGateway({
   store: browserStore(`demo-episode-state:${DEMO_EPISODE_ID}`),
 });
 
-export const episodeKeys = {
-  record: (episodeId: string) => ["episode", episodeId, "record"] as const,
-  handoffs: (episodeId: string) => ["episode", episodeId, "handoffs"] as const,
-  all: (episodeId: string) => ["episode", episodeId] as const,
-};
+const recordKeys = ["episode-records"] as const;
+const handoffKeys = ["professional-handoffs"] as const;
 
-export function useEpisodeRecord(episodeId: string) {
-  return useQuery({
-    queryKey: episodeKeys.record(episodeId),
-    queryFn: () => episodeGateway.getRecord(episodeId),
-  });
+export function useEpisodeRecords() {
+  return useQuery({ queryKey: recordKeys, queryFn: () => episodeGateway.listRecords() });
 }
 
-export function useHandoffs(episodeId: string) {
+export function useHandoffs(professionalId: string) {
   return useQuery({
-    queryKey: episodeKeys.handoffs(episodeId),
-    queryFn: () => episodeGateway.listHandoffs(episodeId),
+    queryKey: [...handoffKeys, professionalId],
+    queryFn: () => episodeGateway.listHandoffs(professionalId),
   });
 }
 
@@ -34,8 +25,7 @@ export function useSendHandoff() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SendHandoffInput) => episodeGateway.sendHandoff(input),
-    onSuccess: (handoff) =>
-      queryClient.invalidateQueries({ queryKey: episodeKeys.handoffs(handoff.episodeId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: handoffKeys }),
   });
 }
 
@@ -43,14 +33,17 @@ export function useClosePending() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ClosePendingInput) => episodeGateway.closePending(input),
-    onSuccess: (pending) => queryClient.invalidateQueries({ queryKey: episodeKeys.record(pending.episodeId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: recordKeys }),
   });
 }
 
 export function useResetDemo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (episodeId: string) => episodeGateway.reset(episodeId),
-    onSuccess: (_, episodeId) => queryClient.invalidateQueries({ queryKey: episodeKeys.all(episodeId) }),
+    mutationFn: () => episodeGateway.reset(),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: recordKeys }),
+      queryClient.invalidateQueries({ queryKey: handoffKeys }),
+    ]),
   });
 }

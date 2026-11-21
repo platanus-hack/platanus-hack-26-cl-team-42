@@ -6,7 +6,7 @@ import type { EpisodeRecord, HandoffSnapshot, PendingTask, SourcedEntry } from "
 import { authorLine, datumText, ENTRY_KIND_LABEL } from "../episode/record";
 
 interface SnapshotViewProps {
-  record: EpisodeRecord;
+  record: Pick<EpisodeRecord, "professionals">;
   snapshot: HandoffSnapshot;
   /** Estado vivo de los pendientes, para señalar cambios posteriores al envío. */
   currentPendings?: PendingTask[];
@@ -16,16 +16,16 @@ interface SnapshotViewProps {
 export function SnapshotView({ record, snapshot, currentPendings }: SnapshotViewProps) {
   return (
     <Flex direction="column" gap="3">
-      <OpenConflicts conflicts={snapshot.openConflicts ?? []} />
+      <OpenConflicts episodeId={snapshot.episodeId} conflicts={snapshot.openConflicts ?? []} />
       <Section title="Cambios recientes" empty="Sin cambios en las últimas horas antes del corte.">
         {snapshot.recentChanges.map((entry) => (
-          <EntryLine key={entry.entryId} record={record} entry={entry} showKind />
+          <EntryLine key={entry.entryId} record={record} entry={entry} episodeId={snapshot.episodeId} showKind />
         ))}
       </Section>
 
       <Section title="Plan vigente validado" empty="Sin plan validado.">
         {snapshot.plan.map((entry) => (
-          <EntryLine key={entry.entryId} record={record} entry={entry} />
+          <EntryLine key={entry.entryId} record={record} entry={entry} episodeId={snapshot.episodeId} />
         ))}
       </Section>
 
@@ -37,7 +37,9 @@ export function SnapshotView({ record, snapshot, currentPendings }: SnapshotView
             </Text>
             <Text size="1" color="gray">
               {formatClinicalTime(datum.observedAt)} · {authorLine(record, datum.source.authorId)} ·{" "}
-              <SourceLink encounterId={datum.source.encounterId}>ver atención de origen</SourceLink>
+              <SourceLink episodeId={snapshot.episodeId} encounterId={datum.source.encounterId}>
+                ver atención de origen
+              </SourceLink>
             </Text>
           </Flex>
         ))}
@@ -60,7 +62,9 @@ export function SnapshotView({ record, snapshot, currentPendings }: SnapshotView
               <Text size="1" color="gray">
                 Responsable {authorLine(record, pending.ownerId)}
                 {pending.dueAt ? ` · plazo ${formatClinicalTime(pending.dueAt)}` : " · sin plazo"} ·{" "}
-                <SourceLink encounterId={pending.sourceEncounterId}>ver atención de origen</SourceLink>
+                <SourceLink episodeId={snapshot.episodeId} encounterId={pending.sourceEncounterId}>
+                  ver atención de origen
+                </SourceLink>
               </Text>
             </Flex>
           );
@@ -103,7 +107,17 @@ function Section({ title, empty, children }: { title: string; empty: string; chi
   );
 }
 
-function EntryLine({ record, entry, showKind = false }: { record: EpisodeRecord; entry: SourcedEntry; showKind?: boolean }) {
+function EntryLine({
+  record,
+  entry,
+  episodeId,
+  showKind = false,
+}: {
+  record: Pick<EpisodeRecord, "professionals">;
+  entry: SourcedEntry;
+  episodeId: string;
+  showKind?: boolean;
+}) {
   return (
     <Flex direction="column">
       <Text size="2">
@@ -112,7 +126,7 @@ function EntryLine({ record, entry, showKind = false }: { record: EpisodeRecord;
       </Text>
       <Text size="1" color="gray">
         {authorLine(record, entry.authorId)} · {formatClinicalTime(entry.occurredAt)} ·{" "}
-        <SourceLink encounterId={entry.encounterId}>ver atención de origen</SourceLink>
+        <SourceLink episodeId={episodeId} encounterId={entry.encounterId}>ver atención de origen</SourceLink>
       </Text>
     </Flex>
   );
