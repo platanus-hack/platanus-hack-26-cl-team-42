@@ -73,3 +73,15 @@ export function renderHandoffSummary(record: EpisodeRecord, snapshot: HandoffSna
 function planLine(record: EpisodeRecord, item: SourcedEntry): string {
   return `${authorLine(record, item.authorId)}: ${item.text}`;
 }
+
+/**
+ * Instante de referencia común para comparar pacientes de un mismo traspaso:
+ * el corte más tardío. Es determinista (no usa el reloj) y en la demo coincide
+ * con el corte de todos los episodios.
+ */
+export function handoffReferenceAt(snapshots: HandoffSnapshot[]): string | undefined {
+  return snapshots.reduce<string | undefined>(
+    (latest, { cutoffAt }) => (!latest || Date.parse(cutoffAt) > Date.parse(latest) ? cutoffAt : latest),
+    undefined,
+  );
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_EPISODES } from "./fixture";
-import { buildHandoffSnapshots } from "./handoff";
+import { formatElapsed } from "./format";
+import { buildHandoffSnapshots, handoffReferenceAt } from "./handoff";
 
 describe("buildHandoffSnapshots", () => {
   it("records the latest encounter at cutoff for each patient", () => {
@@ -23,5 +24,23 @@ describe("buildHandoffSnapshots", () => {
     const [snapshot] = buildHandoffSnapshots(DEMO_EPISODES.slice(0, 1), "prof-nurse-day");
 
     expect(snapshot.lastEncounter).toMatchObject({ authorId: "prof-nurse-day", occurredAt: "2026-11-20T16:40:00-03:00" });
+  });
+});
+
+describe("handoffReferenceAt", () => {
+  it("uses the latest cutoff", () => {
+    const snapshots = buildHandoffSnapshots(DEMO_EPISODES, "prof-nurse-day");
+    expect(handoffReferenceAt([{ ...snapshots[0], cutoffAt: "2026-11-20T18:00:00-03:00" }, snapshots[0]])).toBe(
+      snapshots[0].cutoffAt,
+    );
+    expect(handoffReferenceAt([])).toBeUndefined();
+  });
+});
+
+describe("formatElapsed", () => {
+  it("formats hours and minutes", () => {
+    expect(formatElapsed("2026-11-20T16:40:00-03:00", "2026-11-20T19:30:00-03:00")).toBe("2 h 50 min");
+    expect(formatElapsed("2026-11-20T19:00:00-03:00", "2026-11-20T19:30:00-03:00")).toBe("30 min");
+    expect(formatElapsed("2026-11-20T17:30:00-03:00", "2026-11-20T19:30:00-03:00")).toBe("2 h");
   });
 });
