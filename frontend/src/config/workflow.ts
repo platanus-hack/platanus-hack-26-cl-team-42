@@ -56,7 +56,7 @@ export const WORKFLOW_STEPS = [
     summary: "Registro prellenado por atención, listo para copiar a la ficha institucional.",
     path: "/official-form",
     hidden: false,
-    connected: false,
+    connected: true,
   },
   {
     id: "handoff",
@@ -64,7 +64,7 @@ export const WORKFLOW_STEPS = [
     summary: "Entrega en conjunto los pacientes que atendiste a otra persona del equipo.",
     path: "/handoff",
     hidden: false,
-    connected: false,
+    connected: true,
   },
   {
     id: "transcription",

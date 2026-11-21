@@ -1,17 +1,16 @@
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Callout, Code, Flex, Heading, Text } from "@radix-ui/themes";
+import { Badge, Button, Callout, Flex, Heading, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { formatClinicalTime } from "./format";
 import type { Episode, OpenConflict, PendingTask } from "./model";
 
-/** Marca visible de que todo lo que sigue es un episodio ficticio. */
-export function DemoEpisodeBanner({ episode, children }: { episode: Episode; children?: ReactNode }) {
+/** Encabezado del paciente: quién es, su unidad y el instante de corte del registro. */
+export function EpisodeBanner({ episode, children }: { episode: Episode; children?: ReactNode }) {
   return (
-    <Callout.Root color="amber" variant="surface">
+    <Callout.Root color="gray" variant="surface">
       <Flex align="center" justify="between" gap="3" wrap="wrap">
         <Callout.Text>
-          <strong>Episodio ficticio · datos de demostración.</strong> {episode.label} · {episode.unit} ·
-          episodio <Code variant="ghost">{episode.id}</Code> · corte {formatClinicalTime(episode.cutoffAt)}
+          <strong>{episode.label}</strong> · {episode.unit} · registro al corte {formatClinicalTime(episode.cutoffAt)}
         </Callout.Text>
         {children}
       </Flex>

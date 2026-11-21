@@ -1,4 +1,4 @@
-import { Badge, Button, Callout, Card, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
+import { Badge, Button, Callout, Card, Flex, Heading, Separator, Skeleton, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import {
@@ -126,26 +126,78 @@ function StatusCard({ summary, patientId }: { summary: PatientSummary; patientId
 
         {summary.brief && <Text size="3">{summary.brief}</Text>}
 
-        <Flex direction="column" gap="2">
-          <Text size="2" weight="medium">
-            Pendientes del tratamiento
-          </Text>
-          {summary.treatmentPending.length === 0 ? (
-            <Text size="2" color="gray">
-              Sin pendientes registrados.
-            </Text>
-          ) : (
-            summary.treatmentPending.map((item, index) => (
-              <HighlightRow key={`${item.reportId}-${item.section}-${index}`} item={item} patientId={patientId} showGroup />
-            ))
-          )}
-        </Flex>
+        <Separator size="4" my="2" />
+        <TreatmentTasks items={summary.treatmentPending} patientId={patientId} />
       </Flex>
     </Card>
   );
 }
 
-function HighlightRow({ item, patientId, showGroup = false }: { item: Highlight; patientId: number; showGroup?: boolean }) {
+const TASK_GROUPS = ["Pendientes", "Indicaciones", "Recomendaciones", "Metas del día"] as const;
+
+/** Lo que falta por hacer: los pendientes resaltados arriba; indicaciones, recomendaciones y metas, aparte. */
+function TreatmentTasks({ items, patientId }: { items: Highlight[]; patientId: number }) {
+  const pending = items.filter((item) => item.group === "Pendientes");
+  const others = TASK_GROUPS.filter((group) => group !== "Pendientes")
+    .map((group) => [group, items.filter((item) => item.group === group)] as const)
+    .filter(([, groupItems]) => groupItems.length > 0);
+
+  return (
+    <Flex direction="column" gap="5">
+      <Flex
+        direction="column"
+        gap="2"
+        p="3"
+        style={{
+          borderRadius: "var(--radius-3)",
+          background: pending.length > 0 ? "var(--amber-a3)" : "var(--gray-a2)",
+          boxShadow: pending.length > 0 ? "inset 4px 0 0 var(--amber-9)" : undefined,
+        }}
+      >
+        <Flex align="center" gap="2">
+          <Text size="3" weight="bold">
+            Pendientes
+          </Text>
+          <Badge color={pending.length > 0 ? "amber" : "gray"} variant={pending.length > 0 ? "solid" : "soft"} radius="full">
+            {pending.length}
+          </Badge>
+        </Flex>
+        {pending.length === 0 ? (
+          <Text size="2" color="gray">
+            Sin pendientes registrados.
+          </Text>
+        ) : (
+          pending.map((item, index) => (
+            <HighlightRow key={`${item.reportId}-${item.section}-${index}`} item={item} patientId={patientId} emphasized />
+          ))
+        )}
+      </Flex>
+
+      {others.map(([group, groupItems]) => (
+        <Flex key={group} direction="column" gap="2" px="1">
+          <Text size="2" weight="medium" color="gray">
+            {group}
+          </Text>
+          {groupItems.map((item, index) => (
+            <HighlightRow key={`${item.reportId}-${item.section}-${index}`} item={item} patientId={patientId} />
+          ))}
+        </Flex>
+      ))}
+    </Flex>
+  );
+}
+
+function HighlightRow({
+  item,
+  patientId,
+  showGroup = false,
+  emphasized = false,
+}: {
+  item: Highlight;
+  patientId: number;
+  showGroup?: boolean;
+  emphasized?: boolean;
+}) {
   return (
     <Flex justify="between" align="center" gap="3" wrap="wrap">
       <Flex align="center" gap="2" style={{ minWidth: 0 }}>
@@ -159,7 +211,9 @@ function HighlightRow({ item, patientId, showGroup = false }: { item: Highlight;
             {item.severity}
           </Badge>
         )}
-        <Text size="2">{item.text}</Text>
+        <Text size={emphasized ? "3" : "2"} weight={emphasized ? "bold" : "regular"}>
+          {item.text}
+        </Text>
       </Flex>
       <Link
         to="/"

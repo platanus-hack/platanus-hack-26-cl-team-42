@@ -17,6 +17,11 @@ export interface Patient {
 /** Qué necesita el paciente de ti: un informe por validar, un dictado que falló o que aún se procesa. */
 export type InboxStatus = "review" | "failed" | "processing" | "up_to_date";
 
+export type PatientCriticality = "critical" | "high" | "moderate" | "stable" | "unknown";
+
+/** Cuándo conviene volver a ver al paciente: ya toca, pronto, al día o sin datos. */
+export type VisitPriority = "now" | "soon" | "ok" | "unknown";
+
 export interface PatientWithCount extends Patient {
   reportCount: number;
   inboxStatus: InboxStatus;
@@ -24,7 +29,25 @@ export interface PatientWithCount extends Patient {
   lastDictationAt: string | null;
   /** Tu dictado cuya transcripción falló y se puede reintentar. */
   retryRecordingId: string | null;
+  /** Criticidad según la versión oficial del paciente (`unknown` si aún no tiene). */
+  criticality: PatientCriticality;
+  criticalityLabel: string;
+  /** Tareas por hacer: pendientes, indicaciones y recomendaciones. */
+  pendingTasks: number;
+  visitPriority: VisitPriority;
+  visitPriorityLabel: string;
+  /** Qué tan atrasada va la visita respecto de lo que pide su criticidad (mayor = más urgente). */
+  priorityScore: number;
+  /** Mientras se procesa un dictado tuyo: etapa (0 = en cola, 1 a 3) y su nombre. */
+  processingStep: number | null;
+  processingLabel: string | null;
+  /** Conflictos abiertos entre informes de este paciente y cuántos son tuyos. */
+  openConflicts: number;
+  myOpenConflicts: number;
 }
+
+/** Etapas visibles de un dictado en proceso: transcribir, parsear a la plantilla y homologar. */
+export const PROCESSING_STEPS = 3;
 
 export interface Highlight {
   group: string;

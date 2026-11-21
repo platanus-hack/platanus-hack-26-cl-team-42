@@ -8,9 +8,12 @@ segunda con el colega (cuya cuenta se crea si no existe), para mostrar que cada 
 solo ve a sus pacientes asignados.
 
 Además crea el equipo demo (medico@, enfermeria@, kinesiologia@ y el externo especialista@,
-todos con clave «test»), los pone de turno y les asigna los pacientes; el externo no recibe
-ninguno. Es idempotente: los pacientes se identifican por su RUT ficticio y el reparto con el
-colega se hace solo al crear su cuenta, así que no deshace traspasos posteriores.
+todos con clave «test»), los pone de turno y les asigna al primer paciente (Juan Pérez, el de
+la historia de conflictos); el externo no recibe ninguno. Para repartir el resto entre
+profesionales y cargar más casos: ``manage.py load_demo_scenario``.
+
+Es idempotente: los pacientes se identifican por su RUT ficticio y el reparto con el colega
+se hace solo al crear su cuenta, así que no deshace traspasos posteriores.
 """
 
 from django.contrib.auth import get_user_model
@@ -94,7 +97,7 @@ class Command(BaseCommand):
             self.stdout.write(f"{patient.reference}: asignado a {colleague.email}")
 
     def _seed_team(self, patients: list[Patient], user) -> None:
-        """Equipo demo: una cuenta por profesión, de turno y con los pacientes (el externo, no)."""
+        """Equipo demo: cuentas por profesión, de turno y con el paciente de los conflictos."""
         users = get_user_model()
         team, external = [], []
         for data in DEMO_PROFESSIONALS:
@@ -111,6 +114,9 @@ class Command(BaseCommand):
             # La app conoce los turnos: el equipo demo queda de turno (si no lo estaba ya).
             if not shifts.is_on_shift(member):
                 shifts.start_shift(member, hours=DEMO_SHIFT_HOURS)
-        for patient in patients:
+        # El equipo comparte solo al paciente de la historia de conflictos (el primero); el
+        # resto de los pacientes se reparte entre profesionales con ``load_demo_scenario``.
+        for patient in patients[:1]:
             patient.assigned_to.add(*team)
+        for patient in patients:
             patient.assigned_to.remove(*external)

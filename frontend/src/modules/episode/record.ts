@@ -109,8 +109,8 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
 export function renderRecordText(record: EpisodeRecord, view: RecordView): string {
   const { episode } = record;
   const lines: string[] = [
-    "EPISODIO FICTICIO — DATOS DE DEMOSTRACIÓN",
-    `Episodio: ${episode.id} · ${episode.label} · ${episode.unit}`,
+    "REGISTRO CLÍNICO",
+    `Paciente: ${episode.label} · ${episode.unit}`,
     `Corte: ${formatClinicalTime(episode.cutoffAt)}`,
     `Filtro: ${describeFilter(record, view.filter)}`,
     "",

@@ -93,20 +93,30 @@ function Answer({ exchange }: { exchange: Exchange }) {
             Referencias
           </Text>
           {references.map((reference) => (
-            <Text key={`${reference.reportId}-${reference.section}`} size="1">
-              <Link
-                to="/"
-                search={{
-                  patient: reference.patientId !== null ? String(reference.patientId) : undefined,
-                  report: reference.reportId,
-                  section: reference.section,
-                }}
-              >
-                {reportTitle(reference.sequence, reference.profession)} · {reference.patientName} ·{" "}
-                {sectionLabel(reference.section)}
-              </Link>
+            <Text key={`${reference.reportId ?? "e"}-${reference.section ?? reference.evidenceId}`} size="1">
+              {reference.evidenceId ? (
+                <Link to="/" search={{ patient: reference.patientId !== null ? String(reference.patientId) : undefined }}>
+                  Examen · {reference.evidenceTitle} · {reference.patientName}
+                </Link>
+              ) : (
+                <Link
+                  to="/"
+                  search={{
+                    patient: reference.patientId !== null ? String(reference.patientId) : undefined,
+                    report: reference.reportId ?? undefined,
+                    section: reference.section ?? undefined,
+                  }}
+                >
+                  {reportTitle(reference.sequence, reference.profession)} · {reference.patientName} ·{" "}
+                  {sectionLabel(reference.section ?? "")}
+                </Link>
+              )}
               {reference.detail && <> — «{reference.detail}»</>}
-              <span style={{ color: "var(--gray-11)" }}> ({professionLabel(reference.profession)}, {reference.authorName})</span>
+              <span style={{ color: "var(--gray-11)" }}>
+                {" "}
+                ({reference.profession ? `${professionLabel(reference.profession)}, ` : "evidencia cargada por "}
+                {reference.authorName})
+              </span>
             </Text>
           ))}
         </Flex>

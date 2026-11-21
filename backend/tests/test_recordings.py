@@ -162,7 +162,7 @@ def test_demo_patients_are_assigned_and_loading_is_idempotent():
 
     assert patients_of(user).count() == 6
     team = User.objects.get(email="enfermeria@localhost")
-    assert (team.profession, patients_of(team).count()) == ("enfermeria", 6)
+    assert (team.profession, patients_of(team).count()) == ("enfermeria", 1)
 
 
 @pytest.mark.django_db
@@ -180,3 +180,115 @@ def test_demo_team_is_on_shift_and_the_shift_can_be_toggled():
     assert not shifts.is_on_shift(nurse)
     call_command("set_demo_shift", "enfermeria@localhost", "on", stdout=StringIO())
     assert shifts.is_on_shift(nurse)
+
+
+@pytest.mark.django_db
+def test_demo_scenario_builds_every_situation_offline_and_is_idempotent():
+    from django.core.management import call_command
+
+    from apps.recordings.services import patients_of
+    from apps.transcription import inbox_services as inbox
+    from apps.transcription import reconciliation_services as rec
+    from apps.transcription.models import (
+        Conflict,
+        ConsolidatedVersion,
+        ExternalConsult,
+        Report,
+        Transcription,
+    )
+    from apps.transcription.triage_services import triage_for
+    from apps.users import shifts
+
+    admin = User.objects.create_user(email="demo@example.com", password="pw")
+    call_command("load_demo_scenario", "demo@example.com", stdout=StringIO())
+    reports = Report.objects.count()
+    call_command("load_demo_scenario", "demo@example.com", stdout=StringIO())
+    assert Report.objects.count() == reports  # idempotente
+
+    by_name = {p.name.split()[0]: p for p in patients_of(admin)}
+    assert len(by_name) == 9
+    triage = triage_for([p.id for p in by_name.values()], {p.id: None for p in by_name.values()})
+    # Cada profesional tiene sus propios pacientes: no todos ven a todos.
+    rojas = User.objects.get(email="medico@localhost")
+    vega = User.objects.get(email="medico2@localhost")
+    assert {p.name.split()[0] for p in patients_of(rojas)} == {"Marta", "Pedro", "Diego", "Sofía"}
+    assert {p.name.split()[0] for p in patients_of(vega)} >= {"Elena", "Hugo", "Camila", "Tomás"}
+    assert not patients_of(User.objects.get(email="especialista@localhost")).exists()
+
+    # Crítica con varias versiones; moderada, alta y estable según su caso.
+    assert triage[by_name["Marta"].id].criticality == "critical"
+    assert ConsolidatedVersion.objects.filter(patient=by_name["Marta"]).count() == 2
+    assert triage[by_name["Camila"].id].criticality == "high"
+    assert triage[by_name["Elena"].id].criticality == "stable"
+    assert triage[by_name["Sofía"].id].criticality == "unknown"
+
+    # Estados de la bandeja: por validar y error. Ningún dictado queda «procesando» para siempre.
+    states = {
+        name: inbox.inbox_states(user, [by_name[name].id])[by_name[name].id].status
+        for name, user in (
+            ("Hugo", vega),
+            ("Lucía", User.objects.get(email="kinesiologia@localhost")),
+        )
+    }
+    assert {k: v.value for k, v in states.items()} == {"Hugo": "review", "Lucía": "failed"}
+    assert not Transcription.objects.filter(status__in=["pending", "processing"]).exists()
+    assert triage[by_name["Diego"].id].criticality == "high"
+    assert ConsolidatedVersion.objects.filter(patient=by_name["Diego"]).count() == 1
+
+    # Conflictos: uno resuelto con historial, uno en consenso, y el de la alergia con el caso
+    # anonimizado enviado a la especialista porque EU Díaz ya está fuera de turno.
+    camila = Conflict.objects.get(reconciliation__patient=by_name["Camila"])
+    assert camila.status == "resolved" and camila.notes.filter(kind="note").count() == 2
+    assert ConsolidatedVersion.objects.filter(patient=by_name["Camila"], reason="reconciliation")
+    pedro = Conflict.objects.filter(reconciliation__patient=by_name["Pedro"])
+    assert pedro.count() == 2 and all(c.status == "open" for c in pedro)
+    assert any(c.proposal for c in pedro)
+    assert not shifts.is_on_shift(User.objects.get(email="enfermeria2@localhost"))
+    allergy = Conflict.objects.get(reconciliation__patient=by_name["Tomás"])
+    assert allergy.kind == "allergy" and allergy.consults.count() == 1
+    assert ExternalConsult.objects.get().consultant.email == "especialista@localhost"
+    assert rec.list_external_consults(User.objects.get(email="especialista@localhost"))
+    assert Report.objects.filter(patient=by_name["Hugo"], status="review").count() == 1
+
+
+@pytest.mark.django_db
+def test_demo_scenario_splits_the_legacy_patients_between_professionals():
+    from django.core.management import call_command
+
+    from apps.recordings.services import patients_of
+
+    admin = User.objects.create_user(email="demo@example.com", password="pw")
+    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
+    call_command("load_demo_scenario", "demo@example.com", stdout=StringIO())
+
+    def first_names(email):
+        return {p.name.split()[0] for p in patients_of(User.objects.get(email=email))}
+
+    assert {"Juan", "María", "Carlos"} <= first_names("medico@localhost")
+    assert not {"Ana", "Luis", "Rosa"} & first_names("medico@localhost")
+    assert {"Ana", "Luis", "Rosa"} <= first_names("medico2@localhost")
+    assert "Juan" not in first_names("medico2@localhost")
+    assert "Juan" in first_names("kinesiologia@localhost")  # la historia de conflictos sigue entera
+    assert len(patients_of(admin)) == 15  # la cuenta de prueba ve a todos
+
+
+@pytest.mark.django_db
+def test_demo_scenario_loads_exams_and_a_report_with_contradictions():
+    from django.core.management import call_command
+
+    from apps.transcription.models import Evidence, Report
+
+    User.objects.create_user(email="demo@example.com", password="pw")
+    call_command("load_demo_scenario", "demo@example.com", stdout=StringIO())
+    call_command("load_demo_scenario", "demo@example.com", stdout=StringIO())
+
+    assert Evidence.objects.filter(patient__name__startswith="Elena").count() == 1  # idempotente
+    hugo = Report.objects.get(patient__name__startswith="Hugo")
+    assert hugo.status == "review"
+    kinds = {a["id"] for a in hugo.evidence_alerts}
+    # Lipasa y creatinina contradicen al informe; el potasio muy alto no se menciona.
+    assert kinds == {
+        "value:examenes:lipasa",
+        "value:examenes:creatinina",
+        "omission:examenes:potasio",
+    }

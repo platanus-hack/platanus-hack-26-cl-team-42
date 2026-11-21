@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge, Button, Callout, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { SectionBlock } from "./SectionBlock";
-import { useValidateReport, useValidateTopic, type Report } from "./api";
+import { useAcknowledgeAlert, useValidateReport, useValidateTopic, type EvidenceAlert, type Report } from "./api";
 import type { PendingSection } from "./pending";
 
 interface ValidationWizardProps {
@@ -69,6 +69,17 @@ export function ValidationWizard({ report, pending, busy }: ValidationWizardProp
           </Flex>
         </Flex>
 
+        {report.evidenceAlerts.some((alert) => !alert.acknowledged) && (
+          <Callout.Root color="red" size="1">
+            <Callout.Text>
+              <strong>
+                {report.evidenceAlerts.filter((alert) => !alert.acknowledged).length} alerta(s) de evidencia por revisar:
+              </strong>{" "}
+              el informe contradice los exámenes del paciente. Aparecen en el tema correspondiente.
+            </Callout.Text>
+          </Callout.Root>
+        )}
+
         {onSummary ? (
           <SaveWindow
             report={report}
@@ -131,6 +142,11 @@ function TopicWindow({ report, topicIndex, pending, busy, validating, error, onB
           </Badge>
         )}
       </Flex>
+
+      <EvidenceAlerts
+        report={report}
+        alerts={report.evidenceAlerts.filter((alert) => alert.topic === topic.id)}
+      />
 
       {topicPending.length > 0 && !validated && (
         <Callout.Root color="amber" size="1">
@@ -213,6 +229,7 @@ function SaveWindow({ report, allValidated, busy, saving, error, onBack, onSave,
           );
         })}
       </Flex>
+      <EvidenceAlerts report={report} alerts={report.evidenceAlerts.filter((alert) => !alert.acknowledged)} />
       <Callout.Root color={allValidated ? "green" : "amber"} size="1">
         <Callout.Text>
           {allValidated
@@ -236,3 +253,49 @@ function SaveWindow({ report, allValidated, busy, saving, error, onBack, onSave,
     </Flex>
   );
 }
+
+/** Contradicciones del informe con los exámenes del paciente: se muestran y se dan por revisadas. */
+function EvidenceAlerts({ report, alerts }: { report: Report; alerts: EvidenceAlert[] }) {
+  const acknowledge = useAcknowledgeAlert();
+  if (alerts.length === 0) return null;
+
+  return (
+    <Flex direction="column" gap="2" role="region" aria-label="Alertas de evidencia">
+      {alerts.map((alert) => (
+        <Callout.Root key={alert.id} color={alert.acknowledged ? "gray" : alert.severity === "high" ? "red" : "amber"} size="1">
+          <Flex direction="column" gap="2" style={{ width: "100%" }}>
+            <Callout.Text>
+              <strong>{ALERT_LABEL[alert.kind]}:</strong> {alert.message}
+            </Callout.Text>
+            <Flex align="center" gap="2">
+              {alert.acknowledged ? (
+                <Badge color="green" variant="soft">
+                  ✓ Revisada
+                </Badge>
+              ) : (
+                <Button
+                  size="1"
+                  variant="soft"
+                  color={alert.severity === "high" ? "red" : "amber"}
+                  loading={acknowledge.isPending && acknowledge.variables?.alertId === alert.id}
+                  onClick={() => acknowledge.mutate({ reportId: report.id, alertId: alert.id })}
+                >
+                  Marcar como revisada
+                </Button>
+              )}
+              <Text size="1" color="gray">
+                Corrige la sección o confirma que el informe es correcto.
+              </Text>
+            </Flex>
+          </Flex>
+        </Callout.Root>
+      ))}
+    </Flex>
+  );
+}
+
+const ALERT_LABEL: Record<EvidenceAlert["kind"], string> = {
+  value: "Contradice un examen",
+  omission: "Resultado no mencionado",
+  concept: "Contradicción con la evidencia",
+};

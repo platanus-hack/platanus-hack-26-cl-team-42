@@ -27,7 +27,12 @@ from .extraction_services import to_out as extraction_to_out
 from .homologation_services import list_mappings
 from .models import ExtractedRecord, Transcription
 from .report_services import PipelineOut, ReportOut, get_pipeline, get_report, list_reports
-from .services import TranscriptionOut, list_transcriptions, request_transcription, to_out
+from .services import (
+    TranscriptionOut,
+    list_transcriptions,
+    request_transcription,
+    to_out,
+)
 
 router = Router(tags=["transcription"])
 
@@ -322,3 +327,16 @@ def _conflict_action(request, conflict_id: int, action):
         raise HttpError(409, str(error)) from error
     conflict.refresh_from_db()
     return reconciliation_services.to_conflict_out(conflict, request.user)
+
+
+@router.post("/reports/{report_id}/alerts/{alert_id}/ack", response=ReportOut)
+def acknowledge_report_alert(request, report_id: int, alert_id: str):
+    """El autor marca como revisada una alerta de contradicción con la evidencia."""
+    report = get_object_or_404(
+        report_services.visible_reports(request.user), pk=report_id, author=request.user
+    )
+    try:
+        report_services.acknowledge_alert(report, alert_id)
+    except report_services.ValidationError as error:
+        raise HttpError(409, str(error)) from error
+    return report_services.to_out(report, request.user)

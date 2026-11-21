@@ -159,6 +159,9 @@ class Report(models.Model):
     homologations = models.JSONField(default=list, blank=True)
     # Ids de los temas (``report_topics``) ya validados; con todos puede guardar el informe.
     validated_sections = models.JSONField(default=list, blank=True)
+    # Contradicciones con la evidencia (exámenes) detectadas al registrar el informe; el autor
+    # las ve en la validación. Cada una: {id, severity, kind, section, topic, message, ...}.
+    evidence_alerts = models.JSONField(default=list, blank=True)
     error = models.CharField(max_length=500, blank=True)
     # Qué pasó con el informe al guardarse respecto de la versión oficial del paciente.
     consolidation = models.CharField(
@@ -311,3 +314,64 @@ class ExternalConsult(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class PendingClosure(models.Model):
+    """Un pendiente de un informe que alguien del equipo dio por cerrado."""
+
+    patient = models.ForeignKey(
+        "recordings.Patient", on_delete=models.CASCADE, related_name="pending_closures"
+    )
+    # «pend-<id de informe>-<posición>»: identifica el pendiente dentro del registro clínico.
+    pending_id = models.CharField(max_length=80, unique=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    closed_at = models.DateTimeField(auto_now_add=True)
+
+
+class Handoff(models.Model):
+    """Traspaso de pacientes de un profesional a otro, con una copia fija de lo comunicado."""
+
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="handoffs_sent"
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="handoffs_received"
+    )
+    note = models.CharField(max_length=1000, blank=True)
+    # Una copia por paciente, tal como se vio al enviar (no cambia aunque el registro cambie).
+    snapshots = models.JSONField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-sent_at"]
+
+
+class Evidence(models.Model):
+    """Evidencia clínica de un paciente además de los dictados: exámenes, imágenes, cultivos…"""
+
+    class Kind(models.TextChoices):
+        LAB = "lab", _("Laboratory")
+        IMAGING = "imaging", _("Imaging")
+        CULTURE = "culture", _("Culture")
+        OTHER = "other", _("Other")
+
+    patient = models.ForeignKey(
+        "recordings.Patient", on_delete=models.CASCADE, related_name="evidence"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.LAB)
+    title = models.CharField(max_length=200)
+    # Cuándo se tomó la muestra o se hizo el examen (no cuándo se cargó).
+    taken_at = models.DateTimeField()
+    # Resultados medidos: [{name, value, unit, numeric, ref_min, ref_max, flag}].
+    results = models.JSONField(default=list, blank=True)
+    # Informe en texto (p. ej. de una imagen o de un cultivo).
+    findings = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-taken_at", "-id"]

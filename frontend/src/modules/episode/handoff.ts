@@ -52,7 +52,7 @@ function lastEncounterAtCutoff(record: EpisodeRecord): LastEncounter | null {
 /** Resumen en texto del traspaso; sale del propio snapshot, no del estado vivo. */
 export function renderHandoffSummary(record: EpisodeRecord, snapshot: HandoffSnapshot): string {
   const lines = [
-    "TRASPASO · EPISODIO FICTICIO (DEMO)",
+    "TRASPASO DE PACIENTE",
     `${record.episode.label} · corte ${formatClinicalTime(snapshot.cutoffAt)}`,
     "",
     "Datos al corte:",
@@ -76,8 +76,8 @@ function planLine(record: EpisodeRecord, item: SourcedEntry): string {
 
 /**
  * Instante de referencia común para comparar pacientes de un mismo traspaso:
- * el corte más tardío. Es determinista (no usa el reloj) y en la demo coincide
- * con el corte de todos los episodios.
+ * el corte más tardío. Es determinista (no usa el reloj): todos los episodios de un
+ * mismo traspaso se cortan al enviarlo.
  */
 export function handoffReferenceAt(snapshots: HandoffSnapshot[]): string | undefined {
   return snapshots.reduce<string | undefined>(

@@ -4,8 +4,6 @@ import { HandoffPage } from "../../modules/handoff/HandoffPage";
 export type HandoffTab = "send" | "received" | "sent";
 
 export interface HandoffSearch {
-  /** Profesional demo desde cuya perspectiva se mira el traspaso. */
-  as?: string;
   tab?: HandoffTab;
   /** Traspaso abierto en la vista de enviados o recibidos. */
   handoff?: string;
@@ -15,7 +13,6 @@ const TABS: readonly HandoffTab[] = ["send", "received", "sent"];
 
 export const Route = createFileRoute("/_authenticated/handoff")({
   validateSearch: (search: Record<string, unknown>): HandoffSearch => ({
-    as: optionalString(search.as),
     tab: TABS.find((tab) => tab === search.tab),
     handoff: optionalString(search.handoff),
   }),

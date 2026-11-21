@@ -1,4 +1,4 @@
-/** Las horas clínicas de la demo se muestran siempre en hora de Chile. */
+/** Las horas clínicas se muestran siempre en hora de Chile. */
 const CLINICAL_TIME = new Intl.DateTimeFormat("es-CL", {
   timeZone: "America/Santiago",
   day: "2-digit",
