@@ -21,9 +21,10 @@ import type { HandoffSearch, HandoffTab } from "../../routes/_authenticated/hand
 import { useClosePending, useEpisodeRecords, useHandoffs, useResetDemo, useSendHandoff } from "../episode/api";
 import { PendingStatusBadge } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
-import { buildHandoffSnapshots } from "../episode/handoff";
+import { buildHandoffSnapshots, handoffReferenceAt } from "../episode/handoff";
 import type { EpisodeRecord, Handoff, HandoffSnapshot } from "../episode/model";
 import { authorLine, professionalById } from "../episode/record";
+import { PatientStatusCard } from "./PatientStatusCard";
 import { SnapshotView } from "./SnapshotView";
 
 const DEFAULT_ACTOR = "prof-nurse-day";
@@ -307,6 +308,7 @@ function PatientSnapshots({ records, team, snapshots, sent = false, actorId }: {
         ))}
       </Flex>
       <Text size="1" color="gray">Datos al {formatClinicalTime(snapshot.cutoffAt)}</Text>
+      <PatientStatusCard team={team} snapshot={snapshot} referenceAt={handoffReferenceAt(snapshots)} />
       {actorId && record && <EpisodePendings key={record.episode.id} record={record} actorId={actorId} />}
       <SnapshotView record={team} snapshot={snapshot} currentPendings={sent ? record?.pendings : undefined} />
     </Flex>
