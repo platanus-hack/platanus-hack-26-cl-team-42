@@ -31,10 +31,19 @@ export interface Episode {
   /** Identificador estable del episodio: es la única llave de unión de los datos. */
   id: string;
   label: string;
+  /** Datos del paciente por separado (para mostrarlos en columnas). */
+  patient?: EpisodePatient;
   unit: string;
   admittedAt: string;
   /** Instante de corte del registro: nada posterior entra en él. */
   cutoffAt: string;
+}
+
+export interface EpisodePatient {
+  name: string;
+  /** RUT del paciente. */
+  identifier: string;
+  bed: string;
 }
 
 export type EntryKind = "assessment" | "vitals" | "intervention" | "plan";

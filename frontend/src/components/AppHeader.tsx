@@ -7,7 +7,7 @@ import { useOpenConflictCount } from "../modules/reconciliation/api";
 import { professionLabel } from "../modules/recordings/professions";
 import { useAuth } from "../services/auth";
 import { DemoAccountSwitcher } from "./DemoAccountSwitcher";
-import { HomeIcon, StepIcon } from "./icons";
+import { StepIcon } from "./icons";
 
 /**
  * Barra superior fija: marca, navegación y cuenta. Reemplaza al menú lateral para que la app
@@ -20,9 +20,7 @@ export function AppHeader({ userEmail }: { userEmail: string }) {
     <header className="app-header">
       <Flex asChild align="center" gap="2" className="app-header__brand">
         <Link to="/" style={{ textDecoration: "none", color: "inherit" }} aria-label="Mis pacientes">
-          <span className="brand-mark" aria-hidden="true">
-            <HomeIcon size={18} />
-          </span>
+          <img src="/logo.png" className="brand-mark" alt="" aria-hidden="true" />
           <Text size="3" weight="bold">
             Flujo médico
           </Text>

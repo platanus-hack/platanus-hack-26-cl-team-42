@@ -82,6 +82,12 @@ def _record(user, patient: Patient, now: datetime) -> dict[str, Any]:
         "episode": {
             "id": str(patient.id),
             "label": patient.reference,
+            # Los datos por separado, para mostrarlos en columnas (nombre, RUT y box).
+            "patient": {
+                "name": patient.name,
+                "identifier": patient.identifier,
+                "bed": patient.bed,
+            },
             "unit": UNIT,
             "admittedAt": patient.created_at.isoformat(),
             "cutoffAt": now.isoformat(),

@@ -98,14 +98,6 @@ export function InboxIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function HomeIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Icon size={size}>
-      <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
-    </Icon>
-  );
-}
-
 export function ArrowIcon({ direction, size = 14 }: { direction: "left" | "right"; size?: number }) {
   return (
     <Icon size={size}>
