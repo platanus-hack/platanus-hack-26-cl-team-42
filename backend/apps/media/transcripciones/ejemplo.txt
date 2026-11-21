@@ -1,0 +1,1 @@
+Hola, este es un audio de ejemplo para probar la transcripción de voz a texto.

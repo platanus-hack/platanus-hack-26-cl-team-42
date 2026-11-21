@@ -212,6 +212,7 @@ INSTALLED_APPS = [
     # Local/Custom apps
     ############################
     "eventcore.app",
+    "apps.transcription",
     "eventcore.contrib.docs",
     "dbi18n",
     "apps.users",
