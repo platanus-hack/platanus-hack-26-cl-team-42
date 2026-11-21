@@ -7,15 +7,15 @@ valida (con un reintento que le devuelve los errores al modelo) -> se guarda.
 
 import json
 import logging
-import os
 from datetime import datetime
 from typing import Any
 
+from decouple import config
 from django.db import transaction
 from pydantic import BaseModel
 
 from apps.agent.llm import ChatMessage, ChatModel, ModelError
-from apps.agent.registry import get_chat_model
+from apps.agent.registry import available_models, get_chat_model
 from apps.clinical_templates import services as template_services
 from apps.clinical_templates.models import ClinicalTemplate
 from apps.recordings.models import Recording
@@ -24,10 +24,8 @@ from .models import ExtractedRecord, Transcription
 
 logger = logging.getLogger(__name__)
 
-# Qwen por API (qwen-hf) si hay HF_TOKEN; si no, el Qwen local. EXTRACTION_MODEL fuerza uno.
-EXTRACTION_MODEL = os.environ.get("EXTRACTION_MODEL") or (
-    "qwen-hf" if os.environ.get("HF_TOKEN") else "qwen-local"
-)
+# Primer modelo disponible en este orden; EXTRACTION_MODEL fuerza uno concreto.
+MODEL_PREFERENCE = ("claude", "qwen-hf", "qwen-local")
 MAX_ATTEMPTS = 2
 MAX_ISSUES_IN_FEEDBACK = 10
 
@@ -135,7 +133,7 @@ def _resolve_template(recording: Recording, template_slug: str | None) -> Clinic
         if template_slug:
             return template_services.get_active_template(template_slug)
         if not recording.profession:
-            raise ExtractionError("El dictado no indica el tipo de profesional: elige una plantilla.")
+            raise ExtractionError("El dictado no indica el profesional: elige una plantilla.")
         return template_services.get_active_template_for_profession(recording.profession)
     except ClinicalTemplate.DoesNotExist as error:
         raise ExtractionError("No existe la plantilla pedida.") from error
@@ -160,7 +158,7 @@ def _extract(transcription: Transcription, template: ClinicalTemplate) -> dict[s
             messages.append(
                 ChatMessage(role="user", content="Respuesta no válida. Responde solo con el JSON.")
             )
-            issues = [template_services.ValidationIssue(path="$", message="La respuesta no es JSON")]
+            issues = [template_services.ValidationIssue(path="$", message="Respuesta no JSON")]
             continue
         issues = template_services.validate_record(template, record)
         if not issues:
@@ -169,7 +167,7 @@ def _extract(transcription: Transcription, template: ClinicalTemplate) -> dict[s
         messages.append(
             ChatMessage(
                 role="user",
-                content=f"El JSON no cumple el schema:\n{feedback}\nCorrígelo y responde solo con el JSON.",
+                content=f"El JSON no cumple el schema:\n{feedback}\nCorrígelo; responde solo JSON.",
             )
         )
     summary = "; ".join(f"{i.path}: {i.message}" for i in issues[:3])
@@ -177,7 +175,9 @@ def _extract(transcription: Transcription, template: ClinicalTemplate) -> dict[s
 
 
 def _extraction_model() -> ChatModel:
-    return get_chat_model(EXTRACTION_MODEL)
+    forced = config("EXTRACTION_MODEL", default="")
+    available = available_models()
+    return get_chat_model(forced or next(name for name in MODEL_PREFERENCE if name in available))
 
 
 def _system_prompt(template: ClinicalTemplate) -> str:

@@ -65,6 +65,43 @@ class OpenAICompatibleChatModel:
             raise ModelError(f"{self.name}: {error}") from error
 
 
+class AnthropicChatModel:
+    """Claude por la API oficial de Anthropic."""
+
+    FALLBACK_BETA = "server-side-fallback-2026-07-01"
+
+    def __init__(
+        self, name: str, model_id: str, api_key: str, max_tokens: int = 16000, timeout: int = 300
+    ):
+        import anthropic
+
+        self.name = name
+        self.model_id = model_id
+        self.max_tokens = max_tokens
+        self._errors = anthropic.APIError
+        self._client = anthropic.Anthropic(api_key=api_key, timeout=timeout)
+
+    def complete(self, messages: list[ChatMessage]) -> str:
+        system = "\n\n".join(message.content for message in messages if message.role == "system")
+        chat = [message.model_dump() for message in messages if message.role != "system"]
+        options: dict[str, Any] = {"system": system} if system else {}
+        try:
+            # Si un clasificador de seguridad rechaza la petición, la API reintenta en otro modelo.
+            response = self._client.beta.messages.create(
+                model=self.model_id,
+                max_tokens=self.max_tokens,
+                messages=chat,
+                betas=[self.FALLBACK_BETA],
+                fallbacks="default",
+                **options,
+            )
+        except self._errors as error:
+            raise ModelError(f"{self.name}: {error}") from error
+        if response.stop_reason == "refusal":
+            raise ModelError(f"{self.name}: el modelo rechazó la solicitud")
+        return "".join(block.text for block in response.content if block.type == "text")
+
+
 @cache
 def _get_generator(model_id: str) -> Any:
     # Import diferido: transformers/torch son pesados y solo hacen falta al usar el modelo.

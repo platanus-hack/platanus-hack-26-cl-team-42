@@ -1,5 +1,7 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 import requests
 from django.contrib.auth import get_user_model
@@ -172,3 +174,60 @@ def test_project_tool_lists_only_the_professionals_transcriptions():
     [tool] = [t for t in project_tools(professional) if t.name == "listar_transcripciones"]
 
     assert tool.run() == []
+
+
+class _FakeAnthropicMessages:
+    def __init__(self, response=None, error=None):
+        self.response, self.error, self.kwargs = response, error, None
+
+    def create(self, **kwargs):
+        self.kwargs = kwargs
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def _anthropic_model(messages_api) -> providers.AnthropicChatModel:
+    model = providers.AnthropicChatModel("claude", "claude-test", api_key="k")
+    model._client = SimpleNamespace(beta=SimpleNamespace(messages=messages_api))
+    return model
+
+
+def _anthropic_response(text, stop_reason="end_turn"):
+    block = SimpleNamespace(type="text", text=text)
+    return SimpleNamespace(content=[block], stop_reason=stop_reason)
+
+
+def test_anthropic_model_splits_system_prompt_and_returns_text():
+    api = _FakeAnthropicMessages(_anthropic_response('{"ok": true}'))
+
+    reply = _anthropic_model(api).complete(
+        [
+            ChatMessage(role="system", content="reglas"),
+            ChatMessage(role="user", content="hola"),
+        ]
+    )
+
+    assert reply == '{"ok": true}'
+    assert api.kwargs["system"] == "reglas"
+    assert api.kwargs["messages"] == [{"role": "user", "content": "hola"}]
+    assert api.kwargs["model"] == "claude-test"
+    assert api.kwargs["fallbacks"] == "default"
+
+
+def test_anthropic_model_reports_refusals_and_api_errors():
+    refused = _FakeAnthropicMessages(_anthropic_response("", stop_reason="refusal"))
+    with pytest.raises(ModelError):
+        _anthropic_model(refused).complete([ChatMessage(role="user", content="x")])
+
+    failing = _FakeAnthropicMessages(error=anthropic.APIConnectionError(request=None))
+    with pytest.raises(ModelError):
+        _anthropic_model(failing).complete([ChatMessage(role="user", content="x")])
+
+
+def test_registry_offers_claude_when_the_key_exists(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    registry._registry.cache_clear()
+
+    assert "claude" in registry.available_models()
+    registry._registry.cache_clear()

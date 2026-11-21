@@ -29,6 +29,7 @@ dependencies = [
     "transformers>=5.23.0",
     "torch>=2.15.0",
     "jsonschema>=4.26.0",
+    "anthropic>=1.0.0",
 ]
 
 [tool.pyright]
