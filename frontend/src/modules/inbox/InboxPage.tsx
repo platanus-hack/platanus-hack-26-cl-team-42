@@ -39,7 +39,7 @@ import { ReportView } from "../reports/ReportView";
 import { reportKeys, useReports, type Report } from "../reports/api";
 import { reportTitle } from "../reports/format";
 import { useRetryTranscription } from "../transcription/api";
-import { formatLastVisit, inboxRowState, sortInbox } from "./inbox";
+import { filterInbox, formatLastVisit, inboxRowState, sortInbox } from "./inbox";
 
 export interface InboxSearch {
   patient?: string;
@@ -65,6 +65,7 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const showList = wide || !chosen;
   const go = (next: InboxSearch) => navigate({ to: "/", search: next });
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [patientQuery, setPatientQuery] = useState("");
   const closeToast = useCallback(() => setToast(null), []);
   useProcessingToasts(data, setToast);
 
@@ -107,6 +108,8 @@ export function InboxPage({ search }: { search: InboxSearch }) {
               patients={patients}
               loading={isPending}
               selected={wide ? selected?.id : undefined}
+              query={patientQuery}
+              onQueryChange={setPatientQuery}
               onSelect={(id) => go({ patient: String(id) })}
             />
           )}
@@ -147,23 +150,42 @@ interface PatientInboxProps {
   patients: PatientWithCount[];
   loading: boolean;
   selected: number | undefined;
+  query: string;
+  onQueryChange: (query: string) => void;
   onSelect: (id: number) => void;
 }
 
 /** La posición en la lista depende de la cama y el nombre. */
-function PatientInbox({ patients, loading, selected, onSelect }: PatientInboxProps) {
+function PatientInbox({ patients, loading, selected, query, onQueryChange, onSelect }: PatientInboxProps) {
   if (loading) return <Skeleton height="240px" />;
+  const visiblePatients = filterInbox(patients, query);
   return (
     <Flex direction="column" gap="2">
       <Heading size="3" as="h2" id="assigned-patients-heading">
         Pacientes asignados{" "}
         <Text size="2" color="gray" weight="regular">{patients.length}</Text>
       </Heading>
-      <Flex direction="column" gap="2" role="list" aria-labelledby="assigned-patients-heading">
-        {patients.map((patient) => (
-          <InboxRow key={patient.id} patient={patient} selected={patient.id === selected} onSelect={onSelect} />
-        ))}
-      </Flex>
+      <TextField.Root
+        type="search"
+        aria-label="Buscar pacientes por nombre o cama"
+        placeholder="Buscar por nombre o cama"
+        value={query}
+        onChange={(event) => onQueryChange(event.target.value)}
+      />
+      {query.trim() && (
+        <Text size="1" color="gray" role="status">
+          {visiblePatients.length === 0
+            ? "No se encontraron pacientes."
+            : `${visiblePatients.length} de ${patients.length} pacientes`}
+        </Text>
+      )}
+      {visiblePatients.length > 0 && (
+        <Flex direction="column" gap="2" role="list" aria-labelledby="assigned-patients-heading">
+          {visiblePatients.map((patient) => (
+            <InboxRow key={patient.id} patient={patient} selected={patient.id === selected} onSelect={onSelect} />
+          ))}
+        </Flex>
+      )}
     </Flex>
   );
 }

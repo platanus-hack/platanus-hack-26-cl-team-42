@@ -79,6 +79,21 @@ export function sortInbox(patients: readonly PatientWithCount[]): PatientWithCou
   });
 }
 
+/** Busca por nombre y cama, sin distinguir mayúsculas ni tildes y conservando el orden. */
+export function filterInbox(patients: readonly PatientWithCount[], query: string): readonly PatientWithCount[] {
+  const terms = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return patients;
+
+  return patients.filter(({ name, bed }) => {
+    const searchable = normalizeSearch(`${name} ${bed}`);
+    return terms.every((term) => searchable.includes(term));
+  });
+}
+
+function normalizeSearch(value: string): string {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("es");
+}
+
 /** «53 min», «2 h»… o «Sin visitas» si ningún profesional lo ha visto aún. */
 export function formatLastVisit(iso: string | null, now: Date = new Date()): string {
   return iso ? formatSince(iso, now) : "Sin visitas";

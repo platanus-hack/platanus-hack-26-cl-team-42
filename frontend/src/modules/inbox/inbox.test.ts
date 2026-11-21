@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PatientWithCount } from "../patients/api";
-import { formatLastVisit, formatSince, inboxRowState, inboxTier, sortInbox } from "./inbox";
+import { filterInbox, formatLastVisit, formatSince, inboxRowState, inboxTier, sortInbox } from "./inbox";
 
 describe("inboxTier", () => {
   it("rojo para la urgencia clínica, ámbar para lo que gestionar, verde al día y gris sin datos", () => {
@@ -41,6 +41,22 @@ describe("sortInbox", () => {
 
     expect(sortInbox(patients).map((item) => item.name)).toEqual(["Ana", "Luis"]);
     expect(sortInbox(updated).map((item) => item.name)).toEqual(["Ana", "Luis"]);
+  });
+});
+
+describe("filterInbox", () => {
+  const patients = [patient("Tomás Araya Peña", "Box 2", "up_to_date"), patient("Elena Ruiz Cortés", "Box 8", "review")];
+
+  it("busca por nombre o cama y admite términos combinados sin tildes", () => {
+    expect(filterInbox(patients, "TOMAS pena")).toEqual([patients[0]]);
+    expect(filterInbox(patients, "  8  ruiz ")).toEqual([patients[1]]);
+    expect(filterInbox(patients, "box 2")).toEqual([patients[0]]);
+  });
+
+  it("conserva el orden y devuelve una lista vacía cuando no hay coincidencias", () => {
+    expect(filterInbox(patients, "box")).toEqual(patients);
+    expect(filterInbox(patients, " ")).toBe(patients);
+    expect(filterInbox(patients, "Sofía")).toEqual([]);
   });
 });
 
