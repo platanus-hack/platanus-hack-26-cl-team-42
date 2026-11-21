@@ -23,7 +23,9 @@ import { PendingStatusBadge } from "../episode/components";
 import { formatClinicalTime } from "../episode/format";
 import { buildHandoffSnapshots, handoffReferenceAt } from "../episode/handoff";
 import type { EpisodeRecord, Handoff, HandoffSnapshot } from "../episode/model";
+import { rankPatients } from "../episode/priority";
 import { authorLine, professionalById } from "../episode/record";
+import { PatientPriorityList } from "./PatientPriorityList";
 import { PatientStatusCard } from "./PatientStatusCard";
 import { SnapshotView } from "./SnapshotView";
 
@@ -287,28 +289,24 @@ function PatientSnapshots({ records, team, snapshots, sent = false, actorId }: {
   sent?: boolean;
   actorId?: string;
 }) {
-  const [episodeId, setEpisodeId] = useState(snapshots[0]?.episodeId);
-  const snapshot = snapshots.find((item) => item.episodeId === episodeId) ?? snapshots[0];
-  if (!snapshot) return null;
+  const [episodeId, setEpisodeId] = useState<string>();
+  const referenceAt = handoffReferenceAt(snapshots);
+  const patients = referenceAt ? rankPatients(snapshots, referenceAt) : [];
+  const snapshot = patients.find((item) => item.snapshot.episodeId === episodeId)?.snapshot ?? patients[0]?.snapshot;
+  if (!snapshot || !referenceAt) return null;
 
   const record = records.find(({ episode }) => episode.id === snapshot.episodeId);
 
   return (
     <Flex direction="column" gap="3">
-      <Flex gap="2" wrap="wrap" role="group" aria-label="Pacientes del traspaso">
-        {snapshots.map((item) => (
-          <Button
-            key={item.episodeId}
-            variant={item === snapshot ? "solid" : "soft"}
-            aria-pressed={item === snapshot}
-            onClick={() => setEpisodeId(item.episodeId)}
-          >
-            {item.episodeLabel}
-          </Button>
-        ))}
-      </Flex>
+      <PatientPriorityList
+        patients={patients}
+        referenceAt={referenceAt}
+        selectedId={snapshot.episodeId}
+        onSelect={setEpisodeId}
+      />
       <Text size="1" color="gray">Datos al {formatClinicalTime(snapshot.cutoffAt)}</Text>
-      <PatientStatusCard team={team} snapshot={snapshot} referenceAt={handoffReferenceAt(snapshots)} />
+      <PatientStatusCard team={team} snapshot={snapshot} referenceAt={referenceAt} />
       {actorId && record && <EpisodePendings key={record.episode.id} record={record} actorId={actorId} />}
       <SnapshotView record={team} snapshot={snapshot} currentPendings={sent ? record?.pendings : undefined} />
     </Flex>
