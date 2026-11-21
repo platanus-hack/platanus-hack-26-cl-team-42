@@ -1,26 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notConnected } from "../../services/api/client";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "../../services/api/client";
 
-// Módulo 2 · Transcripción de los audios grabados.
-
-export type TranscriptStatus = "queued" | "processing" | "done" | "failed";
+// Módulo 2 · Transcripción automática de los audios cargados.
 
 export interface Transcript {
   id: string;
   recordingId: string;
-  status: TranscriptStatus;
+  name: string;
+  status: "done";
   language: string;
   text: string;
+  created_at: string;
 }
 
 export interface TranscriptionGateway {
   list(): Promise<Transcript[]>;
-  request(recordingId: string): Promise<Transcript>;
 }
 
 export const transcriptionGateway: TranscriptionGateway = {
-  list: async () => [],
-  request: notConnected("transcription.request"),
+  list: () => apiRequest<Transcript[]>("/transcription/transcripts"),
 };
 
 export const transcriptKeys = ["transcripts"] as const;
@@ -29,13 +27,5 @@ export function useTranscripts() {
   return useQuery({
     queryKey: transcriptKeys,
     queryFn: () => transcriptionGateway.list(),
-  });
-}
-
-export function useRequestTranscription() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (recordingId: string) => transcriptionGateway.request(recordingId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: transcriptKeys }),
   });
 }
