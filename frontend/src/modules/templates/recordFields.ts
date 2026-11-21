@@ -1,5 +1,7 @@
 // Qué partes de un registro extraído tienen información y cuáles siguen pendientes.
 
+import type { FieldSchema } from "./api";
+
 export interface FieldCount {
   filled: number;
   pending: number;
@@ -40,6 +42,24 @@ export function sectionState(present: boolean, value: unknown, inProgress: boole
 export function sectionLabel(key: string): string {
   const words = key.replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Resuelve las referencias locales y la rama editable de un campo anulable. */
+export function resolveField(
+  schema: FieldSchema, definitions: Record<string, FieldSchema>,
+): { field: FieldSchema; nullable: boolean } {
+  const reference = schema.$ref?.split("/").at(-1);
+  if (reference && definitions[reference]) return resolveField(definitions[reference], definitions);
+  const branch = schema.anyOf?.find((choice) => choice.type !== "null");
+  if (branch) {
+    const resolved = resolveField(branch, definitions);
+    return {
+      ...resolved,
+      nullable: resolved.nullable || Boolean(schema.anyOf?.some((choice) => choice.type === "null")),
+    };
+  }
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  return { field: schema, nullable: types.includes("null") };
 }
 
 function sum(counts: FieldCount[]): FieldCount {

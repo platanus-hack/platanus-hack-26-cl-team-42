@@ -290,8 +290,8 @@ def _report_for(author, patient, profession="medico", data=None, validated=True)
 
     report = report_services.generate_report(record)
     if validated:
-        report.validated_sections = [t.id for t in report_services.topics_of(report)]
-        report.save()
+        for point in report_services.pending_review_items(report):
+            report_services.review_item(report, point.id)
         report_services.validate_report(report)
     return report
 
@@ -473,47 +473,138 @@ def test_completing_a_section_keeps_the_same_report(monkeypatch, user):
     assert report.data["diagnosticos"][0]["descripcion"] == "Neumonía"
 
 
-def test_report_is_saved_only_after_every_topic_is_validated(user):
+def _with_clarifications() -> dict:
+    """Registro del médico con dos datos dictados que no se pueden ejecutar tal cual."""
+    data = _medico_record()
+    data["medicamentos"][0]["unidad"] = None  # «enoxaparina 40» ¿mg? ¿UI?
+    data["antimicrobianos"][0]["accion"] = "inicio"
+    data["antimicrobianos"][0]["dosis"] = None  # se inicia sin dosis
+    return data
+
+
+def test_report_is_saved_only_after_reviewing_its_pending_points(user):
     other = User.objects.create_user(email="med@example.com", password="pw")
     patient = _patient(user, other)
-    report = _report_for(user, patient, validated=False)
+    report = _report_for(user, patient, data=_with_clarifications(), validated=False)
     mine, theirs = Client(), Client()
     mine.force_login(user)
     theirs.force_login(other)
-    topics = [t["id"] for t in mine.get(f"{API_URL}/reports/{report.id}").json()["topics"]]
-    topic_url = f"{API_URL}/reports/{report.id}/topics"
+    body = mine.get(f"{API_URL}/reports/{report.id}").json()
+    items = body["reviewItems"]
 
-    def put(client, topic, validated=True):
-        return client.put(
-            f"{topic_url}/{topic}", {"validated": validated}, content_type="application/json"
-        )
+    def review(client, item_id):
+        return client.post(f"{API_URL}/reports/{report.id}/review-items/{item_id}/review")
 
-    assert len(topics) > 1
+    assert [(i["section"], i["kind"], i["severity"]) for i in items] == [
+        ("medicamentos", "clarification", "medium"),
+        ("antimicrobianos", "clarification", "medium"),
+    ]
+    assert items[0]["itemIndex"] == 0 and "sin unidad" in items[0]["message"]
     # Sin guardar, los demás profesionales del paciente todavía no lo ven.
     assert theirs.get(f"{API_URL}/reports").json() == []
-    assert put(theirs, topics[0]).status_code == 404
-    # Con temas sin validar no se puede guardar.
+    assert review(theirs, items[0]["id"]).status_code == 404
+    # Con puntos sin revisar no se puede guardar (ni saltándose la interfaz).
     assert mine.post(f"{API_URL}/reports/{report.id}/validate").status_code == 409
-
-    for topic in topics[:-1]:
-        assert put(mine, topic).status_code == 200
+    assert review(mine, items[0]["id"]).json()["reviewItems"][0]["reviewed"] is True
     assert mine.post(f"{API_URL}/reports/{report.id}/validate").status_code == 409
-    # Un tema se puede desmarcar; uno que no existe se rechaza.
-    assert topics[0] not in put(mine, topics[0], False).json()["validatedTopics"]
-    assert put(mine, "no_existe").status_code == 409
-    put(mine, topics[0])
-    put(mine, topics[-1])
+    assert review(mine, "clarification:medicamentos:9:dosis").status_code == 409
+    review(mine, items[1]["id"])
 
     saved = mine.post(f"{API_URL}/reports/{report.id}/validate")
 
     assert saved.status_code == 200, saved.content
     body = saved.json()
     assert (body["status"], body["canEdit"]) == ("done", False)
-    assert set(body["validatedTopics"]) == set(topics)
+    assert all(item["reviewed"] for item in body["reviewItems"])
     assert [r["id"] for r in theirs.get(f"{API_URL}/reports").json()] == [str(report.id)]
-    # Guardado, ya no se edita: ni temas ni guardar de nuevo.
-    assert put(mine, topics[0], False).status_code == 409
+    # Guardado, ya no se edita: ni revisar puntos ni guardar de nuevo.
+    assert review(mine, items[0]["id"]).status_code == 409
     assert mine.post(f"{API_URL}/reports/{report.id}/validate").status_code == 409
+
+
+def test_a_report_without_pending_points_is_saved_directly(user):
+    from apps.transcription import report_services
+
+    report = _report_for(user, _patient(user), validated=False)
+
+    assert report_services.pending_review_items(report) == []
+    # Los temas que se validaban uno a uno ya no bloquean el guardado.
+    assert report_services.validate_report(report).status == Report.Status.DONE
+
+
+def test_the_author_can_edit_a_single_draft_item_directly(monkeypatch, user):
+    other = User.objects.create_user(email="med@example.com", password="pw")
+    first = {
+        "descripcion": "Alerta inicial",
+        "severidad": None,
+        "sistema": "general",
+        "evidencia": "Texto del dictado",
+    }
+    second = {**first, "descripcion": "Otra alerta"}
+    model = _use_model(monkeypatch, [])
+    data = {"alertas": [first, second]}
+    report = _report_for(user, _patient(user, other), data=data, validated=False)
+    mine, theirs = Client(), Client()
+    mine.force_login(user)
+    theirs.force_login(other)
+    report_url = f"{API_URL}/reports/{report.id}"
+    edit_url = f"{report_url}/sections/alertas"
+    updated = {**first, "severidad": "alta"}
+    draft = mine.get(report_url).json()
+    payload = {"index": 0, "value": updated, "revision": draft["editRevision"]}
+
+    assert theirs.patch(edit_url, payload, content_type="application/json").status_code == 404
+    bad_value = {**payload, "value": {**first, "severidad": "inventada"}}
+    assert mine.patch(edit_url, bad_value, content_type="application/json").status_code == 422
+    bad_quote = {**payload, "value": {**updated, "evidencia": "Cita modificada"}}
+    assert mine.patch(edit_url, bad_quote, content_type="application/json").status_code == 422
+
+    result = mine.patch(edit_url, payload, content_type="application/json")
+    assert result.status_code == 200, result.content
+    assert result.json()["data"]["alertas"] == [updated, second]
+    report.extracted_record.refresh_from_db()
+    assert report.extracted_record.data["alertas"] == [updated, second]
+    assert model.calls == []
+    assert mine.patch(edit_url, payload, content_type="application/json").status_code == 409
+
+    saved = mine.post(f"{report_url}/validate")
+    assert saved.status_code == 200, saved.content
+    payload["revision"] = saved.json()["editRevision"]
+    assert mine.patch(edit_url, payload, content_type="application/json").status_code == 409
+
+
+def test_only_narrow_actionable_gaps_are_clarifications():
+    from apps.transcription import review_services
+
+    data = {
+        "medicamentos": [
+            {"nombre": "paracetamol", "dosis": 1, "unidad": "g", "accion": "indicado"},
+            {"nombre": "furosemida", "dosis": 20, "unidad": None, "accion": "administrado"},
+            {"nombre": "insulina", "dosis": None, "unidad": None, "accion": "modificado"},
+            {"nombre": "omeprazol", "dosis": None, "unidad": None, "accion": "administrado"},
+            {"nombre": "heparina", "dosis": 5000, "unidad": None, "accion": "suspendido"},
+        ],
+        "drogas_infusion": [
+            {"farmaco": "noradrenalina", "dosis": 0.1, "unidad": None, "tendencia": "aumento"},
+            {"farmaco": "fentanilo", "dosis": None, "unidad": None, "tendencia": "inicio"},
+        ],
+        "antimicrobianos": [
+            {"farmaco": "meropenem", "dosis": None, "accion": "continua"},
+            {"farmaco": "vancomicina", "dosis": "", "accion": "escalamiento"},
+        ],
+        # Un vacío corriente no es un pendiente.
+        "resumen_24h": None,
+        "diagnosticos": [],
+    }
+
+    ids = [c["id"] for c in review_services.clarifications(data)]
+
+    assert ids == [
+        "clarification:medicamentos:1:unidad",
+        "clarification:medicamentos:2:dosis",
+        "clarification:drogas_infusion:0:unidad",
+        "clarification:antimicrobianos:1:dosis",
+    ]
 
 
 def test_topics_group_the_sections_of_the_report(user):
@@ -526,6 +617,11 @@ def test_topics_group_the_sections_of_the_report(user):
     assert "diagnosticos" in topics["assessment"]
     assert "drogas_infusion" in topics["treatment"]
     assert all("metadatos" not in sections for sections in topics.values())
+    # Familia y observaciones no son una categoría: quedan como notas del informe completo.
+    assert "family" not in topics
+    assert all("comunicacion_familia" not in sections for sections in topics.values())
+    out = report_services.to_out(report, user)
+    assert out.noteSections == ["observaciones_no_estructuradas", "comunicacion_familia"]
 
 
 def test_a_saved_report_cannot_be_completed(user):
@@ -535,25 +631,28 @@ def test_a_saved_report_cannot_be_completed(user):
         extraction.request_section_update(report.extracted_record, "diagnosticos", "más datos")
 
 
-def test_completing_a_section_only_unvalidates_its_topic(monkeypatch, user):
+def test_completing_a_section_only_reopens_its_reviewed_points(monkeypatch, user):
     from apps.transcription import report_services
 
-    report = _report_for(user, _patient(user), validated=False)
+    report = _report_for(user, _patient(user), data=_with_clarifications(), validated=False)
     record = report.extracted_record
-    all_topics = [t.id for t in report_services.topics_of(report)]
-    report.validated_sections = all_topics
+    for point in report_services.pending_review_items(report):
+        report_services.review_item(report, point.id)
+    # Un id antiguo de tema validado se descarta al rehacer el informe.
+    report.validated_sections = [*report.validated_sections, "assessment"]
     report.save()
-    new_value = [
-        {"descripcion": "Neumonía", "codigo_cie10": None, "estado": "confirmado", "evidencia": "x"}
-    ]
-    _use_model(monkeypatch, [json.dumps({"diagnosticos": new_value})])
+    new_value = [{"farmaco": "ceftriaxona", "dosis": None, "accion": "ajuste", "evidencia": "x"}]
+    _use_model(monkeypatch, [json.dumps({"antimicrobianos": new_value})])
 
-    extraction.request_section_update(record, "diagnosticos", "agrega neumonía")
-    extraction.run_section_update(record.id, "diagnosticos", "agrega neumonía", "")
+    extraction.request_section_update(record, "antimicrobianos", "ajustar ceftriaxona")
+    with pytest.raises(report_services.ValidationError, match="termine de actualizarse"):
+        report_services.validate_report(report)
+    extraction.run_section_update(record.id, "antimicrobianos", "ajustar ceftriaxona", "")
 
     report.refresh_from_db()
-    assert set(report.validated_sections) == set(all_topics) - {"assessment"}
-    assert [t.id for t in report_services.unvalidated_topics(report)] == ["assessment"]
+    assert report.validated_sections == ["clarification:medicamentos:0:unidad"]
+    pending = report_services.pending_review_items(report)
+    assert [item.id for item in pending] == ["clarification:antimicrobianos:0:dosis"]
 
 
 def test_patient_summary_has_criticality_status_brief_and_treatment_pending(

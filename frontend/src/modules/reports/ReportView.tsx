@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Badge, Button, Callout, Card, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
@@ -8,8 +8,9 @@ import { sectionLabel } from "../templates/recordFields";
 import { useTemplate } from "../templates/api";
 import { reportTitle, sectionAnchor } from "./format";
 import { pendingSections } from "./pending";
+import { ReviewHeaderAction, ReviewPointCallout, ReviewTopicPicker } from "./ReviewPanel";
 import { SectionBlock } from "./SectionBlock";
-import { ValidationWizard } from "./ValidationWizard";
+import { useReportReview } from "./useReportReview";
 import type { Homologation, Report } from "./api";
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short" });
@@ -22,20 +23,47 @@ interface ReportViewProps {
   focusSection?: string;
 }
 
-/** El informe completo: paciente, autor, orden en la categoría, información pendiente y registro. */
-export function ReportView({ report, interactive = true, focusSection }: ReportViewProps) {
-  const { data: template } = useTemplate(report.templateSlug);
+/**
+ * El informe completo: paciente, autor, orden en la categoría, información pendiente y registro.
+ * Mientras su autor lo valida, se revisa por excepción: solo los puntos pendientes, con la acción
+ * («Validar y continuar» o «Guardar informe») en el encabezado.
+ */
+export function ReportView(props: ReportViewProps) {
+  return <ReportContent key={`${props.report.id}:${props.focusSection ?? ""}`} {...props} />;
+}
+
+function ReportContent({ report, interactive = true, focusSection }: ReportViewProps) {
+  const { data: template } = useTemplate(report.templateSlug, report.templateVersion);
   const data = report.data ?? {};
   const order = template?.output_schema.required ?? Object.keys(data);
   const pending = pendingSections(data, order);
   const validating = interactive && report.canEdit && report.status === "review";
   const busy = report.status === "processing" || report.extractionStatus === "processing" || report.extractionStatus === "pending";
+  const review = useReportReview(report, focusSection);
+  const activeTopic = report.topics.find((topic) => topic.id === review.activeTopicId);
+  const activeSections = activeTopic?.sections ?? (review.current ? [review.current.section] : []);
+  const sectionBusy = busy || review.reviewing;
 
   useFocusedSection(focusSection, report.id, report.data !== null);
 
+  const renderSections = (keys: string[], canComplete = false) =>
+    keys.map((key) => (
+      <SectionBlock
+        key={key}
+        report={report}
+        sectionKey={key}
+        pendingFields={pending.find((section) => section.key === key)?.fields ?? []}
+        focused={focusSection === key}
+        canComplete={canComplete}
+        schema={template?.output_schema.properties[key]}
+        definitions={template?.output_schema.$defs}
+        busy={sectionBusy}
+      />
+    ));
+
   return (
     <Flex direction="column" gap="4">
-      <ReportHeader report={report} />
+      <ReportHeader report={report} action={validating && <ReviewHeaderAction review={review} busy={busy} />} />
 
       {busy && (
         <Callout.Root color="blue">
@@ -58,13 +86,27 @@ export function ReportView({ report, interactive = true, focusSection }: ReportV
 
       <ConsolidationNotice report={report} />
 
-      <ConceptSummary homologations={report.homologations} />
+      {!validating && <ConceptSummary homologations={report.homologations} />}
 
-      {validating ? (
-        <ValidationWizard key={report.id} report={report} pending={pending} busy={busy} />
-      ) : (
-        <>
-          {report.data !== null && <PendingInformation report={report} pending={pending} interactive={false} busy={busy} />}
+      {!validating && report.data !== null && (
+        <PendingInformation report={report} pending={pending} interactive={false} busy={busy} />
+      )}
+
+      {validating && report.data !== null && (
+        <Card variant="classic">
+          <Flex direction="column" gap="3">
+            <ReviewTopicPicker topics={report.topics} review={review} />
+            {activeTopic && <Heading size="3">{activeTopic.label}</Heading>}
+            {review.current && <ReviewPointCallout report={report} item={review.current} busy={sectionBusy} />}
+            {renderSections(activeSections, true)}
+            {focusSection && !activeSections.includes(focusSection) && report.noteSections.includes(focusSection) &&
+              renderSections([focusSection])}
+          </Flex>
+        </Card>
+      )}
+
+      {!validating && report.data !== null && (
+        <Flex direction="column" gap="3">
           {report.topics.map((topic) => {
             const pendingCount = pending.filter((section) => topic.sections.includes(section.key)).length;
             return (
@@ -72,24 +114,26 @@ export function ReportView({ report, interactive = true, focusSection }: ReportV
                 key={topic.id}
                 title={topic.label}
                 detail={`${topic.sections.length} ${topic.sections.length === 1 ? "sección" : "secciones"}`}
-                badge={pendingCount > 0 ? { label: `${pendingCount} con pendientes`, color: "amber" } : undefined}
+                badge={pendingCount > 0 ? { label: `${pendingCount} sin completar`, color: "gray" } : undefined}
                 open={focusSection !== undefined && topic.sections.includes(focusSection)}
               >
                 <Flex direction="column" gap="3">
-                  {topic.sections.map((key) => (
-                    <SectionBlock
-                      key={key}
-                      report={report}
-                      sectionKey={key}
-                      pendingFields={pending.find((section) => section.key === key)?.fields ?? []}
-                      focused={focusSection === key}
-                    />
-                  ))}
+                  {renderSections(topic.sections)}
                 </Flex>
               </CollapsibleSection>
             );
           })}
-        </>
+          {/* Familia y observaciones: notas del informe, sin categoría ni revisión. */}
+          {report.noteSections.map((key) => (
+            <SectionBlock
+              key={key}
+              report={report}
+              sectionKey={key}
+              pendingFields={[]}
+              focused={focusSection === key}
+            />
+          ))}
+        </Flex>
       )}
     </Flex>
   );
@@ -106,15 +150,18 @@ function useFocusedSection(section: string | undefined, reportId: string, ready:
   }, [section, reportId, ready]);
 }
 
-function ReportHeader({ report }: { report: Report }) {
+function ReportHeader({ report, action }: { report: Report; action?: ReactNode }) {
   return (
     <Flex direction="column" gap="2">
-      <Flex align="center" gap="2" wrap="wrap">
-        <Heading size="4">{reportTitle(report.sequence, report.profession)}</Heading>
-        <Badge color="indigo" variant="soft">
-          N.º {report.sequence} · {professionLabel(report.profession)}
-        </Badge>
-        <StatusBadge report={report} />
+      <Flex justify="between" align="start" gap="3" wrap="wrap">
+        <Flex align="center" gap="2" wrap="wrap">
+          <Heading size="4">{reportTitle(report.sequence, report.profession)}</Heading>
+          <Badge color="gray" variant="soft">
+            N.º {report.sequence} · {professionLabel(report.profession)}
+          </Badge>
+          <StatusBadge report={report} />
+        </Flex>
+        {action}
       </Flex>
       <PatientLine report={report} />
       <Text size="2" color="gray">

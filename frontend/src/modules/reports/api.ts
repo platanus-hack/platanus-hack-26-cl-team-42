@@ -4,7 +4,7 @@ import { apiRequest } from "../../services/api/client";
 // Informes: el registro extraído con sus conceptos homologados, firmado por su autor.
 // Backend: `backend/apps/transcription` → `/-/api/transcription/reports`.
 
-/** `review`: homologado, a la espera de que su autor lo valide; `done`: guardado (todos sus temas validados; ya no se edita). */
+/** `review`: homologado, a la espera de que su autor revise sus puntos pendientes; `done`: guardado (publicado; ya no se edita). */
 export type ReportStatus = "processing" | "review" | "done" | "failed";
 
 /** Un término del registro y el representante común al que se homologó. */
@@ -41,6 +41,28 @@ export interface EvidenceAlert {
   acknowledged: boolean;
 }
 
+/**
+ * Punto que el autor debe revisar antes de guardar: un conflicto con la evidencia o una aclaración
+ * (algo dictado que, por un dato que falta, no se puede interpretar o ejecutar tal cual).
+ * El backend los entrega ordenados: primero los de severidad alta.
+ */
+export interface ReviewItem {
+  id: string;
+  kind: "evidence" | "clarification";
+  /** `high`: conflicto clínicamente relevante (rojo); `medium`: discrepancia o aclaración (ámbar). */
+  severity: "high" | "medium";
+  section: string;
+  message: string;
+  /** Posición del ítem dictado dentro de la sección (si es una lista). */
+  itemIndex: number | null;
+  alertKind: EvidenceAlert["kind"] | null;
+  evidenceId: number | null;
+  evidenceTitle: string;
+  evidenceTakenAt: string | null;
+  fromEarlierVersion?: boolean;
+  reviewed: boolean;
+}
+
 export interface ReportTopic {
   id: string;
   label: string;
@@ -53,6 +75,7 @@ export interface Report {
   recordingId: string;
   templateSlug: string;
   templateName: string;
+  templateVersion: number;
   status: ReportStatus;
   profession: string;
   patientReference: string;
@@ -70,13 +93,16 @@ export interface Report {
   /** Qué pasó al guardarse respecto de la versión oficial del paciente. */
   consolidation: "pending" | "official" | "merged" | "reconciling" | "consolidated";
   validatedAt: string | null;
-  /** Temas del informe (agrupan sus secciones); se validan de a uno. */
+  /** Temas del informe: agrupan sus secciones para leerlo completo (no se validan de a uno). */
   topics: ReportTopic[];
-  /** Ids de los temas ya validados; con todos validados puede guardar el informe. */
-  validatedTopics: string[];
+  /** Notas sin categoría (familia y observaciones), al final del informe completo. */
+  noteSections: string[];
+  /** Puntos por revisar (y ya revisados); sin pendientes, el autor puede guardar el informe. */
+  reviewItems: ReviewItem[];
   evidenceAlerts: EvidenceAlert[];
   /** Solo quien generó el informe puede completarlo. */
   canEdit: boolean;
+  editRevision: string;
   recordedAt: string;
   created_at: string;
   updated_at: string;
@@ -140,32 +166,50 @@ export function useAskReports() {
   });
 }
 
-/** Valida un tema del informe (o quita la validación). */
-export function useValidateTopic() {
+/** Da por revisado un punto pendiente (una alerta queda marcada como revisada, no se borra). */
+export function useReviewItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ reportId, topicId, validated }: { reportId: string; topicId: string; validated: boolean }) =>
-      apiRequest<Report>(`/transcription/reports/${reportId}/topics/${topicId}`, {
-        method: "PUT",
-        body: JSON.stringify({ validated }),
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportKeys }),
-  });
-}
-
-/** Da por revisada una alerta de evidencia (queda marcada, no se borra). */
-export function useAcknowledgeAlert() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ reportId, alertId }: { reportId: string; alertId: string }) =>
-      apiRequest<Report>(`/transcription/reports/${reportId}/alerts/${encodeURIComponent(alertId)}/ack`, {
+    mutationFn: ({ reportId, itemId }: { reportId: string; itemId: string }) =>
+      apiRequest<Report>(`/transcription/reports/${reportId}/review-items/${encodeURIComponent(itemId)}/review`, {
         method: "POST",
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportKeys }),
+    onSuccess: (report) => {
+      queryClient.setQueryData([...reportKeys, "one", report.id], report);
+      return queryClient.invalidateQueries({ queryKey: reportKeys });
+    },
   });
 }
 
-/** Guarda el informe con todos sus temas validados: queda disponible para el equipo y ya no se edita. */
+interface ReportItemEdit {
+  reportId: string;
+  section: string;
+  index?: number;
+  value: unknown;
+  revision: string;
+}
+
+export function useEditReportItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reportId, section, index, value, revision }: ReportItemEdit) =>
+      apiRequest<Report>(`/transcription/reports/${reportId}/sections/${encodeURIComponent(section)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ index, value, revision }),
+      }),
+    onSuccess: (report) => {
+      queryClient.setQueryData([...reportKeys, "one", report.id], report);
+      void queryClient.invalidateQueries({ queryKey: reportKeys });
+      void queryClient.invalidateQueries({ queryKey: ["extractions"] });
+      void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: reportKeys });
+    },
+  });
+}
+
+/** Guarda el informe sin puntos pendientes: se publica al equipo del paciente y ya no se edita. */
 export function useValidateReport() {
   const queryClient = useQueryClient();
   return useMutation({

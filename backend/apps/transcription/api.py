@@ -5,6 +5,7 @@ Las transcripciones se crean solas al guardar un dictado (ver
 Cada profesional solo ve las de sus propios dictados.
 """
 
+from typing import Any
 from uuid import UUID
 
 from django.shortcuts import get_object_or_404
@@ -181,7 +182,7 @@ def ask_assistant(request, payload: AskIn):
 
 @router.post("/reports/{report_id}/validate", response=ReportOut)
 def validate_user_report(request, report_id: int):
-    """El autor guarda el informe con todos sus temas validados: ya no se puede editar."""
+    """El autor guarda el informe sin puntos pendientes: se publica y ya no se puede editar."""
     report = get_object_or_404(
         report_services.visible_reports(request.user), pk=report_id, author=request.user
     )
@@ -192,18 +193,35 @@ def validate_user_report(request, report_id: int):
     return report_services.to_out(report, request.user)
 
 
-class TopicValidationIn(Schema):
-    validated: bool = True
+class ReportItemEditIn(Schema):
+    index: int | None = None
+    value: Any
+    revision: str
 
 
-@router.put("/reports/{report_id}/topics/{topic_id}", response=ReportOut)
-def validate_report_topic(request, report_id: int, topic_id: str, payload: TopicValidationIn):
-    """El autor valida un tema del informe (o quita la validación)."""
+@router.patch("/reports/{report_id}/sections/{section}", response=ReportOut)
+def edit_report_section_item(request, report_id: int, section: str, payload: ReportItemEditIn):
+    """Guarda el valor que corrigió el autor en el borrador."""
     report = get_object_or_404(
         report_services.visible_reports(request.user), pk=report_id, author=request.user
     )
     try:
-        report_services.set_topic_validated(report, topic_id, payload.validated)
+        report_services.edit_item(report, section, payload.index, payload.value, payload.revision)
+    except report_services.ItemEditError as error:
+        raise HttpError(422, str(error)) from error
+    except report_services.ValidationError as error:
+        raise HttpError(409, str(error)) from error
+    return report_services.to_out(report, request.user)
+
+
+@router.post("/reports/{report_id}/review-items/{item_id}/review", response=ReportOut)
+def review_report_item(request, report_id: int, item_id: str):
+    """El autor da por revisado un punto pendiente del informe (alerta o aclaración)."""
+    report = get_object_or_404(
+        report_services.visible_reports(request.user), pk=report_id, author=request.user
+    )
+    try:
+        report_services.review_item(report, item_id)
     except report_services.ValidationError as error:
         raise HttpError(409, str(error)) from error
     return report_services.to_out(report, request.user)

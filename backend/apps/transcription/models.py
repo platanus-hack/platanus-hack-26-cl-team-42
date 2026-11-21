@@ -157,7 +157,8 @@ class Report(models.Model):
     data = models.JSONField(null=True, blank=True)
     # Qué término se reemplazó por qué concepto y dónde (se llena mientras se homologa).
     homologations = models.JSONField(default=list, blank=True)
-    # Ids de los temas (``report_topics``) ya validados; con todos puede guardar el informe.
+    # Ids de las aclaraciones ya revisadas por el autor (``review_services``). En informes
+    # antiguos guardaba ids de temas validados, que hoy se ignoran.
     validated_sections = models.JSONField(default=list, blank=True)
     # Contradicciones con la evidencia (exámenes) detectadas al registrar el informe; el autor
     # las ve en la validación. Cada una: {id, severity, kind, section, topic, message, ...}.
