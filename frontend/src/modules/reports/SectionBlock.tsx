@@ -3,10 +3,7 @@ import { ComplementDialog } from "../templates/ComplementDialog";
 import { RecordValue } from "../templates/RecordSections";
 import { sectionLabel } from "../templates/recordFields";
 import type { Report } from "./api";
-
-export function sectionAnchor(key: string): string {
-  return `report-section-${key}`;
-}
+import { sectionAnchor } from "./format";
 
 interface SectionBlockProps {
   report: Report;

@@ -12,3 +12,7 @@ export function reportOrdinal(sequence: number): string {
 export function reportTitle(sequence: number, profession: string): string {
   return `${reportOrdinal(sequence)} de ${professionLabel(profession)}`;
 }
+
+export function sectionAnchor(key: string): string {
+  return `report-section-${key}`;
+}
