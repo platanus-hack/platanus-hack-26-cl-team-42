@@ -1,0 +1,11 @@
+{
+  "global": "Paciente en día 6 de UCI por traumatismo craneoencefálico grave (S06.9), en ventilación mecánica invasiva y sedación profunda. En las últimas 24 horas la presión intracraneana se ha mantenido controlada, con hipertensión endocraneana manejada con osmoterapia. Actualmente recibe propofol 1,5 mg/kg/h sin cambios, con RASS -4 y saturación de 97 %. Queda pendiente la TAC de cerebro de control mañana a las 08:00, el inicio de kinesiterapia respiratoria y movilización pasiva hoy a las 16:00 con control de PIC, y la reducción de sedación para evaluar despertar diario mañana. El plan es pasar a presión soporte cuando RASS sea ≥ -2 y, a 72 horas, realizar prueba de ventilación espontánea con tubo en T si cumple criterios.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de traumatismo craneoencefálico grave (S06.9). Alerta de severidad media por hipertensión endocraneana, controlada con osmoterapia.",
+    "Hemodinamia": "En infusión de propofol a 1,5 mg/kg/h (sedante), sin cambios en la dosis.",
+    "Respiratorio": "En ventilación mecánica invasiva con saturación de O2 de 97 %.",
+    "Neurológico y sedación": "RASS de -4, compatible con sedación profunda.",
+    "Medicamentos y dispositivos": "Portador de tubo endotraqueal en posición orotraqueal.",
+    "Plan y pendientes": "Mantener cabecera a 30 grados y normotermia; enfermería controlará pupilas y escala de Glasgow cada 2 horas. Pendiente TAC de cerebro de control mañana a las 08:00 y kinesiterapia respiratoria con movilización pasiva hoy a las 16:00 bajo control de PIC. Se recomienda reducir la sedación para despertar diario, mantener VMI asistido-controlada, pasar a presión soporte con RASS ≥ -2 (48 h) y realizar prueba con tubo en T con eventual extubación (72 h)."
+  }
+}

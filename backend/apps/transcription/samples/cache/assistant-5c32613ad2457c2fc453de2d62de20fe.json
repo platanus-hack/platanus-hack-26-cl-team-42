@@ -1,0 +1,84 @@
+{
+  "respuesta": "Evolución **estable** durante el 21/11 (día 6 de UCI): TCE grave en VMI con sedación profunda, PIC controlada y SatO2 sin cambios. Solo hay informes de ese día, por lo que no se puede describir la evolución de días anteriores.\n\n## Neurológico\n- **TCE grave** (S06.9), confirmado (INFORME 19 [sección: diagnosticos]; INFORME 22 [sección: diagnosticos]).\n- En la mañana: **hipertensión endocraneana controlada con osmoterapia** (alerta de severidad media) y **PIC controlada** (INFORME 19 [sección: alertas], [sección: resumen_24h]).\n- TAC de cerebro del 21/11 a las 09:30: **contusiones frontales bilaterales sin desplazamiento de línea media** (EVIDENCIA 9).\n- En la tarde: **RASS -4, sedación profunda** (INFORME 23 [sección: escalas]).\n\n## Fármacos\n- **Propofol 1,5 mg/kg/h**, sin cambio de dosis (INFORME 19 [sección: drogas_infusion]).\n\n## Respiratorio\n- **VMI con SatO2 97 %**, sin cambios en los tres informes (INFORME 19, 22 y 23 [sección: control_respiratorio]).\n- Tubo endotraqueal orotraqueal (INFORME 19 [sección: dispositivos_invasivos]).\n- Plan ventilatorio: mantener **VMI en modo asistido-controlado**. Pasar a presión soporte cuando el **RASS sea >= -2** (plazo 48 h). Prueba de ventilación espontánea con tubo en T y evaluación de extubación en 72 h, si cumple criterios (INFORME 23 [sección: objetivos_terapeuticos]).\n\n## Pendientes\n- **TAC de cerebro de control** mañana a las 08:00 (INFORME 19 [sección: pendientes]).\n- **Reducir la sedación** mañana a las 08:00 para la evaluación del despertar diario (INFORME 23 [sección: recomendaciones_equipo]).\n- Enfermería: **pupilas y Glasgow cada 2 h** durante el turno. No hay registro de los resultados (INFORME 22 [sección: pendientes]).\n- Kinesiterapia respiratoria y movilización pasiva con control de PIC, solicitada para hoy a las 16:00 (INFORME 22 [sección: pendientes]). Kinesiología la registra como objetivo del día, sin detallar el resultado (INFORME 23 [sección: objetivos_terapeuticos]).\n- Indicación de **cabecera a 30° y normotermia** (INFORME 19 [sección: indicaciones]).",
+  "referencias": [
+    {
+      "informe": 19,
+      "seccion": "diagnosticos",
+      "detalle": "Traumatismo craneoencefálico grave, S06.9"
+    },
+    {
+      "informe": 22,
+      "seccion": "diagnosticos",
+      "detalle": "Traumatismo craneoencefálico grave, confirmado"
+    },
+    {
+      "informe": 19,
+      "seccion": "alertas",
+      "detalle": "Hipertensión endocraneana controlada con osmoterapia"
+    },
+    {
+      "informe": 19,
+      "seccion": "resumen_24h",
+      "detalle": "TCE grave en VMI y sedación, con presión intracraneana controlada"
+    },
+    {
+      "evidencia": 9,
+      "detalle": "Contusiones frontales bilaterales sin desplazamiento de línea media"
+    },
+    {
+      "informe": 23,
+      "seccion": "escalas",
+      "detalle": "RASS -4, sedación profunda"
+    },
+    {
+      "informe": 19,
+      "seccion": "drogas_infusion",
+      "detalle": "Propofol 1.5 mg/kg/h, sin_cambio"
+    },
+    {
+      "informe": 19,
+      "seccion": "control_respiratorio",
+      "detalle": "VMI, SatO2 97"
+    },
+    {
+      "informe": 22,
+      "seccion": "control_respiratorio",
+      "detalle": "VMI, SatO2 97"
+    },
+    {
+      "informe": 23,
+      "seccion": "control_respiratorio",
+      "detalle": "VMI, SatO2 97"
+    },
+    {
+      "informe": 19,
+      "seccion": "dispositivos_invasivos",
+      "detalle": "Tubo endotraqueal orotraqueal"
+    },
+    {
+      "informe": 23,
+      "seccion": "objetivos_terapeuticos",
+      "detalle": "Pasar a presión soporte cuando RASS >= -2; PVE con tubo en T en 72 h"
+    },
+    {
+      "informe": 19,
+      "seccion": "pendientes",
+      "detalle": "TAC de cerebro de control mañana 08:00"
+    },
+    {
+      "informe": 23,
+      "seccion": "recomendaciones_equipo",
+      "detalle": "Reducir sedación para evaluar despertar diario"
+    },
+    {
+      "informe": 22,
+      "seccion": "pendientes",
+      "detalle": "Control de pupilas y Glasgow cada 2 horas; kinesiterapia con control de PIC hoy 16:00"
+    },
+    {
+      "informe": 19,
+      "seccion": "indicaciones",
+      "detalle": "Cabecera a 30 grados y normotermia"
+    }
+  ]
+}

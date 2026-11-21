@@ -1,0 +1,9 @@
+{
+  "global": "Paciente en Box 6, día 2 de estadía en UCI, ingresado por insuficiencia respiratoria por EPOC reagudizado (J44.1). Se mantiene con cánula nasal de alto flujo y saturación de 94%, con evolución favorable. Persiste como alerta de severidad media la retención de CO2 en el último gas. Recibe corticoides endovenosos por 5 días y enoxaparina 40 mg SC cada 24 h, y es portador de CVC yugular derecho. Queda pendiente el control de gases a las 16:00 y evaluar el descenso del soporte.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de insuficiencia respiratoria por EPOC reagudizado (J44.1). Alerta de severidad media por retención de CO2 en el último gas.",
+    "Respiratorio": "Soporte con cánula nasal de alto flujo y saturación de O2 de 94%.",
+    "Medicamentos y dispositivos": "Recibe enoxaparina 40 mg SC cada 24 h. Es portador de catéter venoso central en yugular derecha.",
+    "Plan y pendientes": "Indicados corticoides endovenosos por 5 días. Pendiente control de gases a las 16:00."
+  }
+}

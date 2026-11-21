@@ -1,0 +1,10 @@
+{
+  "global": "Paciente en día 6 de estada en UCI (Box 14) por traumatismo craneoencefálico grave (S06.9). Se mantiene en ventilación mecánica invasiva y sedación con propofol. Cursa con hipertensión endocraneana, actualmente controlada con osmoterapia. Saturación de O2 de 97%. Se indica cabecera a 30 grados y normotermia durante el turno. Queda pendiente TAC de cerebro de control mañana a las 08:00.",
+  "areas": {
+    "Diagnósticos y alertas": "Traumatismo craneoencefálico grave confirmado (CIE-10 S06.9). Alerta de severidad media por hipertensión endocraneana controlada con osmoterapia.",
+    "Hemodinamia": "En infusión de propofol a 1,5 mg/kg/h como sedante, sin cambios en la dosis.",
+    "Respiratorio": "En ventilación mecánica invasiva con saturación de O2 de 97%.",
+    "Medicamentos y dispositivos": "Portador de tubo endotraqueal en posición orotraqueal.",
+    "Plan y pendientes": "Durante el turno: cabecera a 30 grados y normotermia. Pendiente TAC de cerebro de control mañana a las 08:00."
+  }
+}

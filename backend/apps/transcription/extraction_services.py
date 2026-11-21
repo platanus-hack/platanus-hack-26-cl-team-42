@@ -507,6 +507,7 @@ PROFESSION_KEYWORDS = {
     "kinesiologia": ("kinesi", "klgo", "vibropresion", "movilizacion", "ejercicio", "fisioterapia"),
     "enfermeria": ("enfermera", "enfermeria", "curacion", "braden", "balance hidrico"),
     "tens": ("tens", "tecnico en enfermeria", "aseo", "cambio de posicion", "bano en cama"),
+    "nutricionista": ("nutricionista", "nutricion", "requerimientos", "formula enteral", "kcal"),
     "especialista": ("interconsulta", "especialista", "infectolog", "cardiolog", "nefrolog"),
     "medico": ("diagnostico", "sepsis", "vasopresor", "sofa", "ventilacion mecanica"),
 }

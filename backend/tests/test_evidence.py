@@ -19,7 +19,7 @@ from apps.transcription import evidence_services as evidence
 from apps.transcription import extraction_services as extraction
 from apps.transcription import reconciliation_services as rec
 from apps.transcription import report_assistant, report_services
-from apps.transcription.models import ExtractedRecord, Report, Transcription
+from apps.transcription.models import Evidence, ExtractedRecord, Report, Transcription
 from apps.users import shifts
 
 API = f"/{settings.URL_PREFIX}/api"
@@ -429,3 +429,115 @@ def test_the_anonymous_case_includes_cultures_and_imaging_reports_anonymized(
     assert "Cultivo: Streptococcus pneumoniae sensible a penicilina." in brief
     for secret in ("Juan", "Pérez", "Box 7", "Dr. Rojas"):
         assert secret not in brief
+
+
+@pytest.mark.django_db
+def test_abnormal_findings_prioritize_mortality_scales_and_labs():
+    from apps.transcription.abnormal_services import abnormal_findings
+
+    user = get_user_model().objects.create_user(email="ab@example.com", password="x")
+    patient = Patient.objects.create(name="Paciente", identifier="9-9", bed="1")
+    Evidence.objects.create(
+        patient=patient,
+        kind="lab",
+        title="Lab",
+        taken_at=timezone.now(),
+        created_by=user,
+        results=[
+            {
+                "name": "Lactato",
+                "value": "4.8",
+                "unit": "mmol/L",
+                "numeric": 4.8,
+                "ref_min": 0.5,
+                "ref_max": 2.0,
+                "flag": "high",
+            },
+            {
+                "name": "Glucosa",
+                "value": "150",
+                "unit": "mg/dL",
+                "numeric": 150.0,
+                "ref_min": 70.0,
+                "ref_max": 140.0,
+                "flag": "high",
+            },
+            {
+                "name": "Sodio",
+                "value": "140",
+                "unit": "mmol/L",
+                "numeric": 140.0,
+                "ref_min": 135.0,
+                "ref_max": 145.0,
+                "flag": "normal",
+            },
+        ],
+    )
+    data = {
+        "escalas": [
+            {"nombre": "SOFA", "puntaje": 11},
+            {"nombre": "RASS", "puntaje": 0},
+            {"nombre": "Glasgow", "puntaje": 15},
+        ]
+    }
+    found = abnormal_findings(patient, data)
+    assert [(f.name, f.severity, f.mortality) for f in found] == [
+        ("SOFA", "critical", True),
+        ("Lactato", "critical", True),
+        ("Glucosa", "moderate", False),
+    ]
+
+
+def test_key_points_flag_let_cpr_and_allergies():
+    from apps.transcription.summary_services import key_points
+
+    data = {
+        "ingreso": {"limitacion_esfuerzo_terapeutico": "LET: no intubar y no RCP"},
+        "alergias": [{"agente": "penicilina", "reaccion": "anafilaxia"}],
+    }
+    labels = [p.label for p in key_points(data)]
+    assert labels == ["LET", "No RCP", "No intubar", "Alergia: penicilina"]
+    assert key_points({})[0].label == "LET no registrada"
+    full = key_points(
+        {"ingreso": {"limitacion_esfuerzo_terapeutico": "Sin limitación; manejo completo"}}
+    )
+    assert full[0].label == "Sin LET"
+
+
+@pytest.mark.django_db
+def test_patient_trends_flag_worsening_and_improving_labs():
+    from apps.transcription.trends_services import patient_trends
+
+    user = get_user_model().objects.create_user(email="tr@example.com", password="x")
+    patient = Patient.objects.create(name="Paciente", identifier="8-8", bed="1")
+    patient.assigned_to.add(user)
+    now = timezone.now()
+
+    def lab(hours, **values):
+        results = [
+            {
+                "name": name,
+                "value": str(v),
+                "unit": "",
+                "numeric": v,
+                "ref_min": lo,
+                "ref_max": hi,
+                "flag": "high",
+            }
+            for name, (v, lo, hi) in values.items()
+        ]
+        Evidence.objects.create(
+            patient=patient,
+            kind="lab",
+            title="Lab",
+            created_by=user,
+            results=results,
+            taken_at=now - timedelta(hours=hours),
+        )
+
+    lab(20, Lactato=(6.0, 0.5, 2.0), Creatinina=(1.5, 0.6, 1.3))
+    lab(2, Lactato=(3.0, 0.5, 2.0), Creatinina=(2.4, 0.6, 1.3))
+    trends = {t.name: t for t in patient_trends(user, patient)}
+    assert trends["Lactato"].status == "improving" and trends["Lactato"].mortality
+    assert trends["Creatinina"].status == "worsening"
+    assert patient_trends(user, patient)[0].name == "Creatinina"

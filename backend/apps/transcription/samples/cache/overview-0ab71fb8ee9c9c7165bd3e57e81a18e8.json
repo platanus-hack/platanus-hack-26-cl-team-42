@@ -1,0 +1,11 @@
+{
+  "global": "Paciente en Box 4, día 4 de estada en UCI, ingresado por shock séptico de foco pulmonar (neumonía grave) en ventilación mecánica invasiva. Evoluciona con requerimiento creciente de noradrenalina (0,25 mcg/kg/min, en aumento) y SOFA de 12, compatible con disfunción multiorgánica severa. Persiste hipoxemia refractaria con PaFi 120 y saturación de 91-92 %, bajo sedación profunda (RASS -3) y tratamiento con meropenem. Queda pendiente el control de gases arteriales en 2 h y evaluar posición prono hoy, manteniendo PAM ≥ 65 y saturación ≥ 92 %.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de shock séptico de foco pulmonar (J15.9). Alerta de severidad alta por hipoxemia refractaria con PaFi 120.",
+    "Hemodinamia": "En infusión de noradrenalina a 0,25 mcg/kg/min con tendencia al aumento.",
+    "Respiratorio": "En ventilación mecánica invasiva con saturación de O2 entre 91 y 92 %.",
+    "Neurológico y sedación": "SOFA de 12 (disfunción multiorgánica severa). RASS -3, sedación profunda.",
+    "Medicamentos y dispositivos": "Recibe meropenem 1 g EV cada 8 h. Dispositivos: catéter venoso central en yugular derecha y tubo endotraqueal orotraqueal.",
+    "Plan y pendientes": "Mantener PAM ≥ 65 titulando noradrenalina, con meta de saturación ≥ 92 % y objetivo de optimizar secreciones. Pendientes: control de gases arteriales en 2 h y evaluar hoy la posición prono con el equipo médico."
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "x-plantilla": {
+    "slug": "nutricionista_uci",
+    "nombre": "Registro de nutrición UCI",
+    "profesion": "nutricionista",
+    "descripcion": "Valoración y soporte nutricional del paciente en UCI: estado nutricional, requerimientos, vía y fórmula, tolerancia y plan.",
+    "tipos_registro": [
+      "ingreso_uci",
+      "evolucion",
+      "ronda_interdisciplinaria"
+    ],
+    "especialidad_obligatoria": false,
+    "instrucciones_llm": "Plantilla de nutrición UCI. El soporte nutricional que el paciente recibe hoy (vía, fórmula, velocidad, aporte, tolerancia) va en 'nutricion'.\nLos requerimientos calculados van en 'requerimientos', y lo que se pide al equipo en 'recomendaciones_equipo'."
+  },
+  "title": "Registro de nutrición UCI",
+  "description": "Valoración y soporte nutricional del paciente en UCI: estado nutricional, requerimientos, vía y fórmula, tolerancia y plan.",
+  "properties": {
+    "valoracion_nutricional": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Valoración del estado nutricional.",
+      "properties": {
+        "estado_nutricional": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Estado nutricional (eutrófico, riesgo de desnutrición, desnutrición, obesidad...)."
+        },
+        "peso_kg": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Peso en kg."
+        },
+        "talla_cm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Talla en cm."
+        },
+        "imc": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Índice de masa corporal."
+        },
+        "riesgo_nutricional": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Riesgo nutricional según la escala usada (NUTRIC, NRS-2002...)."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "estado_nutricional",
+        "peso_kg",
+        "talla_cm",
+        "imc",
+        "riesgo_nutricional",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "requerimientos": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Requerimientos calculados.",
+      "properties": {
+        "kcal_dia": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Meta de energía en kcal/día."
+        },
+        "proteinas_g_kg": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Meta de proteínas en g/kg/día."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "kcal_dia",
+        "proteinas_g_kg",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "nutricion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Nutricion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recomendaciones_equipo": {
+      "type": "array",
+      "description": "Recomendaciones al resto del equipo. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Indicacion"
+      }
+    }
+  }
+}

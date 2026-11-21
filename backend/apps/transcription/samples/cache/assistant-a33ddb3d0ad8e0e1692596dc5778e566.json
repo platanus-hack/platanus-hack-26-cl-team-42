@@ -1,0 +1,70 @@
+{
+  "respuesta": "Sigue en **ventilación mecánica invasiva (VCV) con parámetros estables** (FiO2 40 %, PEEP 8, PaFi 210). Aún no está en destete: la prueba de ventilación espontánea se evaluará mañana.\n\n## Parámetros actuales\n- Modo **VCV**, **FiO2 40 %**, **PEEP 8 cmH2O**, FR programada **18**, volumen corriente **420 mL** (INFORME 6 [sección: ventilacion_mecanica]).\n- Presión plateau **24 cmH2O**, driving pressure **16 cmH2O**, **PaFi 210** (INFORME 6 [sección: ventilacion_mecanica]).\n- Saturación O2 **96 %** (INFORME 6 [sección: control_respiratorio]).\n- Enfermería registra igual modo, FiO2 y PEEP (INFORME 7 [sección: ventilacion_mecanica]).\n\n## Vía aérea\n- Tubo endotraqueal **7.5**, fijación **22 cm** (INFORME 6 y 7 [sección: ventilacion_mecanica]).\n- Presión de cuff: **25 cmH2O** según el médico y **28 cmH2O** según enfermería (INFORME 6 y 7 [sección: ventilacion_mecanica]).\n- **Secreciones mucopurulentas abundantes** por el TET (INFORME 7 [sección: valoracion_por_sistemas]).\n- Bundle de neumonía asociada a VM: cabecera a 30° y aseo oral con clorhexidina (INFORME 7 [sección: bundles_iaas]).\n\n## Evaluación y destete\n- Evaluación: **neumonía en resolución**, con crépitos basales derechos (INFORME 6 [sección: valoracion_por_sistemas]).\n- Prueba de ventilación espontánea **no realizada**: aún requiere drogas vasoactivas (INFORME 6 [sección: ventilacion_mecanica]).\n- Noradrenalina: el médico registra **0,15 mcg/kg/min sin cambio** (INFORME 6 [sección: drogas_infusion]). Enfermería registra **0,3 mcg/kg/min en aumento** (INFORME 7 [sección: drogas_infusion]). Son datos discordantes.\n- Sedación: **RASS -3** con objetivo -1. El plan es disminuir propofol (INFORME 6 [sección: sedoanalgesia_neuro]).\n- Plan: mantener VMI y evaluar la PVE mañana (INFORME 6 [sección: valoracion_por_sistemas]). Se indica kinesioterapia respiratoria dos veces al día (INFORME 6 [sección: indicaciones]).\n\n## Pendientes / observaciones\n- Se tomaron **gases arteriales a las 10:00**. El resultado no está disponible en los informes ni en los exámenes (INFORME 7 [sección: toma_examenes]).\n- El INFORME 5 solo describe un 'modo controlado' sin parámetros (INFORME 5 [sección: ventilacion_mecanica]). Incluye una alerta para descartar TEP ante cualquier deterioro respiratorio (INFORME 5 [sección: alertas]).",
+  "referencias": [
+    {
+      "informe": 6,
+      "seccion": "ventilacion_mecanica",
+      "detalle": "VCV, FiO2 40, PEEP 8, FR 18, VC 420, plateau 24, driving 16, PaFi 210, cuff 25, PVE no realizada"
+    },
+    {
+      "informe": 6,
+      "seccion": "control_respiratorio",
+      "detalle": "Ventilación mecánica invasiva, SatO2 96"
+    },
+    {
+      "informe": 7,
+      "seccion": "ventilacion_mecanica",
+      "detalle": "VCV, FiO2 40, PEEP 8, TET 7.5, fijación 22, cuff 28"
+    },
+    {
+      "informe": 7,
+      "seccion": "valoracion_por_sistemas",
+      "detalle": "Secreciones mucopurulentas abundantes por TET"
+    },
+    {
+      "informe": 7,
+      "seccion": "bundles_iaas",
+      "detalle": "Cabecera 30°, aseo oral con clorhexidina, cuff 28"
+    },
+    {
+      "informe": 6,
+      "seccion": "valoracion_por_sistemas",
+      "detalle": "Neumonía en resolución, PaFi 210; crépitos basales derechos; mantener VMI, evaluar PVE mañana"
+    },
+    {
+      "informe": 6,
+      "seccion": "drogas_infusion",
+      "detalle": "Noradrenalina 0,15 mcg/kg/min sin cambio"
+    },
+    {
+      "informe": 7,
+      "seccion": "drogas_infusion",
+      "detalle": "Noradrenalina 0,3 mcg/kg/min en aumento"
+    },
+    {
+      "informe": 6,
+      "seccion": "sedoanalgesia_neuro",
+      "detalle": "RASS actual -3, objetivo -1"
+    },
+    {
+      "informe": 6,
+      "seccion": "indicaciones",
+      "detalle": "Kinesioterapia respiratoria dos veces al día y evaluar PVE"
+    },
+    {
+      "informe": 7,
+      "seccion": "toma_examenes",
+      "detalle": "10:00 Gases arteriales"
+    },
+    {
+      "informe": 5,
+      "seccion": "ventilacion_mecanica",
+      "detalle": "modo: controlado"
+    },
+    {
+      "informe": 5,
+      "seccion": "alertas",
+      "detalle": "Riesgo de TEP: descartar ante cualquier deterioro respiratorio"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "respuesta": "Asumiendo que pregunta por los medicamentos indicados: los informes registran solo uno, amoxicilina 1 g endovenosa cada 8 h. Es la única indicación en el único informe médico disponible (día 2 de estada en UCI). No hay registros de días anteriores, así que no se puede reconstruir todo lo indicado desde el ingreso. El diagnóstico registrado es neumonía adquirida en la comunidad (J18.9), confirmada. ALERTA: el informe de enfermería registra alergia a penicilina (rash cutáneo), y la amoxicilina es una penicilina; la indicación debe verificarse. El cultivo de expectoración muestra Streptococcus pneumoniae sensible a penicilina y ceftriaxona.",
+  "referencias": [
+    {
+      "informe": 17,
+      "seccion": "medicamentos",
+      "detalle": "amoxicilina 1 g Endovenosa cada 8 h"
+    },
+    {
+      "informe": 17,
+      "seccion": "metadatos",
+      "detalle": "dia_estada_uci: 2"
+    },
+    {
+      "informe": 17,
+      "seccion": "diagnosticos",
+      "detalle": "Neumonía adquirida en la comunidad, J18.9, confirmado"
+    },
+    {
+      "informe": 18,
+      "seccion": "alergias",
+      "detalle": "Penicilina – rash cutáneo"
+    },
+    {
+      "evidencia": 7,
+      "detalle": "Streptococcus pneumoniae, sensible a penicilina y ceftriaxona"
+    }
+  ]
+}

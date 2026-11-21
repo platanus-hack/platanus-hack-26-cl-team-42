@@ -1,0 +1,16 @@
+{
+  "global": "Día 3 de UCI por shock séptico registrado como de foco abdominal, aunque los hemocultivos muestran Streptococcus pneumoniae sensible a ceftriaxona y la valoración lo describe como neumonía neumocócica bacterémica. La evolución es favorable: afebril desde las 22:00, PCR 145 mg/L (desde 280), creatinina 1,4 mg/dL en descenso y lactato 2,1. Sigue en VMI (PaFi 210) con noradrenalina 0,15 mcg/kg/min, PAM 68, sedación más profunda que el objetivo y balance acumulado +4,8 L. Queda pendiente destetar noradrenalina, reducir propofol, lograr balance −500 mL, controlar lactato a las 14:00 y evaluar PVE mañana. Hay que aclarar la discordancia entre la piperacilina/tazobactam indicada y el plan de completar ceftriaxona; se pidió interconsulta a infectología por la duración del antibiótico.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de shock séptico de foco abdominal (R57.2), discordante con la bacteriemia neumocócica y la neumonía descritas en otras áreas. Alerta de severidad media por balance hídrico acumulado positivo de 4,8 L.",
+    "Hemodinamia": "PAM 68 mmHg y FC 94 lpm. Noradrenalina 0,15 mcg/kg/min, registrada sin cambio en la infusión, aunque el resumen de 24 h describe un descenso progresivo.",
+    "Respiratorio": "VMI en VCV con VT 420 mL, FR 18, FiO2 40%, PEEP 8, plateau 24 y driving pressure 16. SatO2 96% y PaFi 210. TET 7,5 fijado a 22 cm con cuff a 25 cmH2O. No se realizó PVE porque aún requiere noradrenalina.",
+    "Neurológico y sedación": "RASS -3 frente a un objetivo de -1; otra escala registra RASS -2, lo que es discordante. CPOT 1, pupilas isocóricas reactivas y CAM-ICU no evaluable.",
+    "Renal y balance hídrico": "Balance de 24 h +1250 mL (ingresos 3100 / egresos 1850) y acumulado +4800 mL. Diuresis 1650 mL (0,9 mL/kg/h).",
+    "Nutrición": "Nutrición enteral por SNG con fórmula polimérica estándar a 40 mL/h, con buena tolerancia y residuo gástrico de 50 mL. Meta de 1800 kcal.",
+    "Infeccioso": "Hemocultivos del 16/11 positivos para Streptococcus pneumoniae sensible a ceftriaxona. Profilaxis cumplidas: cabecera a 30°, enoxaparina 40 mg SC, insulina con meta de 140-180, omeprazol 40 mg EV y Foley mantenido por balance estricto. No se cumple la interrupción de la sedación; se disminuirá el propofol hoy.",
+    "Medicamentos y dispositivos": "Piperacilina/tazobactam 4,5 g EV cada 6 h. CVC yugular derecho instalado el 16/11, funcionante.",
+    "Exámenes": "PCR 145 mg/L, en descenso desde 280. Creatinina 1,4 mg/dL, en descenso.",
+    "Plan y pendientes": "Bajar noradrenalina 0,02 mcg/kg/min cada hora manteniendo PAM ≥65. Kinesioterapia dos veces al día y evaluar PVE mañana. Control de lactato a las 14:00, reducir la sedación para movilizar y metas de RASS -1 a 0 y balance −500 mL.",
+    "Otros": "Secreciones mucopurulentas abundantes, tos inefectiva y crépitos basales derechos; tras la aspiración la saturación subió a 97% y se sugiere bajar FiO2 a 35%. La evaluación kinésica registra PEEP 10 y plateau 25, discordante con el registro médico. Hay discordancia en el plan infeccioso (completar ceftriaxona) con interconsulta a infectología; se movilizó pasivamente las cuatro extremidades sin cambios hemodinámicos (IMS 0) y se informó a la hija."
+  }
+}

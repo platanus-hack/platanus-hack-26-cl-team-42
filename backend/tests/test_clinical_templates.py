@@ -20,6 +20,7 @@ EXPECTED_SLUGS = [
     "especialista_interconsulta",
     "kinesiologia_uci",
     "medico_uci",
+    "nutricionista_uci",
     "tens_uci",
 ]
 User = get_user_model()

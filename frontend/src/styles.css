@@ -228,3 +228,84 @@
     animation: none;
   }
 }
+
+/* Asistente «Pregúntale a los informes»: botón flotante y panel lateral */
+.assistant-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--indigo-9), var(--violet-9));
+  box-shadow: 0 6px 20px var(--indigo-a7);
+  cursor: pointer;
+}
+
+.assistant-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  background: var(--color-panel-solid);
+  border-left: 1px solid var(--indigo-a6);
+  box-shadow: -8px 0 28px var(--black-a5);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.2s ease, visibility 0.2s;
+}
+
+.assistant-drawer[data-open='true'] {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.assistant-drawer__head {
+  background: linear-gradient(135deg, var(--indigo-a3), var(--violet-a3));
+  border-bottom: 1px solid var(--indigo-a5);
+}
+
+.assistant-drawer__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-3);
+  color: white;
+  background: linear-gradient(135deg, var(--indigo-9), var(--violet-9));
+}
+
+.assistant-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.assistant-drawer__foot {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--gray-a5);
+}
+
+@media (min-width: 900px) {
+  .assistant-fab {
+    bottom: 24px;
+  }
+}
+
+/* Con el asistente abierto, la página se adapta al espacio restante (en pantallas anchas). */
+.app-shell {
+  transition: padding-right 0.2s ease;
+}
+
+@media (min-width: 900px) {
+  html[data-assistant='open'] .app-shell {
+    padding-right: 420px;
+  }
+}

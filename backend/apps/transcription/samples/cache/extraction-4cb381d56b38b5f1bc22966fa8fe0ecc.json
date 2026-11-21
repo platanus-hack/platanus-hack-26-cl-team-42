@@ -1,0 +1,133 @@
+{
+  "metadatos": {
+    "tipo_profesional": "tens",
+    "nombre_profesional": null,
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-21T10:01:50+00:00",
+    "tipo_registro": "evolucion",
+    "turno": null,
+    "dia_estada_uci": null,
+    "cama": "Box 2"
+  },
+  "control_hemodinamico": [],
+  "control_respiratorio": [
+    {
+      "hora": null,
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 95,
+      "soporte": null,
+      "fio2": null,
+      "flujo_l_min": null,
+      "evidencia": "Saturación de oxígeno estable noventa y cinco por ciento."
+    }
+  ],
+  "drogas_infusion": [
+    {
+      "farmaco": "Vasoactivos (fármaco no especificado)",
+      "categoria": "vasoactivo",
+      "dosis": null,
+      "unidad": null,
+      "tendencia": null,
+      "hora": null,
+      "evidencia": "Se administró correctamente antibióticos, vasoactivos según orden médica."
+    },
+    {
+      "farmaco": "Suero fisiológico",
+      "categoria": "otro",
+      "dosis": 50,
+      "unidad": "ml/h",
+      "tendencia": null,
+      "hora": null,
+      "evidencia": "suero fisiológico por vía central, se calcula aproximadamente cincuenta mililitros por hora"
+    }
+  ],
+  "medicamentos": [
+    {
+      "nombre": "Antibióticos (no especificados)",
+      "principio_activo": null,
+      "dosis": null,
+      "unidad": null,
+      "via": null,
+      "frecuencia": null,
+      "accion": "administrado",
+      "hora": null,
+      "evidencia": "Se administró correctamente antibióticos, vasoactivos según orden médica."
+    }
+  ],
+  "escalas": [],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "CVC",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "Permeable, sin presencia de coágulos",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "se verifica permeabilidad de catéter venoso central, sin presencia de coágulos"
+    },
+    {
+      "tipo": "VVP",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "Permeable, con leve enrojecimiento",
+      "signos_infeccion": null,
+      "accion": null,
+      "evidencia": "se observa una con leve enrojecimiento, se comunica al equipo médico"
+    },
+    {
+      "tipo": "VVP",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "Permeable",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "Se verifica permeabilidad de vías periféricas"
+    }
+  ],
+  "alergias": [],
+  "alertas": [
+    {
+      "descripcion": "Vía venosa periférica con leve enrojecimiento (vía comprometida), comunicada al médico de turno",
+      "severidad": "baja",
+      "sistema": "piel_tegumentos",
+      "evidencia": "se observa una con leve enrojecimiento, se comunica al equipo médico"
+    }
+  ],
+  "indicaciones": [],
+  "pendientes": [
+    {
+      "descripcion": "Próximo control de signos vitales",
+      "responsable_sugerido": "tens",
+      "plazo": "16:00",
+      "evidencia": "Próximo control de signos vitales a las dieciséis horas."
+    }
+  ],
+  "observaciones_no_estructuradas": "En la transcripción se menciona 'paciente cama siete', mientras que los datos del dictado indican Box 2; se registró Box 2 según los datos del dictado. Hay que verificar la identidad y la cama. El profesional indica 'turno tarde', que no corresponde directamente a las opciones día/noche, por lo que el turno queda sin asignar. Se recibe el turno con signos vitales estables según el reporte del turno anterior, sin valores informados. Se revisan los formularios de ingreso y se verifica la identidad del paciente. Los monitores cardíacos están bien conectados, con trazo normal y alarmas calibradas. Se recibió la boleta de medicamentos para administrar a las 14:00. Se administraron antibióticos y vasoactivos según orden médica, registrados en la gráfica de medicamentos, sin hora explícita ni fármacos especificados. El paciente está en ayuno sólido y líquido con nutrición parenteral total según prescripción. Paciente con sedación mantenida que responde a estímulos dolorosos; no se aplicó escala formal.",
+  "cuidados_basicos": {
+    "aseo_confort": "Higiene de cara y manos; se mantiene lecho limpio y seco",
+    "aseo_cavidades": null,
+    "cambios_posicion": [],
+    "cabecera_30": null,
+    "evidencia": "se realiza higiene de cara y manos, se mantiene lecho limpio y seco"
+  },
+  "eliminacion": null,
+  "alimentacion": {
+    "via": "parenteral",
+    "tolerancia": null,
+    "evidencia": "Entrada de nutrición parenteral total según prescripción. Ayuno: paciente bajo régimen de ayuno sólido y líquido."
+  },
+  "toma_muestras": [],
+  "traslados": [],
+  "novedades_informadas": [
+    {
+      "a_quien": "Médico de turno",
+      "que": "Vía periférica comprometida con leve enrojecimiento",
+      "hora": null,
+      "evidencia": "Se comunica con médico de turno sobre vía periférica comprometida."
+    }
+  ],
+  "entrega_turno": null
+}

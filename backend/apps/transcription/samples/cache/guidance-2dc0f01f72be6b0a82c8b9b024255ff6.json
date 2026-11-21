@@ -1,0 +1,7 @@
+{
+  "suggestion": "Ambos registros son del mismo profesional (Dr. Rojas), por lo que lo más probable es una titulación entre dos momentos y no un desacuerdo clínico. Sin horas de registro no se puede saber cuál es el vigente: 0.15 → 0.1 sería un destete (coherente con la 'adecuada respuesta hemodinámica' de B) y 0.1 → 0.15 sería un aumento. Se sugiere: 1) confirmar al lado de la cama la velocidad programada en la bomba (ml/h) y convertirla a mcg/kg/min con la concentración de la dilución y el peso registrado; 2) revisar la hora de cada registro y la última indicación médica; 3) que el Dr. Rojas confirme la dosis objetivo y la meta de PAM; 4) dejar un único valor vigente en la ficha con su hora, para evitar errores de titulación o de reposición de la infusión. No modificar la infusión solo por esta discrepancia mientras el paciente esté estable.",
+  "recommended_side": "none",
+  "external_recommended": false,
+  "external_profession": null,
+  "external_reason": ""
+}

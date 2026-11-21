@@ -1,0 +1,7 @@
+{
+  "suggestion": "La postura B parece la más verosímil como valor vigente. La enfermera explica el cambio: se subió la dosis por hipotensión. Eso sugiere que el registro del Dr. Rojas (0,15) corresponde a un momento anterior y no a un error. Antes de cerrar la discrepancia, conviene: 1) revisar en la bomba de infusión la velocidad actual y la concentración de la dilución, y recalcular la dosis en mcg/kg/min con el peso registrado; 2) confirmar la hora de cada registro y de la titulación; 3) verificar que el aumento a 0,3 mcg/kg/min tenga indicación o protocolo de titulación médica y que el Dr. Rojas esté informado; 4) revisar la PAM y la perfusión actuales para reevaluar la meta hemodinámica, ya que la necesidad de duplicar la dosis puede requerir evaluación médica (volemia, causa del shock, segundo vasoactivo). Mientras tanto, no modificar la infusión basándose en el registro de 0,15.",
+  "recommended_side": "b",
+  "external_recommended": false,
+  "external_profession": null,
+  "external_reason": ""
+}

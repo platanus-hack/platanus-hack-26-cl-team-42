@@ -10,7 +10,7 @@
  * asignado al usuario es un episodio y sus informes guardados son las atenciones.
  */
 
-export type Discipline = "nursing" | "medicine" | "kinesiology";
+export type Discipline = "nursing" | "medicine" | "kinesiology" | "nutrition";
 
 export interface Professional {
   id: string;

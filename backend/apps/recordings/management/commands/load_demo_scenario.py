@@ -49,19 +49,25 @@ STAFF = [
     ("enfermeria@localhost", "EU Soto", "enfermeria"),
     ("enfermeria2@localhost", "EU Díaz", "enfermeria"),
     ("kinesiologia@localhost", "Klgo. Muñoz", "kinesiologia"),
+    ("nutricionista@localhost", "Nut. Parra", "nutricionista"),
     ("especialista@localhost", "Dra. Fuentes", "especialista"),
 ]
 OFF_SHIFT = "enfermeria2@localhost"
 # Quién tiene a quién (además de la cuenta que ve todo). La externa no tiene pacientes.
 PATIENTS = [
-    ("21.001.001-1", "Marta Silva Pino", "Box 4", ["medico", "enfermeria", "kinesiologia"]),
+    (
+        "21.001.001-1",
+        "Marta Silva Pino",
+        "Box 4",
+        ["medico", "enfermeria", "kinesiologia", "nutricionista"],
+    ),
     ("21.002.002-2", "Pedro Núñez Lara", "Box 6", ["medico", "enfermeria"]),
     ("21.003.003-3", "Elena Ruiz Cortés", "Box 8", ["medico2", "enfermeria2"]),
-    ("21.004.004-4", "Hugo Salinas Mora", "Box 10", ["medico2"]),
+    ("21.004.004-4", "Hugo Salinas Mora", "Box 10", ["medico2", "nutricionista"]),
     ("21.005.005-5", "Camila Rojas Vera", "Box 11", ["medico2", "enfermeria2"]),
     ("21.006.006-6", "Tomás Araya Peña", "Box 12", ["medico2", "enfermeria2"]),
     ("21.007.007-7", "Lucía Vargas Díaz", "Box 13", ["kinesiologia", "enfermeria"]),
-    ("21.008.008-8", "Diego Fuentes Mora", "Box 14", ["medico", "kinesiologia"]),
+    ("21.008.008-8", "Diego Fuentes Mora", "Box 14", ["medico", "kinesiologia", "nutricionista"]),
     ("21.009.009-9", "Sofía Lagos Vidal", "Box 15", ["medico", "medico2"]),
 ]
 
@@ -106,6 +112,7 @@ class Command(BaseCommand):
             patients = self._patients(admin, staff)
             self._stories(patients, staff)
             self._evidence(patients, staff)
+            self._serial_labs(patients, staff)
             # ...y EU Díaz termina su turno al final: así hay un conflicto con alguien ausente.
             self._turns(staff)
         self.stdout.write(self.style.SUCCESS("Escenario de demo cargado."))
@@ -161,6 +168,10 @@ class Command(BaseCommand):
             self._tomas,
             self._lucia,
             self._diego,
+            self._diego_requests,
+            self._diego_kinesiology,
+            self._area_records,
+            self._nutrition_records,
         ):
             story(patients, staff)
 
@@ -178,13 +189,17 @@ class Command(BaseCommand):
                 "Box 4",
                 4,
                 dx=("Shock séptico de foco pulmonar", "J15.9"),
+                let="Sin limitación del esfuerzo terapéutico; manejo completo.",
                 summary="Neumonía grave en VMI con shock séptico: noradrenalina en alza, SOFA 12.",
                 resp="VMI",
                 sat=92,
                 drugs=[drug("norepinefrina", 0.25, "aumento")],
                 meds=[med("meropenem", 1, "g", "EV", "cada 8 h")],
                 devices=[device("CVC", "yugular derecha"), device("TET", "orotraqueal")],
-                scales=[scale("SOFA", 12, "disfunción multiorgánica severa")],
+                scales=[
+                    scale("SOFA", 12, "disfunción multiorgánica severa"),
+                    scale("APACHE II", 27, "mortalidad predicha cercana al 55 %"),
+                ],
                 alerts=[alert("Hipoxemia refractaria con PaFi 120", "alta")],
                 pending=[
                     task("Control de gases arteriales", "en 2 h"),
@@ -226,6 +241,7 @@ class Command(BaseCommand):
                 "Box 6",
                 2,
                 dx=("Insuficiencia respiratoria por EPOC reagudizado", "J44.1"),
+                let="LET acordada con la familia: no intubar y no RCP; soporte no invasivo.",
                 summary="EPOC reagudizado en alto flujo, mejorando; evaluar descenso de soporte.",
                 resp="Cánula nasal de alto flujo",
                 sat=94,
@@ -426,17 +442,34 @@ class Command(BaseCommand):
         )
 
     def _lucia(self, patients, staff) -> None:
-        """Dictado de kinesiología cuya transcripción falló (la bandeja ofrece reintentar)."""
+        """Informe guardado de kinesiología (reemplaza el dictado fallido de versiones previas)."""
         patient = patients["Lucía"]
-        if patient.recordings.exists():
+        failed = Recording.objects.filter(
+            patient=patient, transcription__status=Transcription.Status.FAILED
+        )
+        for recording in failed:
+            delete_recording(recording)
+        if self._done(patient):
             return
-        recording = self._recording(staff["kinesiologia"], patient, "kinesiologia", hours_ago=0.7)
-        Transcription.objects.create(
-            recording=recording,
-            status=Transcription.Status.FAILED,
-            error="No se pudo transcribir el audio. Intenta nuevamente.",
-            language="spanish",
-            model_id="demo",
+        self._saved(
+            staff["kinesiologia"],
+            patient,
+            "kinesiologia",
+            hours_ago=5,
+            data={
+                "metadatos": meta("kinesiologia", "Klgo. Muñoz", "Box 13", 3),
+                "control_respiratorio": [resp_item("Cánula nasal de alto flujo", 95)],
+                "escalas": [scale("RASS", 0, "alerta y tranquila")],
+                "objetivos_terapeuticos": [
+                    {
+                        "objetivo": "Destete de oxígeno: bajar el flujo si la saturación se "
+                        "mantiene sobre 94 %",
+                        "plazo": "24 horas",
+                    },
+                    {"objetivo": "Sedestación y marcha asistida", "plazo": "hoy"},
+                ],
+                "recomendaciones_equipo": [task("Control de gases antes de bajar el flujo", "hoy")],
+            },
         )
 
     def _diego(self, patients, staff) -> None:
@@ -464,6 +497,295 @@ class Command(BaseCommand):
                 indications=[task("Cabecera a 30 grados y normotermia", "durante el turno")],
             ),
         )
+
+    def _diego_requests(self, patients, staff) -> None:
+        """Segundo informe médico de Diego: pide una tarea a kinesiología y otra a enfermería."""
+        patient = patients["Diego"]
+        doctor = staff["medico"]
+        if Report.objects.filter(patient=patient, author=doctor).count() >= 2:
+            return
+        self._saved(
+            doctor,
+            patient,
+            "medico",
+            hours_ago=0.5,
+            data=medico(
+                "Box 14",
+                6,
+                dx=("Traumatismo craneoencefálico grave", "S06.9"),
+                summary="TCE grave en VMI. Se solicitan tareas a kinesiología y a enfermería.",
+                resp="VMI",
+                sat=97,
+                scales=[scale("SOFA", 8, "disfunción orgánica moderada"), scale("Glasgow", 6, "")],
+                pending=[
+                    task(
+                        "Kinesiología: iniciar kinesiterapia respiratoria y movilización pasiva "
+                        "con control de PIC",
+                        "hoy 16:00",
+                    ),
+                    task(
+                        "Enfermería: control de pupilas y escala de Glasgow cada 2 horas",
+                        "durante el turno",
+                    ),
+                ],
+            ),
+        )
+
+    def _diego_kinesiology(self, patients, staff) -> None:
+        """Informe de kinesiología de Diego: cumple lo pedido y deja el plan ventilatorio."""
+        patient = patients["Diego"]
+        kine = staff["kinesiologia"]
+        if Report.objects.filter(patient=patient, author=kine).exists():
+            return
+        self._saved(
+            kine,
+            patient,
+            "kinesiologia",
+            hours_ago=0.2,
+            data={
+                "metadatos": meta("kinesiologia", "Klgo. Muñoz", "Box 14", 6),
+                "control_respiratorio": [resp_item("VMI", 97)],
+                "escalas": [scale("RASS", -4, "sedación profunda")],
+                "objetivos_terapeuticos": [
+                    {
+                        "objetivo": "Kinesiterapia respiratoria y movilización pasiva realizadas "
+                        "según lo indicado, con PIC estable",
+                        "plazo": "hoy",
+                    },
+                    {
+                        "objetivo": "Plan ventilatorio: mantener VMI en modo asistido-controlado "
+                        "hoy; pasar a presión soporte cuando RASS sea >= -2",
+                        "plazo": "48 horas",
+                    },
+                    {
+                        "objetivo": "Progreso: prueba de ventilación espontánea con tubo en T "
+                        "si cumple criterios, luego evaluar extubación",
+                        "plazo": "72 horas",
+                    },
+                ],
+                "recomendaciones_equipo": [
+                    task("Reducir sedación para evaluar despertar diario", "mañana 08:00")
+                ],
+            },
+        )
+
+    def _serial_labs(self, patients, staff) -> None:
+        """Controles anteriores de laboratorio, para que se vea la tendencia; idempotente."""
+        plan = [
+            (
+                patients["Marta"],
+                staff["medico"],
+                [
+                    (30.0, [("Lactato", "6.4"), ("Creatinina", "1.1")]),
+                    (16.0, [("Lactato", "5.6"), ("Creatinina", "1.6")]),
+                    (4.0, [("Lactato", "5.1"), ("Creatinina", "2.1")]),
+                ],
+            ),
+            (
+                patients["Hugo"],
+                staff["medico2"],
+                [
+                    (20.0, [("Potasio", "5.4"), ("Creatinina", "1.6")]),
+                    (8.0, [("Potasio", "6.2"), ("Creatinina", "2.0")]),
+                ],
+            ),
+            (
+                patients["Pedro"],
+                staff["medico"],
+                [
+                    (20.0, [("pCO2", "52")]),
+                    (8.0, [("pCO2", "58")]),
+                ],
+            ),
+        ]
+        for patient, author, controls in plan:
+            if Evidence.objects.filter(patient=patient, title="Control previo").exists():
+                continue
+            for hours_ago, results in controls:
+                evidence_services.add_evidence(
+                    author,
+                    patient.id,
+                    kind="lab",
+                    title="Control previo",
+                    taken_at=timezone.now() - timedelta(hours=hours_ago),
+                    results=[{"name": name, "value": value} for name, value in results],
+                    findings="",
+                )
+
+    # -- áreas y nutrición ----------------------------------------------------------------
+
+    def _recorded(self, patient: Patient, marker: str) -> bool:
+        return ExtractedRecord.objects.filter(
+            transcription__recording__patient=patient, data__resumen_24h=marker
+        ).exists()
+
+    def _area_records(self, patients, staff) -> None:
+        """Informes médicos con las áreas que faltaban: infeccioso, renal, neurológico, balance."""
+        marker = "Control por sistemas del turno."
+        plan = [
+            (
+                "Marta",
+                "medico",
+                ("Shock séptico de foco pulmonar", "J15.9"),
+                ("VMI", 92),
+                {
+                    "antimicrobianos": [
+                        {
+                            "farmaco": "meropenem",
+                            "dosis": "1 g cada 8 h",
+                            "dia_tratamiento": 3,
+                            "indicacion": "neumonía grave con shock séptico",
+                            "accion": "continua",
+                            "evidencia": "meropenem día tres",
+                        }
+                    ],
+                    "cultivos": [
+                        {
+                            "muestra": "hemocultivos x2",
+                            "fecha_toma": "ayer",
+                            "estado": "pendiente",
+                            "microorganismo": None,
+                            "sensibilidad": None,
+                            "evidencia": "hemocultivos pendientes",
+                        }
+                    ],
+                    "balance_hidrico": {
+                        "periodo_horas": 24,
+                        "diuresis_ml": 900,
+                        "balance_ml": 1800,
+                        "balance_acumulado_ml": 4200,
+                        "evidencia": "balance positivo de 1800",
+                    },
+                    "sedoanalgesia_neuro": {"rass_actual": -3, "rass_objetivo": -2, "glasgow": 8},
+                },
+            ),
+            (
+                "Hugo",
+                "medico2",
+                ("Pancreatitis aguda grave", "K85.9"),
+                ("Cánula nasal", 96),
+                {
+                    "balance_hidrico": {
+                        "periodo_horas": 24,
+                        "diuresis_ml": 600,
+                        "balance_ml": 2200,
+                        "balance_acumulado_ml": 3100,
+                        "evidencia": "balance positivo de 2200, oligúrico",
+                    },
+                    "terapia_reemplazo_renal": {
+                        "modalidad": "CVVH",
+                        "dosis_efluente_ml_kg_h": 25,
+                        "anticoagulacion": "citrato",
+                        "ultrafiltracion_ml": 100,
+                        "evidencia": "se inicia CVVH por hiperkalemia y oliguria",
+                    },
+                    "antimicrobianos": [
+                        {
+                            "farmaco": "imipenem",
+                            "dosis": "500 mg cada 6 h",
+                            "dia_tratamiento": 1,
+                            "indicacion": "necrosis pancreática infectada",
+                            "accion": "inicio",
+                            "evidencia": "se inicia imipenem",
+                        }
+                    ],
+                },
+            ),
+            (
+                "Diego",
+                "medico",
+                ("Traumatismo craneoencefálico grave", "S06.9"),
+                ("VMI", 97),
+                {
+                    "sedoanalgesia_neuro": {
+                        "rass_actual": -4,
+                        "rass_objetivo": -4,
+                        "glasgow": 6,
+                        "pupilas": "isocóricas reactivas",
+                        "focalidad": "sin focalidad evidente",
+                    },
+                    "balance_hidrico": {
+                        "periodo_horas": 24,
+                        "diuresis_ml": 1700,
+                        "balance_ml": -300,
+                        "balance_acumulado_ml": 400,
+                        "evidencia": "balance levemente negativo con osmoterapia",
+                    },
+                },
+            ),
+        ]
+        for name, who, dx, (resp, sat), extra in plan:
+            patient = patients[name]
+            if self._recorded(patient, marker):
+                continue
+            self._saved(
+                staff[who],
+                patient,
+                "medico",
+                hours_ago=1.2,
+                data=medico(patient.bed, 6, dx=dx, summary=marker, resp=resp, sat=sat, extra=extra),
+            )
+
+    def _nutrition_records(self, patients, staff) -> None:
+        """Informes de nutrición: estado nutricional, requerimientos, soporte y recomendaciones."""
+        nutritionist = staff["nutricionista"]
+        plan = [
+            (
+                "Marta",
+                {
+                    "valoracion_nutricional": _nutrition_status(
+                        "riesgo de desnutrición", 72, 165, 26.4, "NUTRIC alto"
+                    ),
+                    "requerimientos": _requirements(1800, 1.5),
+                    "nutricion": _feeding("SNG", "polimérica hiperproteica", 40, 1800, 900, 60),
+                    "recomendaciones_equipo": [
+                        _advice("Avanzar nutrición enteral hasta alcanzar la meta calórica", "48 h")
+                    ],
+                },
+            ),
+            (
+                "Hugo",
+                {
+                    "valoracion_nutricional": _nutrition_status(
+                        "desnutrición moderada", 64, 172, 21.6, "NUTRIC alto"
+                    ),
+                    "requerimientos": _requirements(1900, 1.8),
+                    "nutricion": _feeding(
+                        "parenteral", "nutrición parenteral total", 60, 1900, 1500, None
+                    ),
+                    "recomendaciones_equipo": [
+                        _advice("Reevaluar vía enteral distal al píloro si baja el dolor", "72 h"),
+                        _advice(
+                            "Controlar triglicéridos y glicemia con la nutrición parenteral",
+                            "diario",
+                        ),
+                    ],
+                },
+            ),
+            (
+                "Diego",
+                {
+                    "valoracion_nutricional": _nutrition_status(
+                        "eutrófico", 80, 178, 25.2, "NUTRIC bajo"
+                    ),
+                    "requerimientos": _requirements(2200, 1.5),
+                    "nutricion": _feeding("SNG", "polimérica estándar", 70, 2200, 1500, 20),
+                    "recomendaciones_equipo": [
+                        _advice("Mantener cabecera a 30° durante la infusión enteral", "continuo")
+                    ],
+                },
+            ),
+        ]
+        for name, extra in plan:
+            patient = patients[name]
+            if Report.objects.filter(patient=patient, author=nutritionist).exists():
+                continue
+            data = {
+                "metadatos": meta("nutricionista", "Nut. Parra", patient.bed, 4),
+                "resumen_24h": None,
+                **extra,
+            }
+            self._saved(nutritionist, patient, "nutricionista", hours_ago=0.9, data=data)
 
     def _evidence(self, patients, staff) -> None:
         """Exámenes de los pacientes (además de los dictados); idempotente por paciente."""
@@ -744,10 +1066,13 @@ def medico(
     indications: list | None = None,
     goals: list | None = None,
     exams: list | None = None,
+    extra: dict | None = None,
+    let: str = "",
 ) -> dict:
     """Dictado de un médico de UCI con las secciones que usa la demo."""
-    return {
+    data = {
         "metadatos": meta("medico", "", bed, day),
+        "ingreso": {"limitacion_esfuerzo_terapeutico": let} if let else {},
         "resumen_24h": summary,
         "diagnosticos": [
             {
@@ -769,3 +1094,41 @@ def medico(
         "metas_del_dia": goals or [],
         "examenes": exams or [],
     }
+    data.update(extra or {})
+    return data
+
+
+def _nutrition_status(state: str, weight: float, height: float, bmi: float, risk: str) -> dict:
+    return {
+        "estado_nutricional": state,
+        "peso_kg": weight,
+        "talla_cm": height,
+        "imc": bmi,
+        "riesgo_nutricional": risk,
+        "evidencia": f"{state}, {risk}",
+    }
+
+
+def _requirements(kcal: int, protein: float) -> dict:
+    return {
+        "kcal_dia": kcal,
+        "proteinas_g_kg": protein,
+        "evidencia": f"meta {kcal} kcal y {protein} g/kg de proteína",
+    }
+
+
+def _feeding(via, formula, rate, goal, intake, residual) -> dict:
+    return {
+        "via": via,
+        "formula": formula,
+        "velocidad_ml_h": rate,
+        "meta_kcal": goal,
+        "aporte_kcal": intake,
+        "tolerancia": "buena" if residual is not None else "sin complicaciones",
+        "residuo_gastrico_ml": residual,
+        "evidencia": f"{formula} por {via} a {rate} ml/h",
+    }
+
+
+def _advice(text: str, deadline: str) -> dict:
+    return {**task(text, deadline), "responsable_sugerido": "medico"}

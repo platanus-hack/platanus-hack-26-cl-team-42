@@ -24,6 +24,7 @@ class ClinicalTemplate(models.Model):
         ENFERMERIA = "enfermeria", _("Nurse")
         TENS = "tens", _("Nursing technician (TENS)")
         KINESIOLOGIA = "kinesiologia", _("Physiotherapist")
+        NUTRICIONISTA = "nutricionista", _("Nutritionist")
 
     slug = models.SlugField(max_length=64)
     name = models.CharField(max_length=255)

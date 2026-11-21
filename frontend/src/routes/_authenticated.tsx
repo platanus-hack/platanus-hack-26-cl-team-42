@@ -1,6 +1,7 @@
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { AppHeader } from "../components/AppHeader";
 import { BottomNav } from "../components/BottomNav";
+import { AssistantDrawer } from "../modules/reports/AssistantPanel";
 import { useAuth } from "../services/auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -20,10 +21,13 @@ function AuthenticatedContent() {
 
   return (
     <>
-      <AppHeader userEmail={session?.email || ""} />
-      <main className="app-main">
-        <Outlet />
-      </main>
+      <div className="app-shell">
+        <AppHeader userEmail={session?.email || ""} />
+        <main className="app-main">
+          <Outlet />
+        </main>
+      </div>
+      <AssistantDrawer />
       <BottomNav />
     </>
   );

@@ -7,6 +7,7 @@ export const PROFESSIONS = [
   { value: "enfermeria", label: "Enfermería" },
   { value: "tens", label: "TENS" },
   { value: "kinesiologia", label: "Kinesiología" },
+  { value: "nutricionista", label: "Nutrición" },
 ] as const;
 
 export type Profession = (typeof PROFESSIONS)[number]["value"];
