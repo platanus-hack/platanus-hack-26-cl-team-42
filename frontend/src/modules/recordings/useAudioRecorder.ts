@@ -137,7 +137,7 @@ class RecordingSession {
   private readonly analyser: AnalyserNode | null;
   private readonly samples: Uint8Array<ArrayBuffer>;
   private accumulatedMs = 0;
-  private resumedAt = performance.now();
+  private resumedAt: number | null = null;
   private timer: number;
   private frame = 0;
   private discarded = false;
@@ -157,6 +157,7 @@ class RecordingSession {
     this.recorder.onstop = () => this.finish();
     // Fragmentos de 1 s: si algo falla a mitad, lo grabado sigue en memoria.
     this.recorder.start(1000);
+    this.resumedAt = performance.now();
 
     this.audioContext = typeof AudioContext !== "undefined" ? new AudioContext() : null;
     this.analyser = this.audioContext?.createAnalyser() ?? null;
@@ -173,17 +174,19 @@ class RecordingSession {
   pause() {
     if (this.recorder.state !== "recording") return;
     this.recorder.pause();
-    this.accumulatedMs += performance.now() - this.resumedAt;
+    this.freezeElapsedTime();
   }
 
   resume() {
     if (this.recorder.state !== "paused") return;
-    this.resumedAt = performance.now();
     this.recorder.resume();
+    this.resumedAt = performance.now();
   }
 
   stop() {
-    if (this.recorder.state !== "inactive") this.recorder.stop();
+    if (this.recorder.state === "inactive") return;
+    this.freezeElapsedTime();
+    this.recorder.stop();
   }
 
   discard() {
@@ -192,8 +195,13 @@ class RecordingSession {
     this.release();
   }
 
+  private freezeElapsedTime() {
+    this.accumulatedMs = this.elapsedMs();
+    this.resumedAt = null;
+  }
+
   private elapsedMs() {
-    const running = this.recorder.state === "recording" ? performance.now() - this.resumedAt : 0;
+    const running = this.resumedAt === null ? 0 : performance.now() - this.resumedAt;
     return this.accumulatedMs + running;
   }
 
