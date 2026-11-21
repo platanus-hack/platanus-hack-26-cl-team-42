@@ -7,10 +7,12 @@ import { ArrowIcon, StepIcon } from "./icons";
 interface ModulePageProps {
   stepId: WorkflowStepId;
   children: ReactNode;
+  /** El módulo ya habla con su backend: oculta la insignia «Sin conexión». */
+  connected?: boolean;
 }
 
 /** Marco común de los módulos: encabezado del paso, contenido y navegación del flujo. */
-export function ModulePage({ stepId, children }: ModulePageProps) {
+export function ModulePage({ stepId, children, connected = false }: ModulePageProps) {
   const { index, step, previous, next } = getWorkflowStep(stepId);
 
   return (
@@ -30,11 +32,13 @@ export function ModulePage({ stepId, children }: ModulePageProps) {
               <Heading size="7" style={{ letterSpacing: "-0.01em" }}>
                 {step.label}
               </Heading>
-              <Tooltip content="Los controles se habilitarán al conectar el backend de este módulo.">
-                <Badge color="gray" variant="surface" radius="full">
-                  Sin conexión
-                </Badge>
-              </Tooltip>
+              {!connected && (
+                <Tooltip content="Los controles se habilitarán al conectar el backend de este módulo.">
+                  <Badge color="gray" variant="surface" radius="full">
+                    Sin conexión
+                  </Badge>
+                </Tooltip>
+              )}
             </Flex>
             <Text color="gray" size="3">
               {step.summary}

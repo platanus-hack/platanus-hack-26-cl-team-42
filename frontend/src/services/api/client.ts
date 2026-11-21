@@ -31,18 +31,38 @@ export class NotConnectedError extends Error {
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Con FormData el navegador fija el Content-Type (multipart + boundary).
+  const isForm = init.body instanceof FormData;
   const response = await fetch(
-    `${API_PREFIX}${path}`,
+    apiUrl(path),
     withLanguage({
       ...init,
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+      headers: { ...(isForm ? {} : { "Content-Type": "application/json" }), ...(init.headers ?? {}) },
     }),
   );
   if (!response.ok) {
-    throw new ApiError(response.status, `${response.status} ${response.statusText}`);
+    throw new ApiError(response.status, await errorMessage(response));
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
   return (await response.json()) as T;
+}
+
+/** URL absoluta (mismo origen) de un recurso de la API, p. ej. para `<audio src>`. */
+export function apiUrl(path: string): string {
+  return `${API_PREFIX}${path}`;
+}
+
+async function errorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") return body.detail;
+  } catch {
+    // Cuerpo vacío o no JSON: usar el estado HTTP.
+  }
+  return `${response.status} ${response.statusText}`;
 }
 
 /** Operación de un adaptador sin backend: falla de forma explícita y visible. */

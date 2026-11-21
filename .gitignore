@@ -5,3 +5,6 @@ tmpl/tmp/*
 # >>> bundle (managed — do not edit by hand) >>>
 bundle.manifest
 # <<< bundle (managed) <<<>
+
+# Uploaded files (audio dictations are clinical data — never commit them)
+backend/apps/media/
