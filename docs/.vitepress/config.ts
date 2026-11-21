@@ -6,8 +6,8 @@ import { defineConfig } from "vitepress";
 // site root (which the ingress routes to the frontend).
 export default defineConfig({
   base: "/-docs/",
-  title: "multiplayer-medico",
-  description: "multiplayer-medico documentation",
+  title: "Dendrita",
+  description: "Dendrita documentation",
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },

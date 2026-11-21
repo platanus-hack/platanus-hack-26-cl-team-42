@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "multiplayer-medico"
+  name: "Dendrita"
   text: "Documentation"
   tagline: User documentation and development guides.
   actions:

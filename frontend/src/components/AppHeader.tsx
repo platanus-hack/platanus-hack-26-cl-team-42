@@ -19,10 +19,10 @@ export function AppHeader({ userEmail }: { userEmail: string }) {
   return (
     <header className="app-header">
       <Flex asChild align="center" gap="2" className="app-header__brand">
-        <Link to="/" style={{ textDecoration: "none", color: "inherit" }} aria-label="Mis pacientes">
+        <Link to="/" style={{ textDecoration: "none", color: "inherit" }} aria-label="Dendrita – Mis pacientes">
           <img src="/logo.png" className="brand-mark" alt="" aria-hidden="true" />
           <Text size="3" weight="bold">
-            Flujo médico
+            Dendrita
           </Text>
         </Link>
       </Flex>
