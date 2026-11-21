@@ -31,8 +31,17 @@ class TransformersChatModel:
 class OpenAICompatibleChatModel:
     """Cualquier endpoint compatible con OpenAI (router de Hugging Face, Ollama, vLLM…)."""
 
-    def __init__(self, name: str, base_url: str, model_id: str, api_key: str, timeout: int = 120):
+    def __init__(
+        self,
+        name: str,
+        base_url: str,
+        model_id: str,
+        api_key: str,
+        timeout: int = 180,
+        max_tokens: int = 4096,
+    ):
         self.name = name
+        self.max_tokens = max_tokens
         self.base_url = base_url.rstrip("/")
         self.model_id = model_id
         self.api_key = api_key
@@ -46,6 +55,7 @@ class OpenAICompatibleChatModel:
                 json={
                     "model": self.model_id,
                     "messages": [message.model_dump() for message in messages],
+                    "max_tokens": self.max_tokens,
                 },
                 timeout=self.timeout,
             )

@@ -38,6 +38,7 @@ services:
       - ../backend:/app
     environment:
       - DJANGO_FRONTEND_URL=http://localhost:3000
+      - HF_TOKEN=${HF_TOKEN:-}
     env_file:
       - ./conf/${LOCAL_ENV:-default}
     labels:
@@ -143,5 +144,6 @@ services:
       - ../backend:/app
     environment:
       - DJANGO_FRONTEND_URL=http://localhost:3000
+      - HF_TOKEN=${HF_TOKEN:-}
     env_file:
       - ./conf/${LOCAL_ENV:-default}

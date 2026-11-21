@@ -1,39 +1,62 @@
-"""Extracción de información estructurada desde transcripciones usando Qwen + templates."""
+"""Extracción de registros clínicos estructurados desde transcripciones con Qwen.
+
+Flujo: transcripción lista + plantilla elegida -> ``ExtractedRecord`` pendiente y
+tarea de Celery -> Qwen responde un JSON según el schema de la plantilla -> se
+valida (con un reintento que le devuelve los errores al modelo) -> se guarda.
+"""
 
 import json
 import logging
+from datetime import datetime
 from typing import Any
 
-from apps.agent.llm import ChatMessage, ModelError
-from apps.agent.registry import get_chat_model
+from django.db import transaction
+from pydantic import BaseModel
+
+from apps.agent.llm import ChatMessage, ChatModel, ModelError
+from apps.agent.registry import available_models, get_chat_model
 from apps.clinical_templates import services as template_services
-from apps.recordings.models import Recording
+from apps.clinical_templates.models import ClinicalTemplate
 
 from .models import ExtractedRecord, Transcription
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_EXTRACTION_MODEL = "qwen-local"
+API_MODEL_NAME = "qwen-hf"
+LOCAL_MODEL_NAME = "qwen-local"
+MAX_ATTEMPTS = 2
+MAX_ISSUES_IN_FEEDBACK = 10
 
 
-def request_extraction(recording: Recording, template_slug: str) -> ExtractedRecord | None:
-    """Encola la extracción de información para una grabación.
+class ExtractionOut(BaseModel):
+    """Registro extraído con los datos de su transcripción (formato del frontend)."""
 
-    Solo crea ExtractedRecord si la transcripción existe y está completa.
+    id: str
+    transcriptId: str
+    recordingId: str
+    templateSlug: str
+    templateName: str
+    status: str
+    data: dict[str, Any] | None
+    error: str
+    updated_at: datetime
+
+
+class ExtractionError(ValueError):
+    """No se pudo pedir la extracción (transcripción no lista o plantilla inexistente)."""
+
+
+def request_extraction(transcription: Transcription, template_slug: str) -> ExtractedRecord:
+    """Deja el registro en *pendiente* y lo encola al confirmar la transacción.
+
+    Sirve tanto para la primera extracción como para repetirla con otra plantilla.
     """
-    try:
-        transcription = recording.transcription
-    except Transcription.DoesNotExist:
-        return None
-
-    if transcription.status != Transcription.Status.DONE:
-        return None
-
+    if transcription.status != Transcription.Status.DONE or not transcription.text.strip():
+        raise ExtractionError("La transcripción aún no está lista.")
     try:
         template = template_services.get_active_template(template_slug)
-    except Exception as error:
-        logger.error(f"Template not found: {template_slug}: {error}")
-        return None
+    except ClinicalTemplate.DoesNotExist as error:
+        raise ExtractionError(f"No existe la plantilla '{template_slug}'.") from error
 
     record, _ = ExtractedRecord.objects.update_or_create(
         transcription=transcription,
@@ -44,89 +67,117 @@ def request_extraction(recording: Recording, template_slug: str) -> ExtractedRec
             "error": "",
         },
     )
-    # Encolar tarea después de confirmar transacción
-    from django.db import transaction
     transaction.on_commit(lambda: _enqueue(record.id))
     return record
 
 
 def run_extraction(record_id: int) -> str:
-    """Extrae información estructurada de una transcripción (lo ejecuta el worker)."""
+    """Extrae el registro estructurado de la transcripción (lo ejecuta el worker)."""
     record = ExtractedRecord.objects.select_related("transcription", "template").get(pk=record_id)
-
     if record.status == ExtractedRecord.Status.DONE:
         return record.status
-
     record.status = ExtractedRecord.Status.PROCESSING
     record.save(update_fields=["status", "updated_at"])
-
     try:
-        text = record.transcription.text
-        if not text:
-            raise ValueError("Transcripción vacía")
-
-        extracted = _extract_with_qwen(
-            text,
-            record.template.output_schema,
-            record.template.llm_instructions,
-        )
-
-        # Validar contra schema
-        issues = template_services.validate_record(record.template, extracted)
-        if issues:
-            error_msg = "; ".join(f"{issue.path}: {issue.message}" for issue in issues[:3])
-            raise ValueError(f"Validación fallida: {error_msg}")
-
-        record.status = ExtractedRecord.Status.DONE
-        record.data = extracted
-        record.error = ""
+        record.data = _extract(record.transcription.text, record.template)
     except Exception as error:
-        logger.exception("Extracción falló para record %s", record_id)
+        logger.exception("Falló la extracción %s", record_id)
         record.status = ExtractedRecord.Status.FAILED
         record.error = str(error)[:500]
-
+    else:
+        record.status = ExtractedRecord.Status.DONE
+        record.error = ""
     record.save(update_fields=["status", "data", "error", "updated_at"])
     return record.status
 
 
-def _extract_with_qwen(
-    transcript: str,
-    output_schema: dict[str, Any],
-    instructions: str,
-) -> dict[str, Any]:
-    """Usa Qwen para extraer información estructurada del transcript."""
-    model = get_chat_model(DEFAULT_EXTRACTION_MODEL)
+def list_extractions(professional) -> list[ExtractionOut]:
+    """Registros extraídos de los dictados del profesional, más recientes primero."""
+    records = (
+        ExtractedRecord.objects.filter(transcription__recording__professional=professional)
+        .select_related("transcription__recording", "template")
+        .order_by("-updated_at")
+    )
+    return [to_out(record) for record in records]
 
-    prompt = f"""{instructions}
 
-Transcript a procesar:
-{transcript}
+def to_out(record: ExtractedRecord) -> ExtractionOut:
+    return ExtractionOut(
+        id=str(record.id),
+        transcriptId=str(record.transcription_id),
+        recordingId=str(record.transcription.recording_id),
+        templateSlug=record.template.slug,
+        templateName=record.template.name,
+        status=record.status,
+        data=record.data,
+        error=record.error,
+        updated_at=record.updated_at,
+    )
 
-Responde SIEMPRE como JSON válido que siga exactamente el schema JSON proporcionado."""
 
+def _extract(transcript: str, template: ClinicalTemplate) -> dict[str, Any]:
+    model = _extraction_model()
     messages = [
-        ChatMessage(role="system", content=json.dumps(output_schema)),
-        ChatMessage(role="user", content=prompt),
+        ChatMessage(role="system", content=_system_prompt(template)),
+        ChatMessage(role="user", content=f"Transcripción del dictado:\n\n{transcript}"),
     ]
+    issues: list[template_services.ValidationIssue] = []
+    for _ in range(MAX_ATTEMPTS):
+        try:
+            reply = model.complete(messages)
+        except ModelError as error:
+            raise ValueError(f"Error del modelo: {error}") from error
+        messages.append(ChatMessage(role="assistant", content=reply))
 
-    try:
-        response = model.complete(messages)
-    except ModelError as error:
-        raise ValueError(f"Error del modelo: {error}") from error
+        record = _parse_json_object(reply)
+        if record is None:
+            messages.append(
+                ChatMessage(role="user", content="Respuesta no válida. Responde solo con el JSON.")
+            )
+            issues = [template_services.ValidationIssue(path="$", message="La respuesta no es JSON")]
+            continue
+        issues = template_services.validate_record(template, record)
+        if not issues:
+            return record
+        feedback = "\n".join(f"- {i.path}: {i.message}" for i in issues[:MAX_ISSUES_IN_FEEDBACK])
+        messages.append(
+            ChatMessage(
+                role="user",
+                content=f"El JSON no cumple el schema:\n{feedback}\nCorrígelo y responde solo con el JSON.",
+            )
+        )
+    summary = "; ".join(f"{i.path}: {i.message}" for i in issues[:3])
+    raise ValueError(f"El modelo no produjo un registro válido. {summary}")
 
-    # Parsear JSON de la respuesta
+
+def _extraction_model() -> ChatModel:
+    """Qwen por API si está configurado; si no, el Qwen local (mucho menos fiable)."""
+    name = API_MODEL_NAME if API_MODEL_NAME in available_models() else LOCAL_MODEL_NAME
+    return get_chat_model(name)
+
+
+def _system_prompt(template: ClinicalTemplate) -> str:
+    schema = json.dumps(template.output_schema, ensure_ascii=False)
+    return (
+        f"{template.llm_instructions}\n\n"
+        "Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional ni bloques de código) "
+        f"que cumpla exactamente este JSON Schema:\n{schema}"
+    )
+
+
+def _parse_json_object(reply: str) -> dict[str, Any] | None:
+    start, end = reply.find("{"), reply.rfind("}")
+    if start == -1 or end <= start:
+        return None
     try:
-        # Buscar JSON dentro de la respuesta
-        start, end = response.find("{"), response.rfind("}")
-        if start == -1 or end <= start:
-            raise ValueError(f"No se encontró JSON en respuesta: {response[:100]}")
-        extracted = json.loads(response[start:end+1])
-        return extracted if isinstance(extracted, dict) else {}
-    except (json.JSONDecodeError, ValueError) as error:
-        raise ValueError(f"JSON inválido en respuesta: {error}") from error
+        parsed = json.loads(reply[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _enqueue(record_id: int) -> None:
-    # Import diferido: tasks importa este módulo
+    # Import diferido: tasks importa este módulo.
     from .tasks import extract_record_information
+
     extract_record_information.delay(record_id)
