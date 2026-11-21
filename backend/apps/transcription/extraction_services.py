@@ -7,6 +7,7 @@ valida (con un reintento que le devuelve los errores al modelo) -> se guarda.
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any
 
@@ -14,7 +15,7 @@ from django.db import transaction
 from pydantic import BaseModel
 
 from apps.agent.llm import ChatMessage, ChatModel, ModelError
-from apps.agent.registry import available_models, get_chat_model
+from apps.agent.registry import get_chat_model
 from apps.clinical_templates import services as template_services
 from apps.clinical_templates.models import ClinicalTemplate
 from apps.recordings.models import Recording
@@ -23,8 +24,10 @@ from .models import ExtractedRecord, Transcription
 
 logger = logging.getLogger(__name__)
 
-API_MODEL_NAME = "qwen-hf"
-LOCAL_MODEL_NAME = "qwen-local"
+# Qwen por API (qwen-hf) si hay HF_TOKEN; si no, el Qwen local. EXTRACTION_MODEL fuerza uno.
+EXTRACTION_MODEL = os.environ.get("EXTRACTION_MODEL") or (
+    "qwen-hf" if os.environ.get("HF_TOKEN") else "qwen-local"
+)
 MAX_ATTEMPTS = 2
 MAX_ISSUES_IN_FEEDBACK = 10
 
@@ -174,9 +177,7 @@ def _extract(transcription: Transcription, template: ClinicalTemplate) -> dict[s
 
 
 def _extraction_model() -> ChatModel:
-    """Qwen por API si está configurado; si no, el Qwen local (mucho menos fiable)."""
-    name = API_MODEL_NAME if API_MODEL_NAME in available_models() else LOCAL_MODEL_NAME
-    return get_chat_model(name)
+    return get_chat_model(EXTRACTION_MODEL)
 
 
 def _system_prompt(template: ClinicalTemplate) -> str:
