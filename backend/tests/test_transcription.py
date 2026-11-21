@@ -1,5 +1,8 @@
 """Unit tests for the transcription module and its link with recordings."""
 
+import hashlib
+import io
+import json
 import subprocess
 from io import StringIO
 from pathlib import Path
@@ -206,3 +209,30 @@ def test_load_sample_audio_command_transcribes_for_the_user(doctor):
     transcription = Transcription.objects.get(recording__professional=doctor)
     assert transcription.status == Transcription.Status.DONE
     assert "ejemplo" in stdout.getvalue()
+
+
+def test_known_audio_is_transcribed_from_the_cache_without_loading_whisper(tmp_path):
+    audio = b"audio de demo"
+    cache = tmp_path / "transcripts.json"
+    digest = hashlib.sha256(audio).hexdigest()
+    cache.write_text(json.dumps({digest: {"file": "demo.wav", "text": "texto conocido"}}))
+
+    with (
+        patch.object(services, "TRANSCRIPT_CACHE_PATH", cache),
+        patch.object(services, "_get_transcriber") as get_transcriber,
+    ):
+        assert services.transcribe(io.BytesIO(audio)) == "texto conocido"
+
+    get_transcriber.assert_not_called()
+
+
+def test_unknown_audio_still_goes_through_whisper(tmp_path):
+    cache = tmp_path / "transcripts.json"
+    cache.write_text("{}")
+    fake = FakeTranscriber("hola")
+
+    with (
+        patch.object(services, "TRANSCRIPT_CACHE_PATH", cache),
+        patch.object(services, "_get_transcriber", return_value=fake),
+    ):
+        assert services.transcribe(SAMPLE_AUDIO) == "hola"

@@ -136,7 +136,7 @@ services:
     command: >
       watchmedo auto-restart --directory=/app --pattern=*.py --recursive
       --signal SIGTERM --debounce-interval 1 --
-      celery -A conf worker --loglevel=info --concurrency=2
+      celery -A conf worker --loglevel=info --concurrency=1
     depends_on:
       postgres:
         condition: service_healthy
