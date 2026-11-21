@@ -165,9 +165,10 @@ def test_run_endpoint_returns_404_for_unknown_model(settings):
 
 
 @pytest.mark.django_db
-def test_project_tool_lists_transcriptions():
+def test_project_tool_lists_only_the_professionals_transcriptions():
     from apps.agent.tools import project_tools
 
-    [tool] = [t for t in project_tools() if t.name == "listar_transcripciones"]
+    professional = get_user_model().objects.create_user(email="tool@example.com", password="pw")
+    [tool] = [t for t in project_tools(professional) if t.name == "listar_transcripciones"]
 
     assert tool.run() == []

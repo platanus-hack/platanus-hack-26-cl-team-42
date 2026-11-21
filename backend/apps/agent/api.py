@@ -25,7 +25,7 @@ def list_models(request):
 def run(request, payload: RunAgentIn):
     try:
         model = get_chat_model(payload.model or DEFAULT_MODEL_NAME)
-        return run_agent(payload.task, model, project_tools())
+        return run_agent(payload.task, model, project_tools(request.user))
     except UnknownModelError as error:
         raise HttpError(404, str(error)) from error
     except AgentError as error:
