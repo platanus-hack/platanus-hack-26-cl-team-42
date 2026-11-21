@@ -72,6 +72,9 @@ function resolvedCount(reconciliation: Reconciliation): number {
 
 function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliation }) {
   const resolved = reconciliation.status === "resolved";
+  const participatesInOpenConflict = reconciliation.conflicts.some(
+    (conflict) => conflict.status === "open" && conflict.myRole !== null,
+  );
   return (
     <Flex direction="column" gap="3" style={{ minWidth: 0 }}>
       <Card>
@@ -89,11 +92,11 @@ function ReconciliationDetail({ reconciliation }: { reconciliation: Reconciliati
           <Text size="2">
             Participan: <strong>{reconciliation.participants.join(" y ")}</strong>
           </Text>
-          {!resolved && !reconciliation.conflicts.some((conflict) => conflict.myRole !== null) && (
+          {!resolved && !participatesInOpenConflict && (
             <Callout.Root color="gray" size="1">
               <Callout.Text>
-                Lo ves en solo lectura porque el paciente está asignado a ti, pero no participas: solo resuelven quienes
-                reportaron. Cámbiate a una de esas cuentas para actuar.
+                Puedes consultar los conflictos abiertos porque el paciente está asignado a tu cuenta. La resolución
+                corresponde a los profesionales que reportaron los datos en disputa y están de turno.
               </Callout.Text>
             </Callout.Root>
           )}

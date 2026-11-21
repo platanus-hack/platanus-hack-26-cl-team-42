@@ -27,8 +27,9 @@ export function DemoAccountSwitcher() {
   if (accounts.length === 0) return null;
   return (
     <>
+      <Separator size="4" />
       <Text size="1" color="gray" weight="medium">
-        Cambiar de usuario (demo)
+        Desarrollo · Cuentas de prueba
       </Text>
       <Flex direction="column" gap="1">
         {accounts.map((account) => (
@@ -55,7 +56,6 @@ export function DemoAccountSwitcher() {
           </Button>
         ))}
       </Flex>
-      <Separator size="4" />
     </>
   );
 }

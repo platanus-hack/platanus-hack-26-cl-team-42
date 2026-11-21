@@ -6,9 +6,9 @@ import { professionLabel } from "../recordings/professions";
 import { ComplementDialog } from "../templates/ComplementDialog";
 import { sectionLabel } from "../templates/recordFields";
 import { useTemplate } from "../templates/api";
-import { reportTitle } from "./format";
+import { reportTitle, sectionAnchor } from "./format";
 import { pendingSections } from "./pending";
-import { SectionBlock, sectionAnchor } from "./SectionBlock";
+import { SectionBlock } from "./SectionBlock";
 import { ValidationWizard } from "./ValidationWizard";
 import type { Homologation, Report } from "./api";
 

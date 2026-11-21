@@ -10,6 +10,7 @@ VITE_PROXY_BACKEND_URL=http://backend:8000
 # With DEBUG, runserver serves static straight from the staticfiles finders, so
 # the Django admin's assets load in dev without a collectstatic/manifest build.
 DJANGO_DEBUG=True
+DJANGO_DEMO_ACCOUNT_SWITCH_ENABLED=True
 DJANGO_SECRET_KEY=django-insecure-tryqw*8!=w%5%x7$)(st1h4aya*a#4-0$)0(5r6n(l$!v_y=jl
 DJANGO_ALLOWED_HOSTS=*
 # The stack is served over HTTPS at <project>.orb.local by OrbStack/Traefik.

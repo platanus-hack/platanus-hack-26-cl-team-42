@@ -564,9 +564,13 @@ def test_demo_audios_tell_the_conflict_story_offline(monkeypatch, doctor, nurse,
     assert clean.consolidation == Report.Consolidation.MERGED
 
 
-def test_the_patient_team_sees_the_reconciliation_read_only(doctor, nurse, patient):
-    bystander = User.objects.create_user(email="otro@localhost", password="pw")
+@pytest.mark.parametrize("is_admin", [False, True])
+def test_the_patient_team_sees_the_reconciliation_read_only(doctor, nurse, patient, is_admin):
+    bystander = User.objects.create_user(
+        email="otro@localhost", password="pw", is_staff=is_admin, is_superuser=is_admin
+    )
     patient.assigned_to.add(bystander)
+    shifts.start_shift(bystander)
     _save_report(doctor, patient, "medico", _base_data())
     _save_report(nurse, patient, "enfermeria", _nurse_data())
     client = Client()

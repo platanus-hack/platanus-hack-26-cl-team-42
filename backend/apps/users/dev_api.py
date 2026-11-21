@@ -1,8 +1,4 @@
-"""Cambio rápido entre cuentas de demo, solo en desarrollo (``DEBUG``), montado en ``/-/api/dev``.
-
-Sirve para probar flujos entre varios profesionales (p. ej. un conflicto entre dos informes)
-sin cerrar sesión y volver a entrar. Solo permite cuentas de demo (correo ``@localhost``).
-"""
+"""Cambio rápido entre cuentas de prueba en entornos de desarrollo habilitados."""
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
@@ -27,10 +23,9 @@ class SwitchIn(Schema):
 
 @router.get("/accounts", response=list[DemoAccount])
 def list_demo_accounts(request):
-    """Cuentas de demo disponibles para cambiar de usuario (vacío fuera de desarrollo)."""
-    if not settings.DEBUG:
+    """Cuentas de prueba disponibles en esta sesión."""
+    if not _can_switch(request.user):
         return []
-    users = get_user_model().objects.filter(email__endswith=DEMO_DOMAIN, is_active=True)
     return [
         DemoAccount(
             email=user.email,
@@ -38,23 +33,31 @@ def list_demo_accounts(request):
             profession=user.profession,
             current=user.pk == request.user.pk,
         )
-        for user in users.order_by("id")
+        for user in _demo_accounts().order_by("id")
     ]
 
 
 @router.post("/switch", response=DemoAccount)
 def switch_demo_account(request, data: SwitchIn):
-    """Inicia sesión como otra cuenta de demo (sin clave), solo con ``DEBUG``."""
-    if not settings.DEBUG:
+    """Inicia sesión como una cuenta de prueba sin acceso administrativo."""
+    if not _can_switch(request.user):
         raise HttpError(404, "No disponible.")
-    user = (
-        get_user_model()
-        .objects.filter(
-            email__iexact=data.email.strip(), email__endswith=DEMO_DOMAIN, is_active=True
-        )
-        .first()
-    )
+    user = _demo_accounts().filter(email__iexact=data.email.strip()).first()
     if user is None:
         raise HttpError(404, "No existe esa cuenta de demo.")
     login(request, user, backend=LOGIN_BACKEND)
     return DemoAccount(email=user.email, name=user.name, profession=user.profession, current=True)
+
+
+def _can_switch(user) -> bool:
+    return (
+        settings.DEBUG
+        and settings.DEMO_ACCOUNT_SWITCH_ENABLED
+        and user.email.casefold().endswith(DEMO_DOMAIN)
+    )
+
+
+def _demo_accounts():
+    return get_user_model().objects.filter(
+        email__iendswith=DEMO_DOMAIN, is_active=True, is_staff=False, is_superuser=False
+    )

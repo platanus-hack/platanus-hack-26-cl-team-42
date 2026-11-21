@@ -228,7 +228,7 @@ class ReplyIn(Schema):
 
 @router.get("/reconciliations", response=list[reconciliation_services.ReconciliationOut])
 def list_user_reconciliations(request):
-    """Reconciliaciones en las que participas (tu informe chocó con otro, o el otro con el tuyo)."""
+    """Reconciliaciones de los pacientes asignados a tu cuenta."""
     return reconciliation_services.list_reconciliations(request.user)
 
 
