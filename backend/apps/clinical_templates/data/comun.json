@@ -97,7 +97,8 @@
             "especialista",
             "enfermeria",
             "tens",
-            "kinesiologia"
+            "kinesiologia",
+            "nutricionista"
           ],
           "description": "Tipo de profesional que realiza el registro (fijo por plantilla)."
         },

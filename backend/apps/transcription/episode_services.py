@@ -36,6 +36,7 @@ PROFESSION_ROLE = {
     "enfermeria": "Enfermería",
     "tens": "TENS",
     "kinesiologia": "Kinesiología",
+    "nutricionista": "Nutrición",
 }
 DISCIPLINE = {
     "medico": "medicine",
@@ -43,6 +44,7 @@ DISCIPLINE = {
     "enfermeria": "nursing",
     "tens": "nursing",
     "kinesiologia": "kinesiology",
+    "nutricionista": "nutrition",
 }
 DEFAULT_DISCIPLINE = "medicine"
 

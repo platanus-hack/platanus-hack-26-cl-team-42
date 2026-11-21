@@ -1,0 +1,69 @@
+{
+  "respuesta": "Paciente con **TCE grave** confirmado, en **ventilación mecánica invasiva** y sedación profunda, con **presión intracraneana controlada**; día 6 de estada en UCI (Box 14).\n\n## Diagnóstico e imágenes\n- **Traumatismo craneoencefálico grave** (CIE-10 **S06.9**), confirmado (INFORME 22 [sección: diagnosticos]).\n- TAC de cerebro (21/11 09:30): **contusiones frontales bilaterales sin desplazamiento de línea media** (EVIDENCIA 9).\n\n## Neurológico\n- **Hipertensión endocraneana controlada con osmoterapia**; alerta de severidad media (INFORME 19 [sección: alertas]).\n- **RASS -4**: sedación profunda (INFORME 23 [sección: escalas]).\n- Indicado **control de pupilas y escala de Glasgow cada 2 horas** durante el turno (INFORME 22 [sección: pendientes]). No hay valores de Glasgow ni de PIC registrados.\n\n## Respiratorio\n- En **VMI** con **SatO2 97%** (INFORME 23 [sección: control_respiratorio]).\n- **Tubo endotraqueal** orotraqueal (INFORME 19 [sección: dispositivos_invasivos]).\n- Plan: mantener **modo asistido-controlado** hoy y pasar a **presión soporte cuando RASS sea ≥ -2** (48 h) (INFORME 23 [sección: objetivos_terapeuticos]).\n- Prueba de **ventilación espontánea con tubo en T** si cumple criterios y luego evaluar extubación (72 h) (INFORME 23 [sección: objetivos_terapeuticos]).\n\n## Fármacos\n- **Propofol 1,5 mg/kg/h**, sin cambio (INFORME 19 [sección: drogas_infusion]).\n\n## Indicaciones\n- **Cabecera a 30 grados y normotermia** durante el turno (INFORME 19 [sección: indicaciones]).\n- Kinesiterapia respiratoria y movilización pasiva con PIC estable (INFORME 23 [sección: objetivos_terapeuticos]).\n\n## Pendientes\n- **TAC de cerebro de control** mañana a las 08:00 (INFORME 19 [sección: pendientes]).\n- **Reducir sedación** mañana a las 08:00 para evaluar despertar diario (INFORME 23 [sección: recomendaciones_equipo]).\n\nNo hay información de hemodinamia, laboratorio ni otros sistemas en los informes.",
+  "referencias": [
+    {
+      "informe": 22,
+      "seccion": "diagnosticos",
+      "detalle": "Traumatismo craneoencefálico grave, S06.9, confirmado"
+    },
+    {
+      "evidencia": 9,
+      "detalle": "Contusiones frontales bilaterales sin desplazamiento de línea media"
+    },
+    {
+      "informe": 19,
+      "seccion": "alertas",
+      "detalle": "Hipertensión endocraneana controlada con osmoterapia"
+    },
+    {
+      "informe": 23,
+      "seccion": "escalas",
+      "detalle": "RASS -4, sedación profunda"
+    },
+    {
+      "informe": 22,
+      "seccion": "pendientes",
+      "detalle": "Control de pupilas y Glasgow cada 2 horas"
+    },
+    {
+      "informe": 23,
+      "seccion": "control_respiratorio",
+      "detalle": "VMI, saturación O2 97"
+    },
+    {
+      "informe": 19,
+      "seccion": "dispositivos_invasivos",
+      "detalle": "Tubo endotraqueal orotraqueal"
+    },
+    {
+      "informe": 23,
+      "seccion": "objetivos_terapeuticos",
+      "detalle": "Mantener VMI asistido-controlado; presión soporte si RASS >= -2; prueba con tubo en T a 72 h"
+    },
+    {
+      "informe": 19,
+      "seccion": "drogas_infusion",
+      "detalle": "Propofol 1.5 mg/kg/h sin cambio"
+    },
+    {
+      "informe": 19,
+      "seccion": "indicaciones",
+      "detalle": "Cabecera a 30 grados y normotermia"
+    },
+    {
+      "informe": 19,
+      "seccion": "pendientes",
+      "detalle": "TAC de cerebro de control mañana 08:00"
+    },
+    {
+      "informe": 23,
+      "seccion": "recomendaciones_equipo",
+      "detalle": "Reducir sedación para evaluar despertar diario, mañana 08:00"
+    },
+    {
+      "informe": 23,
+      "seccion": "metadatos",
+      "detalle": "Box 14, día de estada UCI 6"
+    }
+  ]
+}

@@ -23,6 +23,7 @@ from apps.transcription.summary_services import (
     patient_overview,
     patient_summary,
 )
+from apps.transcription.trends_services import Trend, patient_trends
 from apps.transcription.triage_services import triage_for
 
 from . import services
@@ -114,6 +115,13 @@ def transfer_patient(request, patient_id: int, data: TransferIn):
 def get_patient_summary(request, patient_id: int):
     patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
     return patient_summary(request.user, patient)
+
+
+@router.get("/{patient_id}/trends", response=list[Trend])
+def get_patient_trends(request, patient_id: int):
+    """Evolución de exámenes y escalas del paciente (series con al menos dos mediciones)."""
+    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
+    return patient_trends(request.user, patient)
 
 
 @router.get("/{patient_id}/overview", response=PatientOverview)

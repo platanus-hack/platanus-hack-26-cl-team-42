@@ -1,0 +1,54 @@
+{
+  "metadatos": {
+    "tipo_profesional": "nutricionista",
+    "nombre_profesional": "Nut. Parra",
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-18T11:30:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [],
+  "control_respiratorio": [],
+  "drogas_infusion": [],
+  "medicamentos": [],
+  "escalas": [],
+  "dispositivos_invasivos": [],
+  "alergias": [],
+  "alertas": [],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": null,
+  "valoracion_nutricional": {
+    "estado_nutricional": "riesgo de desnutrición",
+    "peso_kg": 72,
+    "talla_cm": 170,
+    "imc": 24.9,
+    "riesgo_nutricional": "NUTRIC alto",
+    "evidencia": "riesgo nutricional alto, setenta y dos kilos"
+  },
+  "requerimientos": {
+    "kcal_dia": 1800,
+    "proteinas_g_kg": 1.5,
+    "evidencia": "meta mil ochocientas calorías y uno cinco de proteína"
+  },
+  "nutricion": {
+    "via": "SNG",
+    "formula": "polimérica hiperproteica",
+    "velocidad_ml_h": 50,
+    "meta_kcal": 1800,
+    "aporte_kcal": 1100,
+    "tolerancia": "buena, residuo gástrico bajo",
+    "residuo_gastrico_ml": 40,
+    "evidencia": "por SNG polimérica a cincuenta, tolera bien"
+  },
+  "recomendaciones_equipo": [
+    {
+      "descripcion": "Avanzar la velocidad de la nutrición enteral hasta alcanzar la meta",
+      "plazo": "48 horas",
+      "evidencia": "subir hasta la meta en dos días",
+      "responsable_sugerido": "medico"
+    }
+  ]
+}

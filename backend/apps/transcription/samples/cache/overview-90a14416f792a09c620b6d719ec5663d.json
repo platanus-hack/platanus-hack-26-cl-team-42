@@ -1,0 +1,14 @@
+{
+  "global": "Paciente en día 4 de UCI por shock séptico de foco pulmonar secundario a neumonía grave, en ventilación mecánica invasiva. Evoluciona con requerimiento creciente de noradrenalina (0,25 mcg/kg/min), hipoxemia refractaria (PaFi 120) y SOFA 12, compatible con disfunción multiorgánica severa. Actualmente satura 91-92 %, está en sedación profunda (RASS -3, objetivo -2), con balance acumulado de +4200 ml y nutrición enteral al 50 % de la meta. Recibe meropenem en día 3 y los hemocultivos están pendientes. Queda pendiente controlar gases arteriales en 2 h, evaluar prono hoy, mantener PAM ≥65 mmHg y avanzar la nutrición hasta la meta en 48 h.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de shock séptico de foco pulmonar (CIE-10 J15.9). Alerta de severidad alta por hipoxemia refractaria con PaFi 120.",
+    "Hemodinamia": "Noradrenalina a 0,25 mcg/kg/min con tendencia al aumento.",
+    "Respiratorio": "En ventilación mecánica invasiva con saturación de 91-92 %.",
+    "Neurológico y sedación": "Glasgow 8 y RASS -3, que corresponde a sedación profunda, con objetivo RASS -2. SOFA 12, compatible con disfunción multiorgánica severa.",
+    "Renal y balance hídrico": "Balance de +1800 ml en 24 h con diuresis de 900 ml. Balance acumulado de +4200 ml.",
+    "Nutrición": "Recibe nutrición enteral polimérica hiperproteica por SNG a 40 ml/h, con buena tolerancia y residuo gástrico de 60 ml. Aporta 900 de 1800 kcal de meta, con requerimiento proteico de 1,5 g/kg. Peso 72 kg, IMC 26,4; riesgo de desnutrición con NUTRIC alto.",
+    "Infeccioso": "Meropenem 1 g cada 8 h en día 3 de tratamiento por neumonía grave con shock séptico. Hemocultivos x2 tomados ayer, aún pendientes.",
+    "Medicamentos y dispositivos": "Meropenem 1 g EV cada 8 h. Dispositivos invasivos: CVC yugular derecho y tubo orotraqueal.",
+    "Plan y pendientes": "Mantener PAM ≥65 mmHg titulando noradrenalina y saturación ≥92 %. Pendientes: gases arteriales en 2 h y evaluar posición prono hoy con el equipo médico. Además, optimizar secreciones hoy y avanzar la nutrición enteral hasta la meta calórica en 48 h."
+  }
+}

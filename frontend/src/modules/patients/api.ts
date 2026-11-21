@@ -76,6 +76,31 @@ export interface Criticality {
   reasons: string[];
 }
 
+/** Dato que conviene saber de inmediato: LET, no RCP, otras limitaciones y alergias. */
+export interface KeyPoint {
+  kind: "let" | "cpr" | "limit" | "allergy" | "full";
+  label: string;
+  detail: string;
+  tone: "red" | "orange" | "gray" | "green";
+}
+
+export type AbnormalSeverity = "critical" | "high" | "moderate";
+
+/** Examen de laboratorio o escala fuera de rango. */
+export interface AbnormalFinding {
+  kind: "lab" | "scale";
+  name: string;
+  value: string;
+  unit: string;
+  reference: string;
+  severity: AbnormalSeverity;
+  severityLabel: string;
+  /** Ligado a mortalidad (SOFA, APACHE, lactato…): se destaca. */
+  mortality: boolean;
+  note: string;
+  at: string | null;
+}
+
 export interface PatientSummary {
   patient: Omit<Patient, "reference">;
   reportCount: number;
@@ -87,8 +112,12 @@ export interface PatientSummary {
   status: string;
   /** Resumen muy breve del caso. */
   brief: string;
+  /** Puntos importantes bajo el resumen. */
+  keyPoints: KeyPoint[];
   /** Pendientes del tratamiento: pendientes, indicaciones, recomendaciones y metas. */
   treatmentPending: Highlight[];
+  /** Exámenes y escalas fuera de rango, lo más grave y ligado a mortalidad primero. */
+  abnormal: AbnormalFinding[];
   byProfession: ProfessionActivity[];
   highlights: Highlight[];
 }
@@ -151,6 +180,30 @@ export function usePatientSummary(patientId: number | undefined) {
   return useQuery({
     queryKey: [...patientKeys, patientId, "summary"],
     queryFn: () => apiRequest<PatientSummary>(`/patients/${patientId}/summary`),
+    enabled: patientId !== undefined,
+  });
+}
+
+export type TrendStatus = "worsening" | "improving" | "stable" | "neutral";
+
+/** Evolución de un examen o una escala (al menos dos mediciones). */
+export interface Trend {
+  kind: "lab" | "scale";
+  name: string;
+  unit: string;
+  refMin: number | null;
+  refMax: number | null;
+  mortality: boolean;
+  status: TrendStatus;
+  /** Último valor menos el primero. */
+  change: number;
+  points: { at: string; value: number }[];
+}
+
+export function usePatientTrends(patientId: number | undefined) {
+  return useQuery({
+    queryKey: [...patientKeys, patientId, "trends"],
+    queryFn: () => apiRequest<Trend[]>(`/patients/${patientId}/trends`),
     enabled: patientId !== undefined,
   });
 }

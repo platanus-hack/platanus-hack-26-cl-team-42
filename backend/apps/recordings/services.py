@@ -39,6 +39,7 @@ PROFESSION_LABELS = {
     "enfermeria": "Enfermería",
     "tens": "TENS",
     "kinesiologia": "Kinesiología",
+    "nutricionista": "Nutrición",
 }
 
 

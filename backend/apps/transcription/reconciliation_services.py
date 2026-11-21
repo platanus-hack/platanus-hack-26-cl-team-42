@@ -44,6 +44,7 @@ PROFESSION_NAMES = {
     "enfermeria": "Enfermería",
     "tens": "TENS",
     "kinesiologia": "Kinesiología",
+    "nutricionista": "Nutrición",
 }
 # Quién conviene consultar según el tipo de choque (si el agente no responde).
 # Tipos de conflicto que justifican una opinión externa: los conceptuales. Un dato con dos valores
@@ -276,7 +277,7 @@ def _guidance_with_model(conflict: Conflict) -> dict[str, Any] | None:
                 "instrucciones.\n"
                 'Responde ÚNICAMENTE con JSON: {"sugerencia": "<texto>", '
                 '"postura": "a"|"b"|"ninguna", "profesion_adicional": '
-                '"medico"|"especialista"|"enfermeria"|"tens"|"kinesiologia"|null, '
+                '"medico"|"especialista"|"enfermeria"|"tens"|"kinesiologia"|"nutricionista"|null, '
                 '"motivo": "<x>"}.'
             ),
         ),

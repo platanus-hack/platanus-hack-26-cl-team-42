@@ -103,6 +103,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   nursing: "Enfermería",
   medicine: "Medicina",
   kinesiology: "Kinesiología",
+  nutrition: "Nutrición",
 };
 
 /** Texto plano para pegar en la ficha institucional. Respeta el filtro de la vista. */

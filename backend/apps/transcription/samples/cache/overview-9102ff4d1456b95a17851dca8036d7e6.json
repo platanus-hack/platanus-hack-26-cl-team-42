@@ -1,0 +1,16 @@
+{
+  "global": "Paciente en día 3 de UCI por shock séptico, registrado como de foco abdominal. Sin embargo, los hemocultivos muestran Streptococcus pneumoniae y la evaluación médica lo describe como neumonía neumocócica bacterémica; esta discrepancia debe aclararse. Evoluciona favorablemente: afebril desde las 22:00, PCR 145 mg/L (venía de 280), creatinina 1,4 mg/dL en descenso y lactato 2,1. Persiste en VMI con PaFi 210 y con noradrenalina 0,15 mcg/kg/min (PAM 68), más sedado que el objetivo (RASS -3) y con balance acumulado de +4,8 L. Pendientes: destete de noradrenalina, reducir propofol, balance de -500 mL, lactato a las 14:00, evaluar PVE mañana y definir el antibiótico (indicada piperacilina/tazobactam, el plan menciona ceftriaxona) y su duración con infectología.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de shock séptico de foco abdominal (R57.2), inconsistente con la bacteriemia neumocócica y la neumonía descritas en la valoración. Alerta de severidad media por balance hídrico acumulado positivo de 4,8 L.",
+    "Hemodinamia": "PAM 68 mmHg y FC 94 lpm con noradrenalina 0,15 mcg/kg/min, registrada sin cambio aunque el resumen describe un descenso progresivo. La valoración consigna shock en resolución con lactato 2,1.",
+    "Respiratorio": "En VMI en modo VCV con VT 420 mL, PEEP 8, FiO2 40%, FR 18, plateau 24 y driving pressure 16 cmH2O, con SatO2 96% y PaFi 210. Tubo endotraqueal 7.5 fijado a 22 cm con cuff a 25 cmH2O. PVE no realizada por el requerimiento de vasoactivos; crépitos en base derecha.",
+    "Neurológico y sedación": "RASS -3 con objetivo -1, CPOT 1, pupilas isocóricas reactivas y CAM-ICU no evaluable. Plan de disminuir propofol; no se cumplió la interrupción de la sedación.",
+    "Renal y balance hídrico": "Balance de 24 h de +1250 mL (ingresos 3100 mL, egresos 1850 mL) y acumulado de +4,8 L. Diuresis 1650 mL (0,9 mL/kg/h). Lesión renal aguda en recuperación con creatinina 1,4 mg/dL; meta de balance de -500 mL.",
+    "Nutrición": "Nutrición enteral con fórmula polimérica estándar por SNG a 40 mL/h, con buena tolerancia y residuo gástrico de 50 mL. Plan de progresar a la meta de 1800 kcal.",
+    "Infeccioso": "Hemocultivos del 16/11 positivos para Streptococcus pneumoniae sensible a ceftriaxona; afebril hace unas 12 h. Profilaxis: cabecera a 30°, enoxaparina 40 mg SC, omeprazol 40 mg EV e insulina según esquema (meta 140-180). Foley mantenido por balance estricto.",
+    "Medicamentos y dispositivos": "Piperacilina/tazobactam 4,5 g EV cada 6 h indicada, discordante con el plan de completar ceftriaxona. CVC yugular derecho funcionante, registrado con 2 días aunque la fecha de instalación es el 16/11.",
+    "Exámenes": "PCR 145 mg/L, en descenso desde 280. Creatinina 1,4 mg/dL en descenso.",
+    "Plan y pendientes": "Disminuir noradrenalina 0,02 mcg/kg/min cada hora manteniendo PAM ≥65 (enfermería). Kinesioterapia respiratoria dos veces al día y evaluación de PVE mañana. Control de lactato a las 14:00; metas de RASS -1 a 0 y balance de -500 mL.",
+    "Otros": "Se informó a la hija una evolución favorable, aunque el paciente sigue en condición grave. Se solicitó interconsulta a infectología para definir la duración del antibiótico en la neumonía bacterémica."
+  }
+}

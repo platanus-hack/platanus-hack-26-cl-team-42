@@ -16,7 +16,9 @@ from apps.agent.llm import ChatMessage
 from apps.recordings.models import Patient
 
 from . import extraction_services, pipeline_cache
+from .abnormal_services import AbnormalFinding, abnormal_findings
 from .consolidation_services import current_version, identity_of
+from .homologation_services import normalize
 from .models import ConsolidatedVersion, Report
 from .report_services import PatientRef, saved_reports
 
@@ -49,6 +51,17 @@ class Criticality(BaseModel):
     reasons: list[str]
 
 
+class KeyPoint(BaseModel):
+    """Dato que conviene saber de inmediato (LET, no RCP, alergias…)."""
+
+    # let | cpr | limit | allergy | full
+    kind: str
+    label: str
+    detail: str = ""
+    # red | orange | gray | green
+    tone: str
+
+
 class PatientSummary(BaseModel):
     patient: PatientRef
     reportCount: int
@@ -60,8 +73,12 @@ class PatientSummary(BaseModel):
     status: str
     # Resumen muy breve del caso (2 frases).
     brief: str
+    # Puntos importantes bajo el resumen: limitaciones terapéuticas, no RCP, alergias.
+    keyPoints: list[KeyPoint]
     # Pendientes respecto al tratamiento: pendientes, indicaciones, recomendaciones y metas.
     treatmentPending: list[Highlight]
+    # Exámenes y escalas fuera de rango, lo más grave y ligado a mortalidad primero.
+    abnormal: list[AbnormalFinding]
     byProfession: list[ProfessionActivity]
     highlights: list[Highlight]
 
@@ -102,9 +119,65 @@ def patient_summary(professional, patient: Patient) -> PatientSummary:
         criticality=criticality_of([data]),
         status=_status([data], highlights),
         brief=_brief(patient, reports, version),
+        keyPoints=key_points(data),
+        abnormal=abnormal_findings(patient, data),
         treatmentPending=[h for h in highlights if h.group in TREATMENT_GROUPS],
         highlights=[h for h in highlights if h.group not in TREATMENT_GROUPS],
     )
+
+
+# (palabras clave ya normalizadas, etiqueta) de limitaciones específicas.
+LIMITATIONS: list[tuple[tuple[str, ...], str, str]] = [
+    (("no rcp", "no reanim", "nrcp", "dnr", "no resucit"), "cpr", "No RCP"),
+    (("no intub", "no vmi", "no ventilacion mecanica"), "limit", "No intubar"),
+    (("no dialisis", "no trra", "no hemodialisis"), "limit", "No diálisis"),
+    (("no vasoactiv", "no aminas", "no drogas vasoactivas"), "limit", "No vasoactivos"),
+    (("no traslado", "no ingreso", "no derivar"), "limit", "No traslado a UCI"),
+]
+NO_LIMITATION = (
+    "sin limitacion",
+    "sin let",
+    "manejo completo",
+    "full code",
+    "reanimacion completa",
+)
+
+
+def key_points(data: dict[str, Any]) -> list[KeyPoint]:
+    """Limitaciones del esfuerzo terapéutico (LET), no RCP y alergias del registro oficial."""
+    points: list[KeyPoint] = []
+    admission = data.get("ingreso")
+    text = ""
+    if isinstance(admission, dict):
+        text = str(admission.get("limitacion_esfuerzo_terapeutico") or "").strip()
+    plain = normalize(text)
+    if not text:
+        points.append(
+            KeyPoint(
+                kind="let", label="LET no registrada", detail="Confirmar con el equipo", tone="gray"
+            )
+        )
+    elif any(phrase in plain for phrase in NO_LIMITATION):
+        points.append(KeyPoint(kind="full", label="Sin LET", detail=text, tone="green"))
+    else:
+        points.append(KeyPoint(kind="let", label="LET", detail=text, tone="red"))
+        points.extend(
+            KeyPoint(kind=kind, label=label, tone="red" if kind == "cpr" else "orange")
+            for words, kind, label in LIMITATIONS
+            if any(word in plain for word in words)
+        )
+    for allergy in _items(data, "alergias"):
+        agent = str(allergy.get("agente") or "").strip()
+        if agent:
+            points.append(
+                KeyPoint(
+                    kind="allergy",
+                    label=f"Alergia: {agent}",
+                    detail=str(allergy.get("reaccion") or ""),
+                    tone="orange",
+                )
+            )
+    return points
 
 
 Formatter = Callable[[dict[str, Any]], str]
@@ -426,7 +499,7 @@ CLINICAL_AREAS: list[tuple[str, tuple[str, ...]]] = [
     ("Respiratorio", ("control_respiratorio", "ventilacion_mecanica")),
     ("Neurológico y sedación", ("sedoanalgesia_neuro", "escalas")),
     ("Renal y balance hídrico", ("balance_hidrico", "terapia_reemplazo_renal")),
-    ("Nutrición", ("nutricion",)),
+    ("Nutrición", ("nutricion", "valoracion_nutricional", "requerimientos")),
     ("Infeccioso", ("antimicrobianos", "cultivos", "profilaxis")),
     ("Medicamentos y dispositivos", ("medicamentos", "dispositivos_invasivos", "procedimientos")),
     ("Exámenes", ("examenes",)),
@@ -446,7 +519,7 @@ OTHER_AREA = "Otros"
 # Van aparte (metadatos y el resumen de 24 h alimentan el resumen global, no un área).
 NOT_AN_AREA = {"metadatos", "resumen_24h"}
 OVERVIEW_PROMPT_VERSION = "2"
-PROFESSION_ORDER = ["medico", "especialista", "enfermeria", "kinesiologia", "tens"]
+PROFESSION_ORDER = ["medico", "especialista", "enfermeria", "kinesiologia", "nutricionista", "tens"]
 MANUAL_ITEMS_PER_SECTION = 3
 
 
