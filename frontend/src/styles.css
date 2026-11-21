@@ -309,3 +309,17 @@
     padding-right: 420px;
   }
 }
+
+/* Aviso flotante arriba a la derecha, bajo la barra superior. */
+.toast {
+  position: fixed;
+  top: calc(72px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  z-index: 30;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px 12px 12px 16px;
+  border-radius: var(--radius-3);
+  border: 1px solid var(--gray-a5);
+  background: var(--color-panel-solid);
+  box-shadow: var(--shadow-4);
+}
