@@ -6,6 +6,9 @@ FROM python:3.13-slim AS build-base
 ENV PYTHONDONTWRITEBYTECODE=1
 # Make vendored libraries (lib/<package>/) importable by top-level name
 ENV PYTHONPATH="/app/lib"
+# CPU-only torch wheels (see [tool.uv.index] in pyproject.toml). `uv export` does
+# not carry index URLs, so pip needs it to resolve the pinned `torch==…+cpu`.
+ENV PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 
 WORKDIR /app
 

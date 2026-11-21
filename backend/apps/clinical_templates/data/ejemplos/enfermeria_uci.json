@@ -1,0 +1,303 @@
+{
+  "metadatos": {
+    "tipo_profesional": "enfermeria",
+    "nombre_profesional": "EU Soto",
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-18T11:00:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": "08:00",
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": 70,
+      "frecuencia_cardiaca": 98,
+      "ritmo": "sinusal",
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "a las 8 PAM 70, frecuencia 98"
+    },
+    {
+      "hora": "10:00",
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": 72,
+      "frecuencia_cardiaca": 96,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "a las 10 PAM 72"
+    }
+  ],
+  "control_respiratorio": [
+    {
+      "hora": "10:00",
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 94,
+      "soporte": "VMI",
+      "fio2": 40,
+      "flujo_l_min": null,
+      "evidencia": "saturando 94 con FiO2 40"
+    }
+  ],
+  "drogas_infusion": [
+    {
+      "farmaco": "noradrenalina",
+      "categoria": "vasoactivo",
+      "dosis": 0.2,
+      "unidad": "mcg/kg/min",
+      "tendencia": "sin_cambio",
+      "hora": "10:00",
+      "evidencia": "la noradrenalina se mantiene en 0,2"
+    },
+    {
+      "farmaco": "propofol",
+      "categoria": "sedante",
+      "dosis": 1.5,
+      "unidad": "mg/kg/h",
+      "tendencia": "sin_cambio",
+      "hora": null,
+      "evidencia": "propofol a 1,5"
+    },
+    {
+      "farmaco": "fentanilo",
+      "categoria": "analgesico",
+      "dosis": 50,
+      "unidad": "mcg/h",
+      "tendencia": "sin_cambio",
+      "hora": null,
+      "evidencia": "fentanilo 50"
+    }
+  ],
+  "medicamentos": [
+    {
+      "nombre": "ceftriaxona",
+      "principio_activo": "ceftriaxona",
+      "dosis": 2,
+      "unidad": "g",
+      "via": "EV",
+      "frecuencia": null,
+      "accion": "administrado",
+      "hora": "10:00",
+      "evidencia": "a las 10 pasé la ceftriaxona 2 gramos"
+    },
+    {
+      "nombre": "enoxaparina",
+      "principio_activo": "enoxaparina",
+      "dosis": 40,
+      "unidad": "mg",
+      "via": "SC",
+      "frecuencia": null,
+      "accion": "administrado",
+      "hora": "09:00",
+      "evidencia": "enoxaparina a las 9"
+    }
+  ],
+  "escalas": [
+    {
+      "nombre": "Braden",
+      "puntaje": 11,
+      "interpretacion": "alto riesgo de LPP",
+      "evidencia": "Braden 11"
+    }
+  ],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "CVC",
+      "ubicacion": "yugular derecha",
+      "fecha_instalacion": null,
+      "dias_instalado": 2,
+      "estado": "sitio limpio, permeable",
+      "signos_infeccion": false,
+      "accion": "mantenido",
+      "evidencia": "CVC yugular sin signos de infección"
+    },
+    {
+      "tipo": "linea_arterial",
+      "ubicacion": "radial izquierda",
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "curva adecuada",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "línea arterial con buena curva"
+    },
+    {
+      "tipo": "sonda_foley",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": 2,
+      "estado": "diuresis clara",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "Foley con orina clara"
+    },
+    {
+      "tipo": "SNG",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": "en posición",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "SNG en posición"
+    }
+  ],
+  "alergias": [
+    {
+      "agente": "penicilina",
+      "reaccion": "rash cutáneo",
+      "evidencia": "la hija refiere que es alérgico a la penicilina, le dio ronchas"
+    }
+  ],
+  "alertas": [
+    {
+      "descripcion": "Hija refiere alergia a penicilina y el paciente recibe ceftriaxona",
+      "severidad": "alta",
+      "sistema": "infeccioso",
+      "evidencia": "es alérgico a la penicilina y está con ceftriaxona"
+    },
+    {
+      "descripcion": "Lesión por presión categoría 1 en sacro",
+      "severidad": "media",
+      "sistema": "piel_tegumentos",
+      "evidencia": "eritema que no blanquea en sacro"
+    }
+  ],
+  "indicaciones": [],
+  "pendientes": [
+    {
+      "descripcion": "Informar al médico alergia a penicilina referida por la familia",
+      "responsable_sugerido": "medico",
+      "plazo": "inmediato",
+      "evidencia": "hay que avisarle al doctor lo de la alergia"
+    },
+    {
+      "descripcion": "Cambios de posición cada 2 horas con protección sacra",
+      "responsable_sugerido": "tens",
+      "plazo": "cada 2 h",
+      "evidencia": "cambios de posición cada 2 horas"
+    }
+  ],
+  "observaciones_no_estructuradas": null,
+  "valoracion_por_sistemas": {
+    "neurologico": null,
+    "respiratorio": {
+      "hallazgos": [
+        {
+          "descripcion": "Secreciones mucopurulentas abundantes por TET",
+          "certeza": "afirmado",
+          "evidencia": "aspiré secreciones mucopurulentas abundantes"
+        }
+      ],
+      "evaluacion": null,
+      "plan": null,
+      "evidencia": "secreciones mucopurulentas abundantes"
+    },
+    "hemodinamico": null,
+    "renal_metabolico": null,
+    "infeccioso": null,
+    "digestivo_nutricional": null,
+    "hematologico": null,
+    "piel_tegumentos": {
+      "hallazgos": [
+        {
+          "descripcion": "Eritema no blanqueable en sacro",
+          "certeza": "afirmado",
+          "evidencia": "eritema que no blanquea en sacro"
+        }
+      ],
+      "evaluacion": null,
+      "plan": "Protección sacra y cambios de posición",
+      "evidencia": "eritema que no blanquea en sacro"
+    }
+  },
+  "sedoanalgesia_neuro": {
+    "rass_actual": -3,
+    "rass_objetivo": null,
+    "dolor": {
+      "escala": "CPOT",
+      "puntaje": 2
+    },
+    "cam_icu": "no_evaluable",
+    "glasgow": null,
+    "pupilas": null,
+    "focalidad": null,
+    "evidencia": "RASS menos 3, CPOT 2"
+  },
+  "ventilacion_mecanica": {
+    "via_aerea": {
+      "tipo": "TET",
+      "numero": "7.5",
+      "fijacion_cm": 22,
+      "presion_cuff_cmh2o": 28
+    },
+    "modo": "VCV",
+    "volumen_corriente_ml": null,
+    "peep_cmh2o": 8,
+    "fio2": 40,
+    "fr_programada": null,
+    "presion_soporte_cmh2o": null,
+    "presion_plateau_cmh2o": null,
+    "presion_peak_cmh2o": null,
+    "driving_pressure_cmh2o": null,
+    "pafi": null,
+    "posicion_prono": null,
+    "weaning": null,
+    "evidencia": "TET 7,5 a 22 en comisura, cuff 28"
+  },
+  "balance_hidrico": {
+    "periodo_horas": 3,
+    "ingresos": [],
+    "egresos": [],
+    "diuresis_ml": 150,
+    "diuresis_ml_kg_h": null,
+    "balance_ml": 220,
+    "balance_acumulado_ml": null,
+    "evidencia": "diuresis 150 en tres horas, balance más 220"
+  },
+  "nutricion": {
+    "via": "SNG",
+    "formula": null,
+    "velocidad_ml_h": 40,
+    "meta_kcal": null,
+    "aporte_kcal": null,
+    "tolerancia": "sin distensión",
+    "residuo_gastrico_ml": 80,
+    "evidencia": "enteral a 40, residuo 80"
+  },
+  "bundles_iaas": {
+    "neumonia_vm": "Cabecera 30°, aseo oral con clorhexidina a las 08:00, cuff 28",
+    "bacteremia_cvc": "Curación de CVC al día, sin signos de infección",
+    "itu_cup": "Sistema cerrado, bolsa bajo nivel vesical",
+    "evidencia": "aseo con clorhexidina a las 8"
+  },
+  "piel": {
+    "braden": 11,
+    "lpp": [
+      {
+        "ubicacion": "sacro",
+        "grado": "1",
+        "evidencia": "eritema que no blanquea en sacro"
+      }
+    ],
+    "curaciones": []
+  },
+  "contencion": null,
+  "toma_examenes": [
+    {
+      "examen": "gases arteriales",
+      "hora": "10:00",
+      "evidencia": "tomé gases a las 10"
+    }
+  ],
+  "eventos_adversos": [],
+  "educacion_familia": "Se orienta a la hija sobre horarios de visita.",
+  "entrega_turno": null
+}

@@ -1,0 +1,377 @@
+{
+  "x-plantilla": {
+    "slug": "medico_uci",
+    "nombre": "Registro médico UCI",
+    "profesion": "medico",
+    "descripcion": "Ingreso, evolución, evento agudo o egreso escrito por el médico intensivista o residente de UCI.",
+    "tipos_registro": [
+      "ingreso_uci",
+      "evolucion",
+      "evento_agudo",
+      "procedimiento",
+      "ronda_interdisciplinaria",
+      "egreso_uci"
+    ],
+    "especialidad_obligatoria": false,
+    "instrucciones_llm": "Plantilla médica UCI. Organiza la evaluación por sistemas en 'valoracion_por_sistemas'.\nCompleta 'ingreso' solo si es la nota de ingreso a UCI y 'egreso' solo si es la nota de egreso; en otro caso déjalos en null.\nLas 'metas_del_dia' son objetivos explícitos (PAM, RASS, balance, SatO2...). Las órdenes concretas van en 'indicaciones'."
+  },
+  "title": "Registro médico UCI",
+  "description": "Ingreso, evolución, evento agudo o egreso escrito por el médico intensivista o residente de UCI.",
+  "properties": {
+    "ingreso": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Datos exclusivos de la nota de ingreso a UCI. null si no es ingreso.",
+      "properties": {
+        "motivo_ingreso_uci": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Motivo de ingreso a UCI."
+        },
+        "procedencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "urgencia",
+            "pabellon",
+            "sala",
+            "otra_uci",
+            "otro_hospital",
+            "otro",
+            null
+          ],
+          "description": "Desde dónde ingresa."
+        },
+        "antecedentes": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Antecedentes del paciente.",
+          "properties": {
+            "morbidos": {
+              "type": "array",
+              "description": "Antecedentes mórbidos. Lista vacía si no se menciona ninguno.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "quirurgicos": {
+              "type": "array",
+              "description": "Antecedentes quirúrgicos. Lista vacía si no se menciona ninguno.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "farmacos_habituales": {
+              "type": "array",
+              "description": "Fármacos de uso habitual. Lista vacía si no se menciona ninguno.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "habitos": {
+              "type": "array",
+              "description": "Hábitos (tabaco, alcohol, drogas). Lista vacía si no se menciona ninguno.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "funcionalidad_basal": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Funcionalidad basal previa al ingreso."
+            }
+          },
+          "required": [
+            "morbidos",
+            "quirurgicos",
+            "farmacos_habituales",
+            "habitos",
+            "funcionalidad_basal"
+          ],
+          "additionalProperties": false
+        },
+        "apache_ii": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Puntaje APACHE II al ingreso."
+        },
+        "sofa_ingreso": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Puntaje SOFA al ingreso."
+        },
+        "limitacion_esfuerzo_terapeutico": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Decisiones de limitación del esfuerzo terapéutico, si existen."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "motivo_ingreso_uci",
+        "procedencia",
+        "antecedentes",
+        "apache_ii",
+        "sofa_ingreso",
+        "limitacion_esfuerzo_terapeutico",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "resumen_24h": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Resumen de eventos relevantes de las últimas 24 horas o desde el último registro."
+    },
+    "valoracion_por_sistemas": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ValoracionPorSistemas"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ventilacion_mecanica": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VentilacionMecanica"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sedoanalgesia_neuro": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SedoanalgesiaNeuro"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "terapia_reemplazo_renal": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TerapiaReemplazoRenal"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "balance_hidrico": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BalanceHidrico"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nutricion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Nutricion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "antimicrobianos": {
+      "type": "array",
+      "description": "Antimicrobianos en curso o indicados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Antimicrobiano"
+      }
+    },
+    "cultivos": {
+      "type": "array",
+      "description": "Cultivos tomados o con resultado. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Cultivo"
+      }
+    },
+    "examenes": {
+      "type": "array",
+      "description": "Exámenes de laboratorio o imagen revisados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/ExamenLaboratorio"
+      }
+    },
+    "diagnosticos": {
+      "type": "array",
+      "description": "Diagnósticos o problemas activos. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Diagnostico"
+      }
+    },
+    "procedimientos": {
+      "type": "array",
+      "description": "Procedimientos realizados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Procedimiento"
+      }
+    },
+    "profilaxis": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Profilaxis"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metas_del_dia": {
+      "type": "array",
+      "description": "Metas terapéuticas explícitas del día. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Meta terapéutica del día.",
+        "properties": {
+          "parametro": {
+            "type": "string",
+            "description": "Parámetro (p. ej. 'PAM', 'RASS', 'balance hídrico')."
+          },
+          "objetivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor o rango objetivo (p. ej. '>= 65 mmHg', '-2 a 0', 'negativo 500 mL')."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "parametro",
+          "objetivo",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "interconsultas_solicitadas": {
+      "type": "array",
+      "description": "Interconsultas solicitadas. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Interconsulta solicitada.",
+        "properties": {
+          "especialidad": {
+            "type": "string",
+            "description": "Especialidad interconsultada."
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Motivo de la interconsulta."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "especialidad",
+          "motivo",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "comunicacion_familia": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Información entregada a la familia y su reacción/decisiones."
+    },
+    "egreso": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Datos exclusivos de la nota de egreso de UCI. null si no es egreso.",
+      "properties": {
+        "destino": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "sala_basica",
+            "intermedio",
+            "otra_uci",
+            "otro_hospital",
+            "domicilio",
+            "fallecido",
+            "otro",
+            null
+          ],
+          "description": "Destino al egreso de UCI."
+        },
+        "condicion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Condición clínica al egreso."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "destino",
+        "condicion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

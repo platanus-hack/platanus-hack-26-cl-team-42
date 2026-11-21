@@ -1,0 +1,428 @@
+{
+  "metadatos": {
+    "tipo_profesional": "medico",
+    "nombre_profesional": "Dr. Rojas",
+    "especialidad": "medicina intensiva",
+    "fecha_hora_registro": "2026-11-18T09:30:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": "09:00",
+      "presion_sistolica": 112,
+      "presion_diastolica": 58,
+      "pam": 76,
+      "frecuencia_cardiaca": 94,
+      "ritmo": "sinusal",
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": 2.1,
+      "evidencia": "PAM 76, en sinusal a 94, lactato 2,1"
+    }
+  ],
+  "control_respiratorio": [
+    {
+      "hora": "09:00",
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 95,
+      "soporte": "VMI",
+      "fio2": 40,
+      "flujo_l_min": null,
+      "evidencia": "satura 95 con FiO2 40"
+    }
+  ],
+  "drogas_infusion": [
+    {
+      "farmaco": "noradrenalina",
+      "categoria": "vasoactivo",
+      "dosis": 0.15,
+      "unidad": "mcg/kg/min",
+      "tendencia": "descenso",
+      "hora": "09:00",
+      "evidencia": "noradrenalina bajando, ahora en 0,15"
+    },
+    {
+      "farmaco": "fentanilo",
+      "categoria": "analgesico",
+      "dosis": 50,
+      "unidad": "mcg/h",
+      "tendencia": "sin_cambio",
+      "hora": null,
+      "evidencia": "fentanilo 50 por hora"
+    },
+    {
+      "farmaco": "propofol",
+      "categoria": "sedante",
+      "dosis": 1.5,
+      "unidad": "mg/kg/h",
+      "tendencia": "descenso",
+      "hora": null,
+      "evidencia": "vamos a bajar el propofol"
+    }
+  ],
+  "medicamentos": [
+    {
+      "nombre": "enoxaparina",
+      "principio_activo": "enoxaparina",
+      "dosis": 40,
+      "unidad": "mg",
+      "via": "SC",
+      "frecuencia": "cada 24 h",
+      "accion": "indicado",
+      "hora": null,
+      "evidencia": "enoxaparina 40 subcutánea al día"
+    },
+    {
+      "nombre": "omeprazol",
+      "principio_activo": "omeprazol",
+      "dosis": 40,
+      "unidad": "mg",
+      "via": "EV",
+      "frecuencia": "cada 24 h",
+      "accion": "indicado",
+      "hora": null,
+      "evidencia": "omeprazol 40 endovenoso"
+    }
+  ],
+  "escalas": [
+    {
+      "nombre": "SOFA",
+      "puntaje": 8,
+      "interpretacion": "en descenso respecto a 11 al ingreso",
+      "evidencia": "SOFA de 8, venía de 11"
+    }
+  ],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "CVC",
+      "ubicacion": "yugular derecha",
+      "fecha_instalacion": "2026-11-16",
+      "dias_instalado": 2,
+      "estado": "funcionante",
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "CVC yugular derecho día 2"
+    },
+    {
+      "tipo": "linea_arterial",
+      "ubicacion": "radial izquierda",
+      "fecha_instalacion": null,
+      "dias_instalado": 2,
+      "estado": null,
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "línea arterial radial izquierda"
+    },
+    {
+      "tipo": "sonda_foley",
+      "ubicacion": null,
+      "fecha_instalacion": null,
+      "dias_instalado": 2,
+      "estado": null,
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "Foley se mantiene por balance estricto"
+    }
+  ],
+  "alergias": [],
+  "alertas": [
+    {
+      "descripcion": "Balance hídrico acumulado positivo de 4,8 L",
+      "severidad": "media",
+      "sistema": "renal_metabolico",
+      "evidencia": "acumulado más 4,8 litros"
+    }
+  ],
+  "indicaciones": [
+    {
+      "descripcion": "Disminuir noradrenalina 0,02 mcg/kg/min cada hora manteniendo PAM >= 65",
+      "responsable_sugerido": "enfermeria",
+      "plazo": "durante el turno",
+      "evidencia": "bajar noradrenalina de a 0,02 cada hora"
+    },
+    {
+      "descripcion": "Kinesioterapia respiratoria dos veces al día y evaluar prueba de ventilación espontánea",
+      "responsable_sugerido": "kinesiologia",
+      "plazo": "mañana",
+      "evidencia": "kine dos veces al día, mañana evaluamos PVE"
+    }
+  ],
+  "pendientes": [
+    {
+      "descripcion": "Gases arteriales de control",
+      "responsable_sugerido": "enfermeria",
+      "plazo": "14:00",
+      "evidencia": "gases de control a las 14"
+    }
+  ],
+  "observaciones_no_estructuradas": null,
+  "ingreso": null,
+  "resumen_24h": "Noche estable, afebril desde las 22:00, descenso progresivo de noradrenalina.",
+  "valoracion_por_sistemas": {
+    "neurologico": {
+      "hallazgos": [
+        {
+          "descripcion": "Sedado, RASS -3",
+          "certeza": "afirmado",
+          "evidencia": "está RASS menos 3"
+        }
+      ],
+      "evaluacion": "Sedación más profunda que el objetivo",
+      "plan": "Disminuir propofol, objetivo RASS -1",
+      "evidencia": "más profundo de lo que queremos"
+    },
+    "respiratorio": {
+      "hallazgos": [
+        {
+          "descripcion": "Crépitos basales derechos",
+          "certeza": "afirmado",
+          "evidencia": "crépitos en base derecha"
+        }
+      ],
+      "evaluacion": "Neumonía en resolución, PaFi 210",
+      "plan": "Mantener VMI, evaluar PVE mañana",
+      "evidencia": "PaFi 210"
+    },
+    "hemodinamico": {
+      "hallazgos": [
+        {
+          "descripcion": "Shock séptico en resolución",
+          "certeza": "afirmado",
+          "evidencia": "el shock va en resolución"
+        }
+      ],
+      "evaluacion": "Mejor perfusión, lactato 2,1",
+      "plan": "Destete de noradrenalina con PAM >= 65",
+      "evidencia": "lactato 2,1"
+    },
+    "renal_metabolico": {
+      "hallazgos": [
+        {
+          "descripcion": "Creatinina 1,4 mg/dL en descenso",
+          "certeza": "afirmado",
+          "evidencia": "creatinina 1,4 bajando"
+        }
+      ],
+      "evaluacion": "Lesión renal aguda en recuperación",
+      "plan": "Balance negativo 500 mL",
+      "evidencia": "creatinina 1,4 bajando"
+    },
+    "infeccioso": {
+      "hallazgos": [
+        {
+          "descripcion": "Afebril hace 12 horas",
+          "certeza": "afirmado",
+          "evidencia": "sin fiebre desde las 22"
+        }
+      ],
+      "evaluacion": "Neumonía neumocócica bacterémica con buena respuesta",
+      "plan": "Completar ceftriaxona, interconsulta a infectología",
+      "evidencia": "neumococo en hemocultivos"
+    },
+    "digestivo_nutricional": {
+      "hallazgos": [],
+      "evaluacion": "Buena tolerancia enteral",
+      "plan": "Progresar a meta 1800 kcal",
+      "evidencia": "tolera bien la enteral"
+    },
+    "hematologico": null,
+    "piel_tegumentos": null
+  },
+  "ventilacion_mecanica": {
+    "via_aerea": {
+      "tipo": "TET",
+      "numero": "7.5",
+      "fijacion_cm": 22,
+      "presion_cuff_cmh2o": 25
+    },
+    "modo": "VCV",
+    "volumen_corriente_ml": 420,
+    "peep_cmh2o": 8,
+    "fio2": 40,
+    "fr_programada": 18,
+    "presion_soporte_cmh2o": null,
+    "presion_plateau_cmh2o": 24,
+    "presion_peak_cmh2o": null,
+    "driving_pressure_cmh2o": 16,
+    "pafi": 210,
+    "posicion_prono": null,
+    "weaning": {
+      "prueba_ventilacion_espontanea": "no_realizada",
+      "criterios": "Aún con requerimiento de drogas vasoactivas",
+      "extubacion": "no_aplica",
+      "resultado": null,
+      "evidencia": "todavía no para PVE por la noradrenalina"
+    },
+    "evidencia": "VCV 420, PEEP 8, FiO2 40, plateau 24"
+  },
+  "sedoanalgesia_neuro": {
+    "rass_actual": -3,
+    "rass_objetivo": -1,
+    "dolor": {
+      "escala": "CPOT",
+      "puntaje": 1
+    },
+    "cam_icu": "no_evaluable",
+    "glasgow": null,
+    "pupilas": "isocóricas reactivas",
+    "focalidad": null,
+    "evidencia": "RASS menos 3, CPOT 1"
+  },
+  "terapia_reemplazo_renal": null,
+  "balance_hidrico": {
+    "periodo_horas": 24,
+    "ingresos": [
+      {
+        "tipo": "cristaloides",
+        "ml": 1800
+      },
+      {
+        "tipo": "nutrición enteral",
+        "ml": 900
+      },
+      {
+        "tipo": "drogas",
+        "ml": 400
+      }
+    ],
+    "egresos": [
+      {
+        "tipo": "diuresis",
+        "ml": 1650
+      },
+      {
+        "tipo": "SNG",
+        "ml": 200
+      }
+    ],
+    "diuresis_ml": 1650,
+    "diuresis_ml_kg_h": 0.9,
+    "balance_ml": 1250,
+    "balance_acumulado_ml": 4800,
+    "evidencia": "balance más 1250, acumulado más 4,8 litros"
+  },
+  "nutricion": {
+    "via": "SNG",
+    "formula": "fórmula polimérica estándar",
+    "velocidad_ml_h": 40,
+    "meta_kcal": 1800,
+    "aporte_kcal": null,
+    "tolerancia": "buena",
+    "residuo_gastrico_ml": 50,
+    "evidencia": "enteral a 40 por SNG, residuo 50"
+  },
+  "antimicrobianos": [
+    {
+      "farmaco": "ceftriaxona",
+      "dosis": "2 g cada 24 h",
+      "dia_tratamiento": 3,
+      "indicacion": "neumonía neumocócica bacterémica",
+      "accion": "continua",
+      "evidencia": "ceftriaxona día 3"
+    }
+  ],
+  "cultivos": [
+    {
+      "muestra": "hemocultivo",
+      "fecha_toma": "2026-11-16",
+      "estado": "positivo",
+      "microorganismo": "Streptococcus pneumoniae",
+      "sensibilidad": "sensible a ceftriaxona",
+      "evidencia": "hemocultivos con neumococo sensible"
+    }
+  ],
+  "examenes": [
+    {
+      "examen": "PCR",
+      "valor": 145,
+      "unidad": "mg/L",
+      "hora": null,
+      "interpretacion": "en descenso desde 280",
+      "evidencia": "PCR 145, venía de 280"
+    },
+    {
+      "examen": "creatinina",
+      "valor": 1.4,
+      "unidad": "mg/dL",
+      "hora": null,
+      "interpretacion": "en descenso",
+      "evidencia": "creatinina 1,4 bajando"
+    }
+  ],
+  "diagnosticos": [
+    {
+      "descripcion": "Shock séptico",
+      "codigo_cie10": "R57.2",
+      "estado": "confirmado",
+      "evidencia": "shock séptico en resolución"
+    },
+    {
+      "descripcion": "Neumonía neumocócica bacterémica",
+      "codigo_cie10": "J13",
+      "estado": "confirmado",
+      "evidencia": "neumonía por neumococo"
+    },
+    {
+      "descripcion": "Lesión renal aguda",
+      "codigo_cie10": "N17.9",
+      "estado": "confirmado",
+      "evidencia": "la falla renal va mejorando"
+    }
+  ],
+  "procedimientos": [],
+  "profilaxis": {
+    "tromboprofilaxis": {
+      "cumple": true,
+      "detalle": "enoxaparina 40 mg SC"
+    },
+    "proteccion_gastrica": {
+      "cumple": true,
+      "detalle": "omeprazol 40 mg EV"
+    },
+    "cabecera_30": {
+      "cumple": true,
+      "detalle": null
+    },
+    "control_glicemico": {
+      "cumple": true,
+      "detalle": "insulina según esquema, meta 140-180"
+    },
+    "interrupcion_sedacion": {
+      "cumple": false,
+      "detalle": "se disminuirá propofol hoy"
+    },
+    "retiro_dispositivos_evaluado": {
+      "cumple": true,
+      "detalle": "Foley se mantiene por balance estricto"
+    }
+  },
+  "metas_del_dia": [
+    {
+      "parametro": "PAM",
+      "objetivo": ">= 65 mmHg",
+      "evidencia": "PAM sobre 65"
+    },
+    {
+      "parametro": "RASS",
+      "objetivo": "-1 a 0",
+      "evidencia": "RASS menos 1 a 0"
+    },
+    {
+      "parametro": "balance hídrico",
+      "objetivo": "negativo 500 mL",
+      "evidencia": "balance negativo 500"
+    }
+  ],
+  "interconsultas_solicitadas": [
+    {
+      "especialidad": "infectología",
+      "motivo": "Duración de antibiótico en neumonía bacterémica",
+      "evidencia": "pedir a infecto la duración"
+    }
+  ],
+  "comunicacion_familia": "Se informa a la hija evolución favorable, aún en condición grave.",
+  "egreso": null
+}

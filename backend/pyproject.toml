@@ -28,6 +28,7 @@ dependencies = [
     "yarl>=1.9.4",
     "transformers>=5.23.0",
     "torch>=2.15.0",
+    "jsonschema>=4.26.0",
 ]
 
 [tool.pyright]
@@ -48,3 +49,13 @@ dev = [
     "watchdog>=6.0.0",
     "werkzeug>=3.1.3",
 ]
+
+# torch from PyPI pulls ~15 NVIDIA CUDA wheels (several GB) on Linux. Containers
+# run Whisper on CPU, so use the CPU-only build there; macOS wheels are CPU/MPS.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
