@@ -6,7 +6,9 @@ Whisper (modelo gratuito de Hugging Face) -> guarda el texto ligado al dictado.
 Si algo falla queda en estado *error* y se puede reintentar.
 """
 
+import hashlib
 import io
+import json
 import logging
 import shutil
 import subprocess
@@ -16,6 +18,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from decouple import config
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.utils import timezone
@@ -24,13 +27,17 @@ from pydantic import BaseModel
 from apps.recordings.models import Recording
 from apps.recordings.services import create_recording
 
+from .extraction_services import request_automatic_extraction
 from .models import Transcription
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL_ID = "openai/whisper-small"
+# Whisper local; cambia el modelo con WHISPER_MODEL_ID (p. ej. openai/whisper-small).
+DEFAULT_MODEL_ID = config("WHISPER_MODEL_ID", default="") or "openai/whisper-large-v3-turbo"
 DEFAULT_LANGUAGE = "spanish"
 SAMPLES_DIR = Path(__file__).parent / "samples"
+# Transcripciones ya conocidas, por hash SHA-256 del audio: evitan cargar Whisper (audios de demo).
+TRANSCRIPT_CACHE_PATH = SAMPLES_DIR / "transcripts.json"
 WHISPER_SAMPLE_RATE = 16000
 FFMPEG_TIMEOUT_SECONDS = 600
 
@@ -42,6 +49,8 @@ class TranscriptionOut(BaseModel):
     recordingId: str
     name: str
     patientReference: str
+    profession: str
+    specialty: str
     recordedAt: datetime
     durationSeconds: float | None
     status: str
@@ -94,6 +103,7 @@ def run_transcription(transcription_id: int) -> str:
     transcription.text = text
     transcription.error = ""
     transcription.save(update_fields=["status", "text", "error", "updated_at"])
+    request_automatic_extraction(transcription)
     return transcription.status
 
 
@@ -127,11 +137,17 @@ def load_sample_audio(
 
 
 def transcribe(source: str | Path | BinaryIO) -> str:
-    """Devuelve el texto de un audio (ruta o archivo) usando Whisper."""
+    """Texto de un audio (ruta o archivo): de la caché si se conoce; si no, con Whisper."""
+    data = Path(source).read_bytes() if isinstance(source, str | Path) else source.read()
+    cached = _cached_transcript(data)
+    if cached is not None:
+        logger.info("Transcripción servida desde la caché")
+        return cached
     transcriber = _get_transcriber(DEFAULT_MODEL_ID)
     output: dict[str, Any] = transcriber(
-        _load_audio(source),
+        _load_audio(io.BytesIO(data)),
         generate_kwargs={"language": DEFAULT_LANGUAGE, "task": "transcribe"},
+        return_timestamps=True,  # Soporte para audios largos (> 30s)
     )
     return str(output["text"]).strip()
 
@@ -143,6 +159,8 @@ def to_out(transcription: Transcription) -> TranscriptionOut:
         recordingId=str(recording.id),
         name=recording.patient_reference or "Dictado sin paciente",
         patientReference=recording.patient_reference,
+        profession=recording.profession,
+        specialty=recording.specialty,
         recordedAt=recording.recorded_at,
         durationSeconds=recording.duration_seconds,
         status=transcription.status,
@@ -164,6 +182,14 @@ def _user_message(error: Exception) -> str:
     if isinstance(error, TranscriptionError):
         return str(error)[:500]
     return "No se pudo transcribir el audio. Intenta nuevamente."
+
+
+def _cached_transcript(data: bytes) -> str | None:
+    if not TRANSCRIPT_CACHE_PATH.exists():
+        return None
+    entries = json.loads(TRANSCRIPT_CACHE_PATH.read_text(encoding="utf-8"))
+    entry = entries.get(hashlib.sha256(data).hexdigest())
+    return str(entry["text"]) if entry else None
 
 
 def _load_audio(source: str | Path | BinaryIO) -> dict[str, Any]:

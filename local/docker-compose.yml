@@ -38,6 +38,9 @@ services:
       - ../backend:/app
     environment:
       - DJANGO_FRONTEND_URL=http://localhost:3000
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_MODEL_ID=${HF_MODEL_ID:-}
+      - EXTRACTION_MODEL=${EXTRACTION_MODEL:-}
     env_file:
       - ./conf/${LOCAL_ENV:-default}
     labels:
@@ -133,7 +136,7 @@ services:
     command: >
       watchmedo auto-restart --directory=/app --pattern=*.py --recursive
       --signal SIGTERM --debounce-interval 1 --
-      celery -A conf worker --loglevel=info --concurrency=2
+      celery -A conf worker --loglevel=info --concurrency=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -143,5 +146,8 @@ services:
       - ../backend:/app
     environment:
       - DJANGO_FRONTEND_URL=http://localhost:3000
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_MODEL_ID=${HF_MODEL_ID:-}
+      - EXTRACTION_MODEL=${EXTRACTION_MODEL:-}
     env_file:
       - ./conf/${LOCAL_ENV:-default}

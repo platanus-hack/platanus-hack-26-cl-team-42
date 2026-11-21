@@ -224,6 +224,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.demo",
     "apps.recordings",
+    "apps.clinical_templates",
 ]
 
 

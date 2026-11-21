@@ -1,39 +1,84 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notConnected } from "../../services/api/client";
+import { apiRequest } from "../../services/api/client";
+import { extensionFor } from "../recordings/recorderFormat";
 
-// Módulo 3 · Parseo del texto transcrito a plantillas de informe.
-
-export interface TemplateField {
-  key: string;
-  label: string;
-  required: boolean;
-}
+// Módulo 3 · Parseo del texto transcrito a plantillas clínicas.
+// Backend: `backend/apps/clinical_templates` (plantillas) y
+// `backend/apps/transcription` (extracción con Qwen).
 
 export interface ReportTemplate {
-  id: string;
+  slug: string;
   name: string;
-  fields: TemplateField[];
+  description: string;
+  profession: string;
+  version: number;
 }
 
-export interface ParsedReport {
+export type ExtractionStatus = "pending" | "processing" | "done" | "failed";
+
+export interface Extraction {
   id: string;
   transcriptId: string;
-  templateId: string;
-  /** Valores extraídos del texto, indexados por `TemplateField.key`. */
-  values: Record<string, string>;
+  recordingId: string;
+  templateSlug: string;
+  templateName: string;
+  status: ExtractionStatus;
+  /** Registro estructurado según el JSON Schema de la plantilla. */
+  data: Record<string, unknown> | null;
+  /** Motivo legible cuando `status` es `failed`. */
+  error: string;
+  updated_at: string;
+}
+
+/** Plantilla con su JSON Schema; `required` conserva el orden de las secciones. */
+export interface TemplateDetail extends ReportTemplate {
+  output_schema: {
+    required: string[];
+    properties: Record<string, { description?: string }>;
+  };
+}
+
+/** Información nueva para una sección: escrita y/o en audio. */
+export interface SectionComplement {
+  text?: string;
+  audio?: Blob;
+  audioFilename?: string;
 }
 
 export interface TemplatesGateway {
   listTemplates(): Promise<ReportTemplate[]>;
-  parse(transcriptId: string, templateId: string): Promise<ParsedReport>;
+  getTemplate(slug: string): Promise<TemplateDetail>;
+  listExtractions(): Promise<Extraction[]>;
+  extract(transcriptId: string, templateSlug?: string): Promise<Extraction>;
+  complement(extractionId: string, section: string, complement: SectionComplement): Promise<Extraction>;
 }
 
 export const templatesGateway: TemplatesGateway = {
-  listTemplates: async () => [],
-  parse: notConnected("templates.parse"),
+  listTemplates: () => apiRequest<ReportTemplate[]>("/clinical-templates/"),
+  getTemplate: (slug) => apiRequest<TemplateDetail>(`/clinical-templates/${slug}`),
+  listExtractions: () => apiRequest<Extraction[]>("/transcription/extractions"),
+  extract: (transcriptId, templateSlug) =>
+    apiRequest<Extraction>(`/transcription/transcripts/${transcriptId}/extract`, {
+      method: "POST",
+      body: JSON.stringify({ template_slug: templateSlug ?? null }),
+    }),
+  complement: (extractionId, section, { text, audio, audioFilename }) => {
+    const form = new FormData();
+    form.append("section", section);
+    if (text) form.append("text", text);
+    if (audio) form.append("audio", audio, audioFilename ?? `complemento.${extensionFor(audio.type)}`);
+    return apiRequest<Extraction>(`/transcription/extractions/${extractionId}/complement`, {
+      method: "POST",
+      body: form,
+    });
+  },
 };
 
 export const templateKeys = ["report-templates"] as const;
+export const extractionKeys = ["extractions"] as const;
+
+/** Mientras haya extracciones en curso se consulta su avance seguido, para ver cómo se llena. */
+const POLL_INTERVAL_MS = 1500;
 
 export function useReportTemplates() {
   return useQuery({
@@ -42,11 +87,45 @@ export function useReportTemplates() {
   });
 }
 
-export function useParseTranscript() {
+export function useTemplate(slug: string | undefined) {
+  return useQuery({
+    queryKey: [...templateKeys, slug],
+    queryFn: () => templatesGateway.getTemplate(slug as string),
+    enabled: slug !== undefined,
+    staleTime: Infinity,
+  });
+}
+
+export function useExtractions() {
+  return useQuery({
+    queryKey: extractionKeys,
+    queryFn: () => templatesGateway.listExtractions(),
+    refetchInterval: (query) => (query.state.data?.some(isExtractionInProgress) ? POLL_INTERVAL_MS : false),
+  });
+}
+
+export function useExtractRecord() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ transcriptId, templateId }: { transcriptId: string; templateId: string }) =>
-      templatesGateway.parse(transcriptId, templateId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templateKeys }),
+    mutationFn: ({ transcriptId, templateSlug }: { transcriptId: string; templateSlug?: string }) =>
+      templatesGateway.extract(transcriptId, templateSlug),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: extractionKeys }),
   });
+}
+
+export function useComplementSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      extractionId,
+      section,
+      ...complement
+    }: { extractionId: string; section: string } & SectionComplement) =>
+      templatesGateway.complement(extractionId, section, complement),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: extractionKeys }),
+  });
+}
+
+export function isExtractionInProgress(extraction: Extraction): boolean {
+  return extraction.status === "pending" || extraction.status === "processing";
 }

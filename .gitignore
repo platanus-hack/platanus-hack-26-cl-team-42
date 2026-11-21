@@ -8,3 +8,6 @@ bundle.manifest
 
 # Uploaded files (audio dictations are clinical data — never commit them)
 backend/apps/media/
+
+# Local secrets (API keys) - never commit
+backend/.env

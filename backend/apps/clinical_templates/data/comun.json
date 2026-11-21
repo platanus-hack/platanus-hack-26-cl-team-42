@@ -1,0 +1,1982 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Definiciones comunes de registros clínicos UCI",
+  "description": "Bloques compartidos por todas las plantillas UCI. Mantener la misma forma en todas permite contrastar y conciliar registros entre profesionales.",
+  "x-instrucciones-base": "Eres un asistente de documentación clínica en una Unidad de Cuidados Intensivos (UCI) en Chile.\nRecibes la transcripción de una nota de voz de un profesional de salud sobre UN paciente hospitalizado en UCI y debes convertirla en un JSON que cumpla EXACTAMENTE el JSON Schema entregado.\n\nReglas:\n1. Extrae solo lo que se dice en la transcripción. No inventes, no infieras valores, no completes con valores normales.\n2. Si un dato no se menciona usa null; si una lista no tiene elementos usa []. Incluye siempre todas las claves.\n3. Normaliza unidades a las indicadas en cada campo (mmHg, mmol/L, mL, %, cmH2O). Si la unidad dicha no es convertible con certeza, deja el número y explica en 'observaciones_no_estructuradas'.\n4. Usa la jerga clínica chilena: 'BIC' = bomba de infusión continua, 'drogas vasoactivas' = DVA, 'TENS' = técnico en enfermería, 'kine' = kinesiólogo, 'VMI' = ventilación mecánica invasiva, 'CNAF' = cánula nasal de alto flujo.\n5. En 'evidencia' copia una cita textual breve (máx. 20 palabras) de la transcripción que respalde el dato.\n6. Si el profesional se corrige a sí mismo, registra el valor final.\n7. Si menciona información de otro profesional (p. ej. 'kine dice que...'), regístrala con certeza 'referido' cuando el campo lo permita.\n8. Responde solo con el JSON, sin texto adicional.",
+  "x-sobre-comun": {
+    "metadatos": {
+      "$ref": "#/$defs/Metadatos"
+    },
+    "control_hemodinamico": {
+      "type": "array",
+      "description": "Controles hemodinámicos, uno por hora/medición. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/ControlHemodinamico"
+      }
+    },
+    "control_respiratorio": {
+      "type": "array",
+      "description": "Controles respiratorios, uno por hora/medición. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/ControlRespiratorio"
+      }
+    },
+    "drogas_infusion": {
+      "type": "array",
+      "description": "Fármacos en infusión continua mencionados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/DrogaInfusion"
+      }
+    },
+    "medicamentos": {
+      "type": "array",
+      "description": "Medicamentos intermitentes mencionados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Medicamento"
+      }
+    },
+    "escalas": {
+      "type": "array",
+      "description": "Escalas clínicas aplicadas. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Escala"
+      }
+    },
+    "dispositivos_invasivos": {
+      "type": "array",
+      "description": "Dispositivos invasivos mencionados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/DispositivoInvasivo"
+      }
+    },
+    "alergias": {
+      "type": "array",
+      "description": "Alergias mencionadas. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Alergia"
+      }
+    },
+    "alertas": {
+      "type": "array",
+      "description": "Alertas o situaciones de riesgo. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Alerta"
+      }
+    },
+    "indicaciones": {
+      "type": "array",
+      "description": "Indicaciones dadas en este registro. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Indicacion"
+      }
+    },
+    "pendientes": {
+      "type": "array",
+      "description": "Pendientes para el siguiente turno o profesional. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Indicacion"
+      }
+    },
+    "observaciones_no_estructuradas": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Información clínicamente relevante dicha en el audio que no cabe en ningún otro campo."
+    }
+  },
+  "$defs": {
+    "Metadatos": {
+      "type": "object",
+      "description": "Contexto del registro: quién, cuándo y en qué momento de la estadía UCI.",
+      "properties": {
+        "tipo_profesional": {
+          "type": "string",
+          "enum": [
+            "medico",
+            "especialista",
+            "enfermeria",
+            "tens",
+            "kinesiologia"
+          ],
+          "description": "Tipo de profesional que realiza el registro (fijo por plantilla)."
+        },
+        "nombre_profesional": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Nombre del profesional si se identifica en el audio."
+        },
+        "especialidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Especialidad del profesional (p. ej. 'medicina intensiva', 'infectología')."
+        },
+        "fecha_hora_registro": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fecha y hora del registro en ISO 8601 (YYYY-MM-DDTHH:MM) solo si se dice explícitamente.",
+          "format": "date-time"
+        },
+        "tipo_registro": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "ingreso_uci",
+            "evolucion",
+            "entrega_turno",
+            "evento_agudo",
+            "procedimiento",
+            "ronda_interdisciplinaria",
+            "interconsulta",
+            "egreso_uci",
+            null
+          ],
+          "description": "Tipo de nota clínica dentro de la estadía UCI."
+        },
+        "turno": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "dia",
+            "noche",
+            null
+          ],
+          "description": "Turno en que se realiza el registro."
+        },
+        "dia_estada_uci": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Día de estadía en UCI (día 1 = día de ingreso) si se menciona.",
+          "minimum": 0
+        },
+        "cama": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cama o box UCI del paciente."
+        }
+      },
+      "required": [
+        "tipo_profesional",
+        "nombre_profesional",
+        "especialidad",
+        "fecha_hora_registro",
+        "tipo_registro",
+        "turno",
+        "dia_estada_uci",
+        "cama"
+      ],
+      "additionalProperties": false
+    },
+    "Sistema": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "neurologico",
+        "respiratorio",
+        "hemodinamico",
+        "renal_metabolico",
+        "infeccioso",
+        "digestivo_nutricional",
+        "hematologico",
+        "piel_tegumentos",
+        "general",
+        null
+      ],
+      "description": "Sistema u órgano al que se refiere el dato."
+    },
+    "ControlHemodinamico": {
+      "type": "object",
+      "description": "Una medición hemodinámica en un momento dado.",
+      "properties": {
+        "hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+        },
+        "presion_sistolica": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión arterial sistólica en mmHg."
+        },
+        "presion_diastolica": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión arterial diastólica en mmHg."
+        },
+        "pam": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión arterial media en mmHg."
+        },
+        "frecuencia_cardiaca": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Frecuencia cardiaca en latidos por minuto."
+        },
+        "ritmo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ritmo cardiaco (p. ej. 'sinusal', 'fibrilación auricular')."
+        },
+        "pvc": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión venosa central en cmH2O."
+        },
+        "llene_capilar": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Llene capilar tal como se informa (p. ej. '< 2 s', 'enlentecido')."
+        },
+        "lactato": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Lactato en mmol/L."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "hora",
+        "presion_sistolica",
+        "presion_diastolica",
+        "pam",
+        "frecuencia_cardiaca",
+        "ritmo",
+        "pvc",
+        "llene_capilar",
+        "lactato",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "ControlRespiratorio": {
+      "type": "object",
+      "description": "Una medición respiratoria en un momento dado.",
+      "properties": {
+        "hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+        },
+        "frecuencia_respiratoria": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Frecuencia respiratoria en respiraciones por minuto."
+        },
+        "saturacion_o2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Saturación de oxígeno en % (0-100).",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "soporte": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "ambiental",
+            "naricera",
+            "mascarilla",
+            "CNAF",
+            "VMNI",
+            "VMI",
+            "TQT",
+            null
+          ],
+          "description": "Soporte de oxígeno o ventilatorio al momento de la medición."
+        },
+        "fio2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Fracción inspirada de oxígeno en % (21-100).",
+          "minimum": 21,
+          "maximum": 100
+        },
+        "flujo_l_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Flujo de oxígeno en L/min."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "hora",
+        "frecuencia_respiratoria",
+        "saturacion_o2",
+        "soporte",
+        "fio2",
+        "flujo_l_min",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Weaning": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Proceso de destete de ventilación mecánica.",
+      "properties": {
+        "prueba_ventilacion_espontanea": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "no_realizada",
+            "en_curso",
+            "exitosa",
+            "fallida",
+            null
+          ],
+          "description": "Resultado de la prueba de ventilación espontánea (PVE/SBT)."
+        },
+        "criterios": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Criterios de destete evaluados o motivo para no realizarlo."
+        },
+        "extubacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "no_aplica",
+            "planificada",
+            "realizada",
+            "fallida_reintubacion",
+            null
+          ],
+          "description": "Estado de la extubación."
+        },
+        "resultado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Resultado o comentario del proceso de destete."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "prueba_ventilacion_espontanea",
+        "criterios",
+        "extubacion",
+        "resultado",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "VentilacionMecanica": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Parámetros de ventilación mecánica invasiva o no invasiva. null si el paciente no está ventilado o no se menciona.",
+      "properties": {
+        "via_aerea": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Vía aérea artificial.",
+          "properties": {
+            "tipo": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "TET",
+                "TQT",
+                "interfaz_VMNI",
+                "otro",
+                null
+              ],
+              "description": "Tipo de vía aérea."
+            },
+            "numero": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Número o calibre del tubo/cánula."
+            },
+            "fijacion_cm": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Fijación del tubo en cm a nivel de comisura."
+            },
+            "presion_cuff_cmh2o": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Presión del cuff en cmH2O."
+            }
+          },
+          "required": [
+            "tipo",
+            "numero",
+            "fijacion_cm",
+            "presion_cuff_cmh2o"
+          ],
+          "additionalProperties": false
+        },
+        "modo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Modo ventilatorio (p. ej. 'VCV', 'PCV', 'PSV', 'SIMV', 'APRV')."
+        },
+        "volumen_corriente_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Volumen corriente en mL."
+        },
+        "peep_cmh2o": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "PEEP en cmH2O."
+        },
+        "fio2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "FiO2 en % (21-100).",
+          "minimum": 21,
+          "maximum": 100
+        },
+        "fr_programada": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Frecuencia respiratoria programada por minuto."
+        },
+        "presion_soporte_cmh2o": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión de soporte en cmH2O."
+        },
+        "presion_plateau_cmh2o": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión plateau en cmH2O."
+        },
+        "presion_peak_cmh2o": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Presión peak en cmH2O."
+        },
+        "driving_pressure_cmh2o": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Driving pressure en cmH2O."
+        },
+        "pafi": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Relación PaO2/FiO2."
+        },
+        "posicion_prono": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Ventilación en posición prono.",
+          "properties": {
+            "activa": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "¿Está en prono?"
+            },
+            "horas": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Horas acumuladas en prono."
+            }
+          },
+          "required": [
+            "activa",
+            "horas"
+          ],
+          "additionalProperties": false
+        },
+        "weaning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Weaning"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Proceso de destete, si se menciona."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "via_aerea",
+        "modo",
+        "volumen_corriente_ml",
+        "peep_cmh2o",
+        "fio2",
+        "fr_programada",
+        "presion_soporte_cmh2o",
+        "presion_plateau_cmh2o",
+        "presion_peak_cmh2o",
+        "driving_pressure_cmh2o",
+        "pafi",
+        "posicion_prono",
+        "weaning",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "DrogaInfusion": {
+      "type": "object",
+      "description": "Fármaco en infusión continua (bomba de infusión).",
+      "properties": {
+        "farmaco": {
+          "type": "string",
+          "description": "Nombre del fármaco en infusión continua (BIC)."
+        },
+        "categoria": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "vasoactivo",
+            "inotropico",
+            "sedante",
+            "analgesico",
+            "relajante_muscular",
+            "insulina",
+            "anticoagulante",
+            "otro",
+            null
+          ],
+          "description": "Categoría farmacológica."
+        },
+        "dosis": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Dosis numérica."
+        },
+        "unidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unidad de la dosis (p. ej. 'mcg/kg/min', 'mg/h', 'UI/h', 'ml/h')."
+        },
+        "tendencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "inicio",
+            "aumento",
+            "descenso",
+            "sin_cambio",
+            "suspension",
+            null
+          ],
+          "description": "Cambio respecto al control previo."
+        },
+        "hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "farmaco",
+        "categoria",
+        "dosis",
+        "unidad",
+        "tendencia",
+        "hora",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "SedoanalgesiaNeuro": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Estado de sedación, analgesia, delirium y conciencia.",
+      "properties": {
+        "rass_actual": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "RASS actual (-5 a +4).",
+          "minimum": -5,
+          "maximum": 4
+        },
+        "rass_objetivo": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "RASS objetivo (-5 a +4).",
+          "minimum": -5,
+          "maximum": 4
+        },
+        "dolor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Evaluación de dolor.",
+          "properties": {
+            "escala": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "CPOT",
+                "BPS",
+                "EVA",
+                "ENA",
+                null
+              ],
+              "description": "Escala de dolor utilizada."
+            },
+            "puntaje": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Puntaje de dolor."
+            }
+          },
+          "required": [
+            "escala",
+            "puntaje"
+          ],
+          "additionalProperties": false
+        },
+        "cam_icu": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "positivo",
+            "negativo",
+            "no_evaluable",
+            null
+          ],
+          "description": "Resultado de CAM-ICU (delirium)."
+        },
+        "glasgow": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Escala de coma de Glasgow (3-15).",
+          "minimum": 3,
+          "maximum": 15
+        },
+        "pupilas": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Descripción de pupilas (p. ej. 'isocóricas reactivas')."
+        },
+        "focalidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Focalidad neurológica descrita."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "rass_actual",
+        "rass_objetivo",
+        "dolor",
+        "cam_icu",
+        "glasgow",
+        "pupilas",
+        "focalidad",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "TerapiaReemplazoRenal": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Terapia de reemplazo renal (diálisis). null si no tiene o no se menciona.",
+      "properties": {
+        "modalidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "HDI",
+            "CVVH",
+            "CVVHD",
+            "CVVHDF",
+            "SLED",
+            "otro",
+            null
+          ],
+          "description": "Modalidad de terapia de reemplazo renal."
+        },
+        "dosis_efluente_ml_kg_h": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Dosis de efluente en mL/kg/h."
+        },
+        "anticoagulacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Anticoagulación del circuito (p. ej. 'citrato', 'heparina', 'sin')."
+        },
+        "ultrafiltracion_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Ultrafiltración neta en mL en el periodo."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "modalidad",
+        "dosis_efluente_ml_kg_h",
+        "anticoagulacion",
+        "ultrafiltracion_ml",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "VolumenHidrico": {
+      "type": "object",
+      "description": "Un componente del balance hídrico.",
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "description": "Tipo de ingreso o egreso (p. ej. 'cristaloides', 'diuresis', 'drenaje')."
+        },
+        "ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Volumen en mL."
+        }
+      },
+      "required": [
+        "tipo",
+        "ml"
+      ],
+      "additionalProperties": false
+    },
+    "BalanceHidrico": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Balance hídrico del periodo.",
+      "properties": {
+        "periodo_horas": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Horas que abarca el balance (p. ej. 12 o 24)."
+        },
+        "ingresos": {
+          "type": "array",
+          "description": "Ingresos del periodo. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "$ref": "#/$defs/VolumenHidrico"
+          }
+        },
+        "egresos": {
+          "type": "array",
+          "description": "Egresos del periodo. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "$ref": "#/$defs/VolumenHidrico"
+          }
+        },
+        "diuresis_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Diuresis total del periodo en mL."
+        },
+        "diuresis_ml_kg_h": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Diuresis en mL/kg/h."
+        },
+        "balance_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Balance del periodo en mL (positivo o negativo)."
+        },
+        "balance_acumulado_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Balance acumulado de la estadía en mL."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "periodo_horas",
+        "ingresos",
+        "egresos",
+        "diuresis_ml",
+        "diuresis_ml_kg_h",
+        "balance_ml",
+        "balance_acumulado_ml",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Nutricion": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Soporte nutricional.",
+      "properties": {
+        "via": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "oral",
+            "SNG",
+            "SNY",
+            "gastrostomia",
+            "parenteral",
+            "regimen_cero",
+            null
+          ],
+          "description": "Vía de alimentación."
+        },
+        "formula": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fórmula o régimen indicado."
+        },
+        "velocidad_ml_h": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Velocidad de infusión enteral/parenteral en mL/h."
+        },
+        "meta_kcal": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Meta calórica diaria en kcal."
+        },
+        "aporte_kcal": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Aporte calórico real en kcal."
+        },
+        "tolerancia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tolerancia (p. ej. 'buena', 'distensión', 'vómitos')."
+        },
+        "residuo_gastrico_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Residuo gástrico en mL."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "via",
+        "formula",
+        "velocidad_ml_h",
+        "meta_kcal",
+        "aporte_kcal",
+        "tolerancia",
+        "residuo_gastrico_ml",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Hallazgo": {
+      "type": "object",
+      "description": "Hallazgo clínico puntual.",
+      "properties": {
+        "descripcion": {
+          "type": "string",
+          "description": "Hallazgo clínico tal como se describe."
+        },
+        "certeza": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "afirmado",
+            "negado",
+            "sospecha",
+            "referido",
+            null
+          ],
+          "description": "Afirmado por el profesional, negado explícitamente, sospechado, o referido por paciente/familia/otro profesional."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "descripcion",
+        "certeza",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "EvaluacionSistema": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Evaluación de un sistema. null si el sistema no se menciona.",
+      "properties": {
+        "hallazgos": {
+          "type": "array",
+          "description": "Hallazgos del sistema. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "$ref": "#/$defs/Hallazgo"
+          }
+        },
+        "evaluacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Evaluación o interpretación del profesional sobre el sistema."
+        },
+        "plan": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Plan específico para el sistema."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "hallazgos",
+        "evaluacion",
+        "plan",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "ValoracionPorSistemas": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Valoración organizada por sistemas. Es el eje común para contrastar registros de distintos profesionales.",
+      "properties": {
+        "neurologico": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "respiratorio": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hemodinamico": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "renal_metabolico": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "infeccioso": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "digestivo_nutricional": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hematologico": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "piel_tegumentos": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvaluacionSistema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "neurologico",
+        "respiratorio",
+        "hemodinamico",
+        "renal_metabolico",
+        "infeccioso",
+        "digestivo_nutricional",
+        "hematologico",
+        "piel_tegumentos"
+      ],
+      "additionalProperties": false
+    },
+    "Diagnostico": {
+      "type": "object",
+      "description": "Diagnóstico o problema activo.",
+      "properties": {
+        "descripcion": {
+          "type": "string",
+          "description": "Diagnóstico o problema tal como se dice."
+        },
+        "codigo_cie10": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Código CIE-10 solo si se menciona o es inequívoco; si hay duda, null."
+        },
+        "estado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "confirmado",
+            "sospecha",
+            "descartado",
+            "antecedente",
+            "resuelto",
+            null
+          ],
+          "description": "Estado del diagnóstico."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "descripcion",
+        "codigo_cie10",
+        "estado",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Medicamento": {
+      "type": "object",
+      "description": "Medicamento intermitente (no infusión continua).",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Nombre del medicamento tal como se menciona."
+        },
+        "principio_activo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Principio activo (genérico) si es inequívoco."
+        },
+        "dosis": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Dosis numérica."
+        },
+        "unidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unidad de la dosis (mg, g, UI, mcg...)."
+        },
+        "via": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Vía de administración (EV, VO, SC, SNG, inhalatoria...)."
+        },
+        "frecuencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Frecuencia (p. ej. 'cada 8 h', 'SOS', 'dosis única')."
+        },
+        "accion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "indicado",
+            "administrado",
+            "suspendido",
+            "modificado",
+            "omitido",
+            null
+          ],
+          "description": "Qué se hizo con el medicamento."
+        },
+        "hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "nombre",
+        "principio_activo",
+        "dosis",
+        "unidad",
+        "via",
+        "frecuencia",
+        "accion",
+        "hora",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Antimicrobiano": {
+      "type": "object",
+      "description": "Tratamiento antimicrobiano.",
+      "properties": {
+        "farmaco": {
+          "type": "string",
+          "description": "Antimicrobiano."
+        },
+        "dosis": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Dosis y frecuencia tal como se dicen (p. ej. '1 g cada 8 h')."
+        },
+        "dia_tratamiento": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Día de tratamiento (día 1 = inicio).",
+          "minimum": 1
+        },
+        "indicacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Foco o indicación del antimicrobiano."
+        },
+        "accion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "inicio",
+            "continua",
+            "ajuste",
+            "escalamiento",
+            "desescalamiento",
+            "suspension",
+            null
+          ],
+          "description": "Acción sobre el antimicrobiano."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "farmaco",
+        "dosis",
+        "dia_tratamiento",
+        "indicacion",
+        "accion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Cultivo": {
+      "type": "object",
+      "description": "Cultivo microbiológico.",
+      "properties": {
+        "muestra": {
+          "type": "string",
+          "description": "Tipo de muestra (hemocultivo, urocultivo, aspirado traqueal...)."
+        },
+        "fecha_toma": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fecha de toma (YYYY-MM-DD) o referencia temporal dicha."
+        },
+        "estado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "pendiente",
+            "negativo",
+            "positivo",
+            null
+          ],
+          "description": "Estado del cultivo."
+        },
+        "microorganismo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Microorganismo aislado."
+        },
+        "sensibilidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Perfil de sensibilidad/resistencia informado."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "muestra",
+        "fecha_toma",
+        "estado",
+        "microorganismo",
+        "sensibilidad",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "ExamenLaboratorio": {
+      "type": "object",
+      "description": "Resultado de laboratorio o imagen.",
+      "properties": {
+        "examen": {
+          "type": "string",
+          "description": "Nombre del examen (p. ej. 'creatinina', 'PCR', 'hemoglobina', 'radiografía de tórax')."
+        },
+        "valor": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ],
+          "description": "Resultado numérico o descriptivo."
+        },
+        "unidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unidad del valor."
+        },
+        "hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+        },
+        "interpretacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Interpretación dada por el profesional (p. ej. 'en ascenso')."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "examen",
+        "valor",
+        "unidad",
+        "hora",
+        "interpretacion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "DispositivoInvasivo": {
+      "type": "object",
+      "description": "Dispositivo invasivo.",
+      "properties": {
+        "tipo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "CVC",
+            "linea_arterial",
+            "TET",
+            "TQT",
+            "sonda_foley",
+            "SNG",
+            "SNY",
+            "drenaje",
+            "cateter_dialisis",
+            "VVP",
+            "otro",
+            null
+          ],
+          "description": "Tipo de dispositivo."
+        },
+        "ubicacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Sitio de inserción (p. ej. 'yugular derecha')."
+        },
+        "fecha_instalacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fecha de instalación (YYYY-MM-DD) o referencia temporal dicha."
+        },
+        "dias_instalado": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Días desde la instalación.",
+          "minimum": 0
+        },
+        "estado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Estado del dispositivo/sitio (p. ej. 'permeable', 'sitio limpio')."
+        },
+        "signos_infeccion": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "¿Se describen signos de infección del sitio?"
+        },
+        "accion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "instalado",
+            "mantenido",
+            "cambiado",
+            "retirado",
+            "evaluar_retiro",
+            null
+          ],
+          "description": "Acción sobre el dispositivo."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "tipo",
+        "ubicacion",
+        "fecha_instalacion",
+        "dias_instalado",
+        "estado",
+        "signos_infeccion",
+        "accion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Procedimiento": {
+      "type": "object",
+      "description": "Procedimiento realizado al paciente.",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Procedimiento realizado."
+        },
+        "fecha_hora": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fecha/hora del procedimiento (ISO 8601 o HH:MM)."
+        },
+        "operador": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Quién lo realizó."
+        },
+        "resultado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Resultado."
+        },
+        "complicaciones": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Complicaciones; null si no se mencionan."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "nombre",
+        "fecha_hora",
+        "operador",
+        "resultado",
+        "complicaciones",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Escala": {
+      "type": "object",
+      "description": "Escala clínica aplicada.",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Nombre de la escala (SOFA, APACHE II, Glasgow, RASS, CPOT, CAM-ICU, Braden, Downton, MRC, IMS, Barthel...)."
+        },
+        "puntaje": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Puntaje obtenido."
+        },
+        "interpretacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Interpretación (p. ej. 'alto riesgo de LPP')."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "nombre",
+        "puntaje",
+        "interpretacion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Alergia": {
+      "type": "object",
+      "description": "Alergia conocida.",
+      "properties": {
+        "agente": {
+          "type": "string",
+          "description": "Agente alérgeno."
+        },
+        "reaccion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tipo de reacción."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "agente",
+        "reaccion",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Alerta": {
+      "type": "object",
+      "description": "Alerta clínica.",
+      "properties": {
+        "descripcion": {
+          "type": "string",
+          "description": "Situación de riesgo o evento que requiere atención."
+        },
+        "severidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "baja",
+            "media",
+            "alta",
+            "critica",
+            null
+          ],
+          "description": "Severidad según lo expresado por el profesional."
+        },
+        "sistema": {
+          "$ref": "#/$defs/Sistema"
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "descripcion",
+        "severidad",
+        "sistema",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "Indicacion": {
+      "type": "object",
+      "description": "Indicación, recomendación o pendiente accionable.",
+      "properties": {
+        "descripcion": {
+          "type": "string",
+          "description": "Acción indicada o pendiente."
+        },
+        "responsable_sugerido": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "medico",
+            "especialista",
+            "enfermeria",
+            "tens",
+            "kinesiologia",
+            "nutricionista",
+            "fonoaudiologo",
+            "terapeuta_ocupacional",
+            "equipo",
+            "otro",
+            null
+          ],
+          "description": "Quién debería ejecutarla, si se menciona."
+        },
+        "plazo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Plazo u hora (p. ej. 'hoy', 'próximo turno', '14:00')."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "descripcion",
+        "responsable_sugerido",
+        "plazo",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "ItemProfilaxis": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Ítem del checklist de profilaxis.",
+      "properties": {
+        "cumple": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "¿Está indicado/cumplido?"
+        },
+        "detalle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Detalle (fármaco, motivo de no cumplimiento...)."
+        }
+      },
+      "required": [
+        "cumple",
+        "detalle"
+      ],
+      "additionalProperties": false
+    },
+    "Profilaxis": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Checklist diario de medidas preventivas UCI (tipo FAST HUGS BID).",
+      "properties": {
+        "tromboprofilaxis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proteccion_gastrica": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cabecera_30": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "control_glicemico": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "interrupcion_sedacion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retiro_dispositivos_evaluado": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemProfilaxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "tromboprofilaxis",
+        "proteccion_gastrica",
+        "cabecera_30",
+        "control_glicemico",
+        "interrupcion_sedacion",
+        "retiro_dispositivos_evaluado"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

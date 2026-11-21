@@ -1,0 +1,137 @@
+{
+  "metadatos": {
+    "tipo_profesional": "kinesiologia",
+    "nombre_profesional": "Klgo. Muñoz",
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-18T10:30:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [],
+  "control_respiratorio": [
+    {
+      "hora": "10:30",
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 97,
+      "soporte": "VMI",
+      "fio2": 40,
+      "flujo_l_min": null,
+      "evidencia": "post aspiración satura 97"
+    }
+  ],
+  "drogas_infusion": [],
+  "medicamentos": [],
+  "escalas": [
+    {
+      "nombre": "IMS",
+      "puntaje": 0,
+      "interpretacion": "sin movilidad activa",
+      "evidencia": "IMS cero"
+    }
+  ],
+  "dispositivos_invasivos": [],
+  "alergias": [],
+  "alertas": [],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": null,
+  "tipo_atencion": [
+    "respiratoria",
+    "motora"
+  ],
+  "evaluacion_respiratoria": {
+    "patron": "acoplado al ventilador",
+    "auscultacion": "crépitos basales derechos y roncus difusos",
+    "tos": "inefectiva",
+    "secreciones": {
+      "cantidad": "abundante",
+      "aspecto": "mucopurulentas"
+    },
+    "ventilacion_mecanica": {
+      "via_aerea": {
+        "tipo": "TET",
+        "numero": "7.5",
+        "fijacion_cm": null,
+        "presion_cuff_cmh2o": null
+      },
+      "modo": "VCV",
+      "volumen_corriente_ml": 420,
+      "peep_cmh2o": 10,
+      "fio2": 40,
+      "fr_programada": 18,
+      "presion_soporte_cmh2o": null,
+      "presion_plateau_cmh2o": 25,
+      "presion_peak_cmh2o": null,
+      "driving_pressure_cmh2o": 15,
+      "pafi": null,
+      "posicion_prono": null,
+      "weaning": null,
+      "evidencia": "en VCV, volumen 420, PEEP 10, FiO2 40, plateau 25"
+    },
+    "evidencia": "crépitos basales derechos, secreciones abundantes"
+  },
+  "evaluacion_motora": {
+    "mrc_total": null,
+    "mrc_segmentos": [],
+    "ims": 0,
+    "nivel_movilizacion": "movilización pasiva en cama",
+    "tolerancia": "sin cambios hemodinámicos",
+    "evidencia": "pasivo de cuatro extremidades, sin cambios en la presión"
+  },
+  "intervenciones": [
+    {
+      "tecnica": "aspiración de secreciones por TET",
+      "dosificacion": null,
+      "respuesta": "mejora saturación a 97%",
+      "evidencia": "aspiré y subió a 97"
+    },
+    {
+      "tecnica": "kinesioterapia respiratoria con vibropresiones",
+      "dosificacion": "10 minutos",
+      "respuesta": null,
+      "evidencia": "vibropresiones 10 minutos"
+    },
+    {
+      "tecnica": "movilización pasiva de cuatro extremidades",
+      "dosificacion": "2 series de 10 repeticiones",
+      "respuesta": "bien tolerada",
+      "evidencia": "dos series de 10 en las cuatro extremidades"
+    }
+  ],
+  "cambios_parametros_vm_sugeridos": [
+    {
+      "parametro": "FiO2",
+      "valor_actual": "40%",
+      "valor_sugerido": "35%",
+      "motivo": "Saturación sostenida de 97% post aspiración",
+      "evidencia": "se podría bajar la FiO2 a 35"
+    }
+  ],
+  "objetivos_terapeuticos": [
+    {
+      "objetivo": "Mantener vía aérea permeable",
+      "plazo": "diario",
+      "evidencia": "mantener vía aérea permeable"
+    },
+    {
+      "objetivo": "Preparar para prueba de ventilación espontánea",
+      "plazo": "mañana",
+      "evidencia": "dejarlo listo para PVE mañana"
+    },
+    {
+      "objetivo": "Sedestación al borde de la cama cuando RASS >= -1",
+      "plazo": null,
+      "evidencia": "sentarlo al borde cuando despierte"
+    }
+  ],
+  "recomendaciones_equipo": [
+    {
+      "descripcion": "Disminuir sedación para avanzar en movilización",
+      "responsable_sugerido": "medico",
+      "plazo": "hoy",
+      "evidencia": "sería bueno bajar la sedación para movilizarlo"
+    }
+  ]
+}

@@ -1,0 +1,346 @@
+{
+  "x-plantilla": {
+    "slug": "kinesiologia_uci",
+    "nombre": "Registro de kinesiología UCI",
+    "profesion": "kinesiologia",
+    "descripcion": "Atención kinésica respiratoria y/o motora en UCI: evaluación, intervenciones, destete y movilización precoz.",
+    "tipos_registro": [
+      "ingreso_uci",
+      "evolucion",
+      "evento_agudo",
+      "procedimiento",
+      "ronda_interdisciplinaria"
+    ],
+    "especialidad_obligatoria": false,
+    "instrucciones_llm": "Plantilla de kinesiología UCI. Los parámetros ventilatorios observados van en 'evaluacion_respiratoria.ventilacion_mecanica'.\nLos cambios de parámetros que el kinesiólogo sugiere al médico van en 'cambios_parametros_vm_sugeridos', no como valores actuales."
+  },
+  "title": "Registro de kinesiología UCI",
+  "description": "Atención kinésica respiratoria y/o motora en UCI: evaluación, intervenciones, destete y movilización precoz.",
+  "properties": {
+    "tipo_atencion": {
+      "type": "array",
+      "description": "Tipos de atención realizados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "respiratoria",
+          "motora"
+        ]
+      }
+    },
+    "evaluacion_respiratoria": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Evaluación respiratoria. null si no se realizó.",
+      "properties": {
+        "patron": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Patrón respiratorio."
+        },
+        "auscultacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Auscultación pulmonar."
+        },
+        "tos": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "efectiva",
+            "inefectiva",
+            "ausente",
+            null
+          ],
+          "description": "Calidad de la tos."
+        },
+        "secreciones": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Secreciones bronquiales.",
+          "properties": {
+            "cantidad": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "escasa",
+                "moderada",
+                "abundante",
+                null
+              ],
+              "description": "Cantidad de secreciones."
+            },
+            "aspecto": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Aspecto (mucosas, mucopurulentas, hemáticas...)."
+            }
+          },
+          "required": [
+            "cantidad",
+            "aspecto"
+          ],
+          "additionalProperties": false
+        },
+        "ventilacion_mecanica": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VentilacionMecanica"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "patron",
+        "auscultacion",
+        "tos",
+        "secreciones",
+        "ventilacion_mecanica",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "evaluacion_motora": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Evaluación motora y movilización precoz. null si no se realizó.",
+      "properties": {
+        "mrc_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Puntaje MRC total (0-60).",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "mrc_segmentos": {
+          "type": "array",
+          "description": "Fuerza por segmento. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "type": "object",
+            "description": "Fuerza de un segmento.",
+            "properties": {
+              "segmento": {
+                "type": "string",
+                "description": "Segmento o grupo muscular."
+              },
+              "puntaje": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Puntaje MRC del segmento (0-5).",
+                "minimum": 0,
+                "maximum": 5
+              }
+            },
+            "required": [
+              "segmento",
+              "puntaje"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "ims": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "ICU Mobility Scale (0-10).",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "nivel_movilizacion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Máximo nivel de movilización logrado (cama, sedente, bípedo, marcha...)."
+        },
+        "tolerancia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tolerancia hemodinámica/respiratoria a la movilización."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "mrc_total",
+        "mrc_segmentos",
+        "ims",
+        "nivel_movilizacion",
+        "tolerancia",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "intervenciones": {
+      "type": "array",
+      "description": "Intervenciones realizadas. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Intervención kinésica.",
+        "properties": {
+          "tecnica": {
+            "type": "string",
+            "description": "Técnica realizada (aspiración, kinesioterapia respiratoria, sedestación...)."
+          },
+          "dosificacion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Dosificación (series, repeticiones, tiempo)."
+          },
+          "respuesta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Respuesta del paciente."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "tecnica",
+          "dosificacion",
+          "respuesta",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "cambios_parametros_vm_sugeridos": {
+      "type": "array",
+      "description": "Cambios de parámetros ventilatorios sugeridos al equipo médico. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Cambio de parámetro sugerido.",
+        "properties": {
+          "parametro": {
+            "type": "string",
+            "description": "Parámetro ventilatorio (PEEP, FiO2, PS...)."
+          },
+          "valor_actual": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor actual."
+          },
+          "valor_sugerido": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valor sugerido."
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Motivo de la sugerencia."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "parametro",
+          "valor_actual",
+          "valor_sugerido",
+          "motivo",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "objetivos_terapeuticos": {
+      "type": "array",
+      "description": "Objetivos terapéuticos. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Objetivo terapéutico.",
+        "properties": {
+          "objetivo": {
+            "type": "string",
+            "description": "Objetivo kinésico."
+          },
+          "plazo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plazo."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "objetivo",
+          "plazo",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "recomendaciones_equipo": {
+      "type": "array",
+      "description": "Recomendaciones al resto del equipo. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Indicacion"
+      }
+    }
+  }
+}

@@ -33,6 +33,8 @@ class RecordingOut(ModelSchema):
             "id",
             "patient_reference",
             "note",
+            "profession",
+            "specialty",
             "mime_type",
             "size_bytes",
             "duration_seconds",
@@ -56,6 +58,8 @@ class RecordingIn(Schema):
     duration_seconds: float | None = None
     patient_reference: str = ""
     note: str = ""
+    profession: str = ""
+    specialty: str = ""
 
 
 @router.get("", response=list[RecordingOut])
@@ -75,6 +79,8 @@ def create_recording(request, audio: File[UploadedFile], data: Form[RecordingIn]
             duration_seconds=data.duration_seconds,
             patient_reference=data.patient_reference,
             note=data.note,
+            profession=data.profession,
+            specialty=data.specialty,
         )
     except services.RecordingError as error:
         raise HttpError(400, str(error)) from error

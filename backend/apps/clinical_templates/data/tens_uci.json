@@ -1,0 +1,312 @@
+{
+  "x-plantilla": {
+    "slug": "tens_uci",
+    "nombre": "Registro TENS UCI",
+    "profesion": "tens",
+    "descripcion": "Registro por turno del técnico en enfermería (TENS) en UCI: controles, cuidados básicos y novedades.",
+    "tipos_registro": [
+      "evolucion",
+      "entrega_turno",
+      "evento_agudo"
+    ],
+    "especialidad_obligatoria": false,
+    "instrucciones_llm": "Plantilla TENS UCI. Los controles de signos vitales van en 'control_hemodinamico' y 'control_respiratorio', uno por hora de control.\nLas novedades que el TENS comunicó a enfermería o al médico van en 'novedades_informadas'."
+  },
+  "title": "Registro TENS UCI",
+  "description": "Registro por turno del técnico en enfermería (TENS) en UCI: controles, cuidados básicos y novedades.",
+  "properties": {
+    "cuidados_basicos": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Cuidados básicos del turno.",
+      "properties": {
+        "aseo_confort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Aseo y confort realizado."
+        },
+        "aseo_cavidades": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Aseo de cavidades (oral, ocular...)."
+        },
+        "cambios_posicion": {
+          "type": "array",
+          "description": "Cambios de posición realizados. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "type": "object",
+            "description": "Cambio de posición.",
+            "properties": {
+              "hora": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+              },
+              "posicion": {
+                "type": "string",
+                "description": "Posición (decúbito lateral derecho, supino, semisentado...)."
+              },
+              "evidencia": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+              }
+            },
+            "required": [
+              "hora",
+              "posicion",
+              "evidencia"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "cabecera_30": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "¿Se mantuvo cabecera a 30° o más?"
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "aseo_confort",
+        "aseo_cavidades",
+        "cambios_posicion",
+        "cabecera_30",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "eliminacion": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Eliminación.",
+      "properties": {
+        "diuresis_ml": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Diuresis medida en mL."
+        },
+        "deposiciones": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Deposiciones (número y características)."
+        },
+        "vomitos": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Vómitos (número y características)."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "diuresis_ml",
+        "deposiciones",
+        "vomitos",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "alimentacion": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Alimentación.",
+      "properties": {
+        "via": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "oral",
+            "SNG",
+            "SNY",
+            "gastrostomia",
+            "parenteral",
+            "regimen_cero",
+            null
+          ],
+          "description": "Vía de alimentación."
+        },
+        "tolerancia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tolerancia y porcentaje de ingesta."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "via",
+        "tolerancia",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "toma_muestras": {
+      "type": "array",
+      "description": "Muestras tomadas. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Muestra tomada.",
+        "properties": {
+          "muestra": {
+            "type": "string",
+            "description": "Muestra tomada."
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "muestra",
+          "hora",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "traslados": {
+      "type": "array",
+      "description": "Traslados realizados. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Traslado del paciente.",
+        "properties": {
+          "destino": {
+            "type": "string",
+            "description": "Destino (TAC, pabellón, rayos...)."
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Motivo del traslado."
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "destino",
+          "motivo",
+          "hora",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "novedades_informadas": {
+      "type": "array",
+      "description": "Novedades informadas al equipo. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Novedad comunicada.",
+        "properties": {
+          "a_quien": {
+            "type": "string",
+            "description": "A quién se informó (enfermera/o, médico...)."
+          },
+          "que": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Qué se informó."
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "a_quien",
+          "que",
+          "hora",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "entrega_turno": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Resumen de entrega al siguiente turno."
+    }
+  }
+}

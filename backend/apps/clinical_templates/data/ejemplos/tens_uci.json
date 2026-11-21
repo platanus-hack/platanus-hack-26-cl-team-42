@@ -1,0 +1,137 @@
+{
+  "metadatos": {
+    "tipo_profesional": "tens",
+    "nombre_profesional": null,
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-18T12:00:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [
+    {
+      "hora": "10:00",
+      "presion_sistolica": 118,
+      "presion_diastolica": 54,
+      "pam": 72,
+      "frecuencia_cardiaca": 96,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "10 horas 118/54, media 72, pulso 96"
+    },
+    {
+      "hora": "11:00",
+      "presion_sistolica": 115,
+      "presion_diastolica": 56,
+      "pam": 71,
+      "frecuencia_cardiaca": 95,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "11 horas 115/56, media 71"
+    },
+    {
+      "hora": "12:00",
+      "presion_sistolica": null,
+      "presion_diastolica": null,
+      "pam": 74,
+      "frecuencia_cardiaca": 92,
+      "ritmo": null,
+      "pvc": null,
+      "llene_capilar": null,
+      "lactato": null,
+      "evidencia": "12 horas media 74, pulso 92"
+    }
+  ],
+  "control_respiratorio": [
+    {
+      "hora": "10:00",
+      "frecuencia_respiratoria": 18,
+      "saturacion_o2": 94,
+      "soporte": "VMI",
+      "fio2": null,
+      "flujo_l_min": null,
+      "evidencia": "frecuencia 18, satura 94"
+    },
+    {
+      "hora": "12:00",
+      "frecuencia_respiratoria": 18,
+      "saturacion_o2": 95,
+      "soporte": "VMI",
+      "fio2": null,
+      "flujo_l_min": null,
+      "evidencia": "satura 95"
+    }
+  ],
+  "drogas_infusion": [],
+  "medicamentos": [],
+  "escalas": [],
+  "dispositivos_invasivos": [],
+  "alergias": [],
+  "alertas": [
+    {
+      "descripcion": "Enrojecimiento persistente en sacro",
+      "severidad": "media",
+      "sistema": "piel_tegumentos",
+      "evidencia": "tiene el sacro rojo y no se le quita"
+    }
+  ],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": null,
+  "cuidados_basicos": {
+    "aseo_confort": "Baño en cama a las 09:00",
+    "aseo_cavidades": "Aseo ocular y oral",
+    "cambios_posicion": [
+      {
+        "hora": "08:00",
+        "posicion": "decúbito lateral derecho",
+        "evidencia": "a las 8 lo dejé de lado derecho"
+      },
+      {
+        "hora": "10:00",
+        "posicion": "supino con cojín sacro",
+        "evidencia": "a las 10 de espalda con cojín"
+      },
+      {
+        "hora": "12:00",
+        "posicion": "decúbito lateral izquierdo",
+        "evidencia": "a las 12 lado izquierdo"
+      }
+    ],
+    "cabecera_30": true,
+    "evidencia": "baño en cama a las 9"
+  },
+  "eliminacion": {
+    "diuresis_ml": 160,
+    "deposiciones": "sin deposiciones",
+    "vomitos": null,
+    "evidencia": "orina 160, no ha hecho deposiciones"
+  },
+  "alimentacion": {
+    "via": "SNG",
+    "tolerancia": "sin vómitos ni distensión",
+    "evidencia": "la enteral pasando bien"
+  },
+  "toma_muestras": [
+    {
+      "muestra": "hemoglucotest",
+      "hora": "11:00",
+      "evidencia": "HGT a las 11"
+    }
+  ],
+  "traslados": [],
+  "novedades_informadas": [
+    {
+      "a_quien": "enfermera",
+      "que": "Enrojecimiento en sacro que no desaparece",
+      "hora": "10:00",
+      "evidencia": "le avisé a la enfermera lo del sacro"
+    }
+  ],
+  "entrega_turno": null
+}

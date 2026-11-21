@@ -13,6 +13,8 @@ export interface Recording {
   professionalName: string;
   patientReference: string;
   note: string;
+  profession: string;
+  specialty: string;
   mimeType: string;
   sizeBytes: number;
   durationSeconds: number | null;
@@ -32,6 +34,8 @@ export interface NewRecording {
   durationSeconds?: number | null;
   patientReference?: string;
   note?: string;
+  profession?: string;
+  specialty?: string;
 }
 
 export interface RecordingsGateway {
@@ -81,6 +85,8 @@ interface RecordingDto {
   professional_name: string;
   patient_reference: string;
   note: string;
+  profession: string;
+  specialty: string;
   mime_type: string;
   size_bytes: number;
   duration_seconds: number | null;
@@ -96,6 +102,8 @@ function fromDto(dto: RecordingDto): Recording {
     professionalName: dto.professional_name,
     patientReference: dto.patient_reference,
     note: dto.note,
+    profession: dto.profession,
+    specialty: dto.specialty,
     mimeType: dto.mime_type,
     sizeBytes: dto.size_bytes,
     durationSeconds: dto.duration_seconds,
@@ -115,5 +123,7 @@ function toFormData(recording: NewRecording): FormData {
   if (recording.durationSeconds != null) form.append("duration_seconds", String(recording.durationSeconds));
   if (recording.patientReference) form.append("patient_reference", recording.patientReference);
   if (recording.note) form.append("note", recording.note);
+  if (recording.profession) form.append("profession", recording.profession);
+  if (recording.specialty) form.append("specialty", recording.specialty);
   return form;
 }

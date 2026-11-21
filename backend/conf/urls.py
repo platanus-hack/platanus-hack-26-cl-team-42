@@ -23,6 +23,7 @@ from drf_spectacular.views import (
 # Celery only imports task modules in the worker; import them here too so the
 # web process can list/dispatch them through the tracker API.
 import apps.demo.tasks  # noqa: F401
+from apps.clinical_templates.api import router as clinical_templates_router
 from apps.demo.api import router as demo_router
 from apps.agent.api import router as agent_router
 from apps.recordings.api import router as recordings_router
@@ -35,6 +36,7 @@ from tracker.api import router as tracker_router
 API_ROUTERS = [
     ("/demo", demo_router),
     ("/recordings", recordings_router),
+    ("/clinical-templates", clinical_templates_router),
     ("/tracker", tracker_router),
     ("/transcription", transcription_router),
     ("/agent", agent_router),

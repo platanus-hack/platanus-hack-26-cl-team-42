@@ -1,0 +1,84 @@
+{
+  "metadatos": {
+    "tipo_profesional": "especialista",
+    "nombre_profesional": "Dra. Fuentes",
+    "especialidad": "infectología",
+    "fecha_hora_registro": "2026-11-18T15:00:00-03:00",
+    "tipo_registro": "interconsulta",
+    "turno": "dia",
+    "dia_estada_uci": 3,
+    "cama": "Box 7"
+  },
+  "control_hemodinamico": [],
+  "control_respiratorio": [],
+  "drogas_infusion": [],
+  "medicamentos": [],
+  "escalas": [],
+  "dispositivos_invasivos": [],
+  "alergias": [
+    {
+      "agente": "penicilina",
+      "reaccion": "rash cutáneo",
+      "evidencia": "enfermería informa alergia a penicilina tipo rash"
+    }
+  ],
+  "alertas": [],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": null,
+  "motivo_interconsulta": "Duración de antibiótico en neumonía neumocócica bacterémica",
+  "solicitado_por": "equipo UCI",
+  "evaluacion": "Evolución favorable: afebril, PCR en descenso. Alergia referida a penicilina de tipo cutáneo no anafiláctico; bajo riesgo de reacción cruzada con ceftriaxona.",
+  "hallazgos": [
+    {
+      "descripcion": "Afebril hace más de 12 horas",
+      "certeza": "afirmado",
+      "evidencia": "afebril desde anoche"
+    },
+    {
+      "descripcion": "Alergia a penicilina con rash",
+      "certeza": "referido",
+      "evidencia": "enfermería informa alergia a penicilina tipo rash"
+    }
+  ],
+  "diagnosticos": [
+    {
+      "descripcion": "Neumonía neumocócica bacterémica",
+      "codigo_cie10": "J13",
+      "estado": "confirmado",
+      "evidencia": "neumonía neumocócica bacterémica"
+    }
+  ],
+  "examenes_revisados": [
+    {
+      "examen": "PCR",
+      "valor": 145,
+      "unidad": "mg/L",
+      "hora": null,
+      "interpretacion": "en descenso",
+      "evidencia": "PCR 145 en descenso"
+    }
+  ],
+  "examenes_sugeridos": [
+    "hemocultivos de control"
+  ],
+  "recomendaciones_al_tratante": [
+    {
+      "descripcion": "Completar 7 días de ceftriaxona 2 g/día",
+      "responsable_sugerido": "medico",
+      "plazo": "hasta día 7",
+      "evidencia": "completar siete días de ceftriaxona"
+    },
+    {
+      "descripcion": "Mantener ceftriaxona con vigilancia de reacción cutánea dada alergia no anafiláctica a penicilina",
+      "responsable_sugerido": "enfermeria",
+      "plazo": "cada administración",
+      "evidencia": "puede seguir con ceftriaxona, vigilar piel"
+    }
+  ],
+  "seguimiento": {
+    "requiere": true,
+    "plazo": "en 72 h",
+    "modalidad": "revisar hemocultivos de control"
+  }
+}

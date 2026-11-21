@@ -1,0 +1,360 @@
+{
+  "x-plantilla": {
+    "slug": "enfermeria_uci",
+    "nombre": "Registro de enfermería UCI",
+    "profesion": "enfermeria",
+    "descripcion": "Registro por turno del enfermero/a UCI: valoración, cuidados, dispositivos, balance y entrega de turno.",
+    "tipos_registro": [
+      "ingreso_uci",
+      "evolucion",
+      "entrega_turno",
+      "evento_agudo",
+      "procedimiento",
+      "egreso_uci"
+    ],
+    "especialidad_obligatoria": false,
+    "instrucciones_llm": "Plantilla de enfermería UCI. Los fármacos en BIC van en 'drogas_infusion' con su tendencia; los administrados de forma intermitente en 'medicamentos' con accion 'administrado' u 'omitido'.\nEn 'entrega_turno' resume lo que el profesional entrega al siguiente turno."
+  },
+  "title": "Registro de enfermería UCI",
+  "description": "Registro por turno del enfermero/a UCI: valoración, cuidados, dispositivos, balance y entrega de turno.",
+  "properties": {
+    "valoracion_por_sistemas": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ValoracionPorSistemas"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sedoanalgesia_neuro": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SedoanalgesiaNeuro"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ventilacion_mecanica": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VentilacionMecanica"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Parámetros observados y cuidados de vía aérea."
+    },
+    "balance_hidrico": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BalanceHidrico"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nutricion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Nutricion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bundles_iaas": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Paquetes de prevención de infecciones asociadas a la atención de salud (IAAS).",
+      "properties": {
+        "neumonia_vm": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cumplimiento de medidas de prevención de neumonía asociada a VM."
+        },
+        "bacteremia_cvc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cumplimiento de medidas de prevención de bacteremia asociada a CVC."
+        },
+        "itu_cup": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cumplimiento de medidas de prevención de ITU asociada a catéter urinario."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "neumonia_vm",
+        "bacteremia_cvc",
+        "itu_cup",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "piel": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Estado de la piel, LPP y curaciones.",
+      "properties": {
+        "braden": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Puntaje Braden.",
+          "minimum": 6,
+          "maximum": 23
+        },
+        "lpp": {
+          "type": "array",
+          "description": "Lesiones por presión. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "type": "object",
+            "description": "Lesión por presión.",
+            "properties": {
+              "ubicacion": {
+                "type": "string",
+                "description": "Ubicación de la lesión por presión."
+              },
+              "grado": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "no_clasificable",
+                  "tejido_profundo",
+                  null
+                ],
+                "description": "Categoría LPP."
+              },
+              "evidencia": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+              }
+            },
+            "required": [
+              "ubicacion",
+              "grado",
+              "evidencia"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "curaciones": {
+          "type": "array",
+          "description": "Curaciones realizadas. Lista vacía si no se menciona ninguno.",
+          "items": {
+            "type": "object",
+            "description": "Curación realizada.",
+            "properties": {
+              "ubicacion": {
+                "type": "string",
+                "description": "Ubicación de la herida."
+              },
+              "tipo_herida": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Tipo de herida (operatoria, LPP, inserción de catéter...)."
+              },
+              "caracteristicas": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Características (lecho, exudado, bordes)."
+              },
+              "aposito": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Apósito o tratamiento utilizado."
+              },
+              "evidencia": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+              }
+            },
+            "required": [
+              "ubicacion",
+              "tipo_herida",
+              "caracteristicas",
+              "aposito",
+              "evidencia"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "braden",
+        "lpp",
+        "curaciones"
+      ],
+      "additionalProperties": false
+    },
+    "contencion": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Contención del paciente. null si no se menciona.",
+      "properties": {
+        "tipo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Tipo de contención (física, farmacológica)."
+        },
+        "motivo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Motivo."
+        },
+        "evidencia": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+        }
+      },
+      "required": [
+        "tipo",
+        "motivo",
+        "evidencia"
+      ],
+      "additionalProperties": false
+    },
+    "toma_examenes": {
+      "type": "array",
+      "description": "Exámenes tomados en el turno. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Examen tomado.",
+        "properties": {
+          "examen": {
+            "type": "string",
+            "description": "Examen o muestra tomada."
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "examen",
+          "hora",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "eventos_adversos": {
+      "type": "array",
+      "description": "Eventos adversos del turno. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "object",
+        "description": "Evento adverso.",
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "description": "Evento adverso (caída, extubación accidental, retiro de dispositivo, error de medicación...)."
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hora del dato en formato HH:MM (24 h). null si no se menciona."
+          },
+          "manejo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Manejo realizado."
+          },
+          "evidencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cita textual breve de la transcripción que respalda este dato. null si no hay cita directa."
+          }
+        },
+        "required": [
+          "descripcion",
+          "hora",
+          "manejo",
+          "evidencia"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "educacion_familia": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Educación o información entregada a familia/paciente."
+    },
+    "entrega_turno": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Resumen de entrega al siguiente turno."
+    }
+  }
+}

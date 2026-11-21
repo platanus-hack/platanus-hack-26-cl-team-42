@@ -1,0 +1,111 @@
+{
+  "x-plantilla": {
+    "slug": "especialista_interconsulta",
+    "nombre": "Interconsulta de especialista en UCI",
+    "profesion": "especialista",
+    "descripcion": "Evaluación de un especialista (infectología, cardiología, neurología, cirugía, etc.) solicitada por el equipo UCI.",
+    "tipos_registro": [
+      "interconsulta",
+      "evolucion",
+      "procedimiento"
+    ],
+    "especialidad_obligatoria": true,
+    "instrucciones_llm": "Plantilla de interconsulta. 'metadatos.especialidad' es obligatorio: si no se dice explícitamente, infiere la especialidad solo del contexto inequívoco del audio.\nLas recomendaciones al equipo tratante van en 'recomendaciones_al_tratante' con el responsable sugerido."
+  },
+  "title": "Interconsulta de especialista en UCI",
+  "description": "Evaluación de un especialista (infectología, cardiología, neurología, cirugía, etc.) solicitada por el equipo UCI.",
+  "properties": {
+    "motivo_interconsulta": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Motivo por el que se solicitó la interconsulta."
+    },
+    "solicitado_por": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Quién solicitó la interconsulta."
+    },
+    "evaluacion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Evaluación clínica del especialista."
+    },
+    "hallazgos": {
+      "type": "array",
+      "description": "Hallazgos relevantes del examen o revisión. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Hallazgo"
+      }
+    },
+    "diagnosticos": {
+      "type": "array",
+      "description": "Diagnósticos o hipótesis del especialista. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Diagnostico"
+      }
+    },
+    "examenes_revisados": {
+      "type": "array",
+      "description": "Exámenes revisados por el especialista. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/ExamenLaboratorio"
+      }
+    },
+    "examenes_sugeridos": {
+      "type": "array",
+      "description": "Exámenes que el especialista sugiere solicitar. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recomendaciones_al_tratante": {
+      "type": "array",
+      "description": "Recomendaciones al equipo tratante. Lista vacía si no se menciona ninguno.",
+      "items": {
+        "$ref": "#/$defs/Indicacion"
+      }
+    },
+    "seguimiento": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Seguimiento por la especialidad.",
+      "properties": {
+        "requiere": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "¿Requiere seguimiento por la especialidad?"
+        },
+        "plazo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cuándo (p. ej. 'en 48 h', 'mañana')."
+        },
+        "modalidad": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Modalidad (presencial, revisar exámenes, llamar si...)."
+        }
+      },
+      "required": [
+        "requiere",
+        "plazo",
+        "modalidad"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
