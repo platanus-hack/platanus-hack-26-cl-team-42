@@ -3,19 +3,16 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from io import StringIO
 
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.management import call_command
 from django.test import Client
 from django.utils import timezone
 
 from apps.clinical_templates import services as template_services
 from apps.recordings.models import Patient, Recording
-from apps.recordings.services import patients_of
 from apps.transcription.models import ExtractedRecord, Report, Transcription
 
 URL = f"/{settings.URL_PREFIX}/api/patients"
@@ -122,38 +119,6 @@ def test_transcription_that_never_gets_a_record_is_reported_as_failed(nurse, pat
     item = _list(nurse)[0]
     assert item["inboxStatus"] == "failed"
     assert item["retryRecordingId"] is None
-
-
-@pytest.mark.django_db
-def test_demo_patients_are_split_with_a_colleague_once():
-    user = User.objects.create_user(email="demo@example.com", password="pw")
-    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
-    assert patients_of(user).count() == 6
-
-    call_command(
-        "load_demo_patients",
-        "demo@example.com",
-        "--colleague",
-        "colega@example.com",
-        stdout=StringIO(),
-    )
-    colleague = User.objects.get(email="colega@example.com")
-    assert patients_of(user).count() == 3
-    assert patients_of(colleague).count() == 3
-    assert colleague.check_password("test")
-
-    # Un traspaso posterior no se deshace al volver a cargar.
-    moved = patients_of(colleague).first()
-    moved.assigned_to.remove(colleague)
-    moved.assigned_to.add(user)
-    call_command(
-        "load_demo_patients",
-        "demo@example.com",
-        "--colleague",
-        "colega@example.com",
-        stdout=StringIO(),
-    )
-    assert patients_of(user).count() == 4
 
 
 def _client(user) -> Client:

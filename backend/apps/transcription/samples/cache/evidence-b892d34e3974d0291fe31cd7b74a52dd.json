@@ -1,0 +1,12 @@
+[
+  {
+    "section": "objetivos_terapeuticos",
+    "message": "Se planifica prueba de ventilación espontánea para mañana sin considerar la respuesta inflamatoria activa (leucocitosis y PCR 160 mg/L). Esto, sumado a secreciones abundantes mucopurulentas, tos inefectiva y PEEP 10, cuestiona los criterios de preparación para el destete.",
+    "severity": "high"
+  },
+  {
+    "section": "evaluacion_respiratoria",
+    "message": "El informe describe crépitos bilaterales y secreciones mucopurulentas abundantes, pero no menciona el proceso inflamatorio/infeccioso sistémico (PCR 160 mg/L, leucocitosis). El cultivo de aspirado traqueal negativo no descarta neumonía asociada a ventilación; se debe evaluar exposición previa a anti",
+    "severity": "medium"
+  }
+]

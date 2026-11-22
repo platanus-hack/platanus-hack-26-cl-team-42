@@ -1,0 +1,32 @@
+# Capa opcional que expone la app por un túnel temporal de Cloudflare (trycloudflare.com).
+# Se usa solo a través de `just local tunnel-up` / `tunnel-down`; no se mezcla con `just local up`.
+#
+# Sin cuenta ni login: cada arranque genera una URL aleatoria *.trycloudflare.com y esa URL
+# deja de existir al bajar el túnel. Apunta al servidor del frontend (no al ingress), así que la
+# documentación interna (/-docs) no queda publicada; el frontend reenvía /-/ al backend.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2025.11.1
+    command: tunnel --no-autoupdate --url http://frontend:3000
+    depends_on:
+      - frontend
+      - backend
+
+  # Las variables de `environment` ganan sobre las del perfil (env_file), así que el túnel
+  # nunca hereda DEBUG ni el selector de desarrollo del perfil local.
+  backend:
+    environment: &public_backend_env
+      DJANGO_DEBUG: "False"
+      DJANGO_DEMO_ACCOUNT_SWITCH_ENABLED: "False"
+      # El cambio de cuenta de la demo queda solo para quien inicie sesión como superusuario.
+      DJANGO_DEMO_SUPERUSER_SWITCH_ENABLED: "True"
+      # Solo las cuentas de la demo (ver apps/recordings/deploy_demo.py); las demás no se ofrecen.
+      DJANGO_DEMO_SWITCH_EMAILS: "tomas.werth@localhost,cristobal.tubino@localhost,nelson.salazar@localhost"
+      # `backend` es el Host que el servidor del frontend usa al reenviar a la API.
+      DJANGO_ALLOWED_HOSTS: ".trycloudflare.com,.orb.local,backend,localhost"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "https://*.trycloudflare.com,https://*.orb.local"
+      DJANGO_LOG_LEVEL: "INFO"
+
+  worker:
+    environment: *public_backend_env

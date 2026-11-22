@@ -1,0 +1,12 @@
+[
+  {
+    "section": "objetivos_terapeuticos",
+    "message": "Se plantea preparar la prueba de ventilación espontánea para mañana sin considerar el estado inflamatorio activo (leucocitosis y PCR 160 mg/L). Además, el propio informe describe secreciones abundantes mucopurulentas, tos inefectiva y PEEP 10. Conviene reevaluar si el paciente cumple criterios de de",
+    "severity": "high"
+  },
+  {
+    "section": "evaluacion_respiratoria",
+    "message": "Se describen secreciones mucopurulentas abundantes con crépitos bilaterales junto a marcadores inflamatorios elevados, pero el informe no plantea un foco infeccioso ni una conducta al respecto. El cultivo traqueal negativo no descarta una neumonía asociada a ventilación (p. ej., si hay antibióticos ",
+    "severity": "medium"
+  }
+]

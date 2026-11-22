@@ -1,0 +1,123 @@
+{
+  "metadatos": {
+    "tipo_profesional": "kinesiologia",
+    "nombre_profesional": "Cristóbal Tubino",
+    "cama": "Box 5",
+    "dia_estada_uci": 4,
+    "especialidad": null,
+    "fecha_hora_registro": "2026-11-21T10:00:00-03:00",
+    "tipo_registro": "evolucion",
+    "turno": "dia"
+  },
+  "control_hemodinamico": [],
+  "control_respiratorio": [
+    {
+      "hora": "10:00",
+      "frecuencia_respiratoria": null,
+      "saturacion_o2": 97,
+      "soporte": "VMI",
+      "fio2": 40,
+      "flujo_l_min": null,
+      "evidencia": "post aspiración satura noventa y siete"
+    }
+  ],
+  "drogas_infusion": [],
+  "medicamentos": [],
+  "escalas": [
+    {
+      "nombre": "RASS",
+      "puntaje": -1,
+      "interpretacion": "despierto, obedece órdenes simples",
+      "evidencia": "Escala de Richmond menos uno, paciente despierto"
+    },
+    {
+      "nombre": "IMS",
+      "puntaje": 3,
+      "interpretacion": "sedestación en el borde de la cama",
+      "evidencia": "escala IMS tres"
+    }
+  ],
+  "dispositivos_invasivos": [
+    {
+      "tipo": "TET",
+      "ubicacion": "orotraqueal",
+      "fecha_instalacion": null,
+      "dias_instalado": null,
+      "estado": null,
+      "signos_infeccion": null,
+      "accion": "mantenido",
+      "evidencia": "tubo orotraqueal número siete coma cinco"
+    }
+  ],
+  "alergias": [],
+  "alertas": [],
+  "indicaciones": [],
+  "pendientes": [],
+  "observaciones_no_estructuradas": null,
+  "tipo_atencion": [
+    "respiratoria",
+    "motora"
+  ],
+  "evaluacion_respiratoria": {
+    "patron": "acoplado al ventilador",
+    "auscultacion": "crépitos basales bilaterales y roncus difusos",
+    "tos": "inefectiva",
+    "secreciones": {
+      "cantidad": "abundante",
+      "aspecto": "mucopurulentas"
+    },
+    "ventilacion_mecanica": {
+      "via_aerea": {
+        "tipo": "TET",
+        "numero": "7.5",
+        "fijacion_cm": null,
+        "presion_cuff_cmh2o": null
+      },
+      "modo": "VCV",
+      "volumen_corriente_ml": 420,
+      "peep_cmh2o": 10,
+      "fio2": 40,
+      "fr_programada": 18,
+      "presion_soporte_cmh2o": null,
+      "presion_plateau_cmh2o": 25,
+      "presion_peak_cmh2o": null,
+      "driving_pressure_cmh2o": null,
+      "pafi": null,
+      "posicion_prono": null,
+      "weaning": null,
+      "evidencia": "volumen control, volumen corriente cuatrocientos veinte, PEEP diez"
+    },
+    "evidencia": "crépitos basales bilaterales, secreciones abundantes mucopurulentas"
+  },
+  "evaluacion_motora": {
+    "mrc_total": null,
+    "mrc_segmentos": [],
+    "ims": 3,
+    "nivel_movilizacion": "borde de la cama",
+    "tolerancia": "buena tolerancia hemodinámica",
+    "evidencia": "Movilización en el borde de la cama, escala IMS tres"
+  },
+  "intervenciones": [
+    {
+      "tecnica": "aspiración de secreciones por TET",
+      "dosificacion": null,
+      "respuesta": "satura 97%",
+      "evidencia": "Se realiza aspiración de secreciones"
+    },
+    {
+      "tecnica": "kinesioterapia respiratoria",
+      "dosificacion": null,
+      "respuesta": null,
+      "evidencia": "kinesioterapia respiratoria"
+    }
+  ],
+  "cambios_parametros_vm_sugeridos": [],
+  "objetivos_terapeuticos": [
+    {
+      "objetivo": "Preparar prueba de ventilación espontánea",
+      "plazo": "mañana",
+      "evidencia": "preparar prueba de ventilación espontánea para mañana"
+    }
+  ],
+  "recomendaciones_equipo": []
+}

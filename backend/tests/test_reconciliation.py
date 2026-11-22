@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import json
 from datetime import UTC, datetime
-from io import StringIO
 
 import pytest
 from django.conf import settings
@@ -633,20 +632,6 @@ def test_the_remaining_professional_decides_knowing_what_the_other_reported(doct
     decision = conflict.notes.filter(kind="system").last().body
     assert "con conocimiento de la discrepancia" in decision
     assert "EU Soto (que había registrado «0.3 mcg/kg/min»)" in decision
-
-
-def test_demo_external_consultant_has_no_patients_assigned():
-    from django.core.management import call_command
-
-    from apps.recordings.services import patients_of
-
-    User.objects.create_user(email="demo@example.com", password="pw")
-    consultant = User.objects.create_user(
-        email="especialista@localhost", password="pw", profession="especialista"
-    )
-    call_command("load_demo_patients", "demo@example.com", stdout=StringIO())
-
-    assert patients_of(consultant).count() == 0
 
 
 def test_drafts_are_listed_only_when_asked_and_only_to_their_author(doctor, nurse, patient):

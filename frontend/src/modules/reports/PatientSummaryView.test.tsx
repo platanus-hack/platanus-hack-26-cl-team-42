@@ -11,6 +11,11 @@ vi.mock("../patients/api", async (importOriginal) => ({
 }));
 
 vi.mock("../reconciliation/api", () => ({ useReconciliations: () => ({ data: [] }) }));
+vi.mock("../panel/api", () => ({
+  isRunning: () => false,
+  usePanels: () => ({ data: [] }),
+  useOpenPanel: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
+}));
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
 
 it("muestra indicaciones y plan en secciones separadas de una misma pestaña", () => {

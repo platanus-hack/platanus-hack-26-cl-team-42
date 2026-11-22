@@ -8,9 +8,10 @@ interface DemoAccount {
   name: string;
   profession: string;
   current: boolean;
+  operator?: boolean;
 }
 
-/** Solo en desarrollo: cambia de cuenta de demo sin cerrar sesión (para probar flujos entre profesionales). */
+/** Solo en desarrollo o para el superusuario de la demo: cambia de cuenta de demo sin cerrar sesión (para probar flujos entre profesionales). */
 export function DemoAccountSwitcher() {
   const { data: accounts = [] } = useQuery({
     queryKey: ["dev-accounts"],
@@ -29,7 +30,7 @@ export function DemoAccountSwitcher() {
     <>
       <Separator size="4" />
       <Text size="1" color="gray" weight="medium">
-        Desarrollo · Cuentas de prueba
+        Cuentas de demo
       </Text>
       <Flex direction="column" gap="1">
         {accounts.map((account) => (
@@ -45,7 +46,7 @@ export function DemoAccountSwitcher() {
             <Flex direction="column" align="start">
               <span>{account.name || account.email.split("@")[0]}</span>
               <Text size="1" color="gray">
-                {account.profession ? professionLabel(account.profession) : "Sin profesión definida"}
+                {account.operator ? "Superusuario (tú)" : account.profession ? professionLabel(account.profession) : "Sin profesión definida"}
               </Text>
             </Flex>
             {account.current && (

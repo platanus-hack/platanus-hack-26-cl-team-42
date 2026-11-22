@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Badge, Button, Callout, Card, Flex, Grid, RadioGroup, Text, TextArea, TextField } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { professionLabel } from "../recordings/professions";
+import { AgentCouncil } from "../panel/AgentCouncil";
 import { sectionLabel } from "../templates/recordFields";
 import {
   useConflictAction,
@@ -64,6 +65,8 @@ export function ConflictCard({ conflict, patientId, reportId }: { conflict: Conf
           </Grid>
 
           <AgentPanel conflict={conflict} />
+
+          <AgentCouncil conflictId={conflict.id} patientId={patientId} canLaunch={conflict.myRole !== null} />
 
           {resolved && conflict.resolution ? <ResolutionSummary resolution={conflict.resolution} /> : <Actions conflict={conflict} />}
 

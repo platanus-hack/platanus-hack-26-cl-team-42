@@ -11,3 +11,6 @@ backend/apps/media/
 
 # Local secrets (API keys) - never commit
 backend/.env
+
+# Perfiles locales con secretos generados (ver `just local init`)
+local/conf/local

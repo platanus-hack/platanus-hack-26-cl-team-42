@@ -264,6 +264,8 @@ export function useValidateReport() {
       void queryClient.invalidateQueries({ queryKey: reportKeys });
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
       void queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      // Guardar el informe puede abrir un conflicto con lo que ya reportó otro profesional.
+      void queryClient.invalidateQueries({ queryKey: ["reconciliations"] });
     },
   });
 }

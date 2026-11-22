@@ -1,0 +1,98 @@
+{
+  "respuesta": "El estado es crítico porque presenta un **shock séptico de foco pulmonar** que requiere **noradrenalina** y **ventilación mecánica invasiva**, con sospecha de neumonía asociada a ventilación. Hay signos de mejoría, como la noradrenalina en descenso.\n\n## Diagnóstico e infección\n- **Shock séptico de foco pulmonar, sospecha de neumonía asociada a ventilación** (confirmado, CIE-10 J95.89) (INFORME 2 [sección: diagnosticos]).\n- Alerta de severidad **media**: sospecha de NAV (INFORME 2 [sección: alertas]).\n- Marcadores inflamatorios elevados: **leucocitos 14.2 x10^3/uL** y **PCR 160 mg/L** (EVIDENCIA 2).\n- **Cultivo de aspirado traqueal: sin desarrollo bacteriano a las 48 h (negativo)** (EVIDENCIA 1). Este resultado figuraba como pendiente para hoy (INFORME 2 [sección: pendientes]).\n\n## Soporte hemodinámico\n- **Noradrenalina 0.08 mcg/kg/min**, en **descenso** (INFORME 2 [sección: drogas_infusion]).\n- **Catéter venoso central** yugular derecho (INFORME 2 [sección: dispositivos_invasivos]).\n\n## Soporte respiratorio\n- **VMI** en modo **VCV**, con TET 7.5: **FiO2 40%**, **PEEP 10 cmH2O**, VC 420 ml, FR 18 y **presión plateau 25 cmH2O** (INFORME 4 [sección: evaluacion_respiratoria]).\n- Secreciones **mucopurulentas abundantes**, **tos inefectiva**, **crépitos basales bilaterales** y roncus difusos (INFORME 4 [sección: evaluacion_respiratoria]).\n- Saturación de **95%** en el informe médico (INFORME 2 [sección: control_respiratorio]) y de **97%** tras la aspiración (INFORME 4 [sección: intervenciones]).\n\n## Fármacos\n- **Meropenem 1 g EV cada 8 h** (INFORME 2 [sección: medicamentos]).\n\n## Sedación y discrepancia a revisar\n- El médico registró **RASS -4** e indicó mantener la sedación profunda mientras dure el shock (INFORME 2 [sección: escalas], [sección: indicaciones]).\n- El registro posterior de kinesiología muestra **RASS -1** e **IMS 3** (sedestación al borde de la cama), y plantea **preparar una prueba de ventilación espontánea mañana** (INFORME 4 [sección: escalas], [sección: objetivos_terapeuticos]).\n- Estos datos no concuerdan con la indicación de sedación profunda. Conviene aclarar con el equipo si hubo un cambio de indicación. Además, el informe de kinesiología figura como turno de día con control a las 10:00, pero tiene registro a las 00:09 (INFORME 4 [sección: metadatos], [sección: control_respiratorio]).\n\n## Contexto\n- **Día 4 de estada en UCI**, sin limitación del esfuerzo terapéutico (manejo completo) (INFORME 2 [sección: metadatos], [sección: ingreso]).",
+  "referencias": [
+    {
+      "informe": 2,
+      "seccion": "diagnosticos",
+      "detalle": "Shock séptico de foco pulmonar, sospecha de neumonía asociada a ventilación, J95.89"
+    },
+    {
+      "informe": 2,
+      "seccion": "alertas",
+      "detalle": "Sospecha de neumonía asociada a ventilación mecánica, severidad media"
+    },
+    {
+      "evidencia": 2,
+      "detalle": "Leucocitos 14.2 x10^3/uL (high); PCR 160 mg/L (high)"
+    },
+    {
+      "evidencia": 1,
+      "detalle": "Cultivo de aspirado traqueal: sin desarrollo bacteriano a las 48 horas (negativo)"
+    },
+    {
+      "informe": 2,
+      "seccion": "pendientes",
+      "detalle": "Resultado del cultivo de aspirado traqueal, hoy"
+    },
+    {
+      "informe": 2,
+      "seccion": "drogas_infusion",
+      "detalle": "Noradrenalina 0.08 mcg/kg/min, descenso"
+    },
+    {
+      "informe": 2,
+      "seccion": "dispositivos_invasivos",
+      "detalle": "Catéter venoso central yugular derecha"
+    },
+    {
+      "informe": 4,
+      "seccion": "evaluacion_respiratoria",
+      "detalle": "VCV, FiO2 40, PEEP 10, plateau 25; secreciones mucopurulentas abundantes; tos inefectiva; crépitos basales bilaterales"
+    },
+    {
+      "informe": 2,
+      "seccion": "control_respiratorio",
+      "detalle": "VMI, saturación 95%"
+    },
+    {
+      "informe": 4,
+      "seccion": "intervenciones",
+      "detalle": "aspiración de secreciones por TET, satura 97%"
+    },
+    {
+      "informe": 2,
+      "seccion": "medicamentos",
+      "detalle": "Meropenem 1 g EV cada 8 h"
+    },
+    {
+      "informe": 2,
+      "seccion": "escalas",
+      "detalle": "RASS -4, sedación profunda"
+    },
+    {
+      "informe": 2,
+      "seccion": "indicaciones",
+      "detalle": "Mantener sedación profunda mientras dure el shock"
+    },
+    {
+      "informe": 4,
+      "seccion": "escalas",
+      "detalle": "RASS -1; IMS 3"
+    },
+    {
+      "informe": 4,
+      "seccion": "objetivos_terapeuticos",
+      "detalle": "Preparar prueba de ventilación espontánea, mañana"
+    },
+    {
+      "informe": 4,
+      "seccion": "metadatos",
+      "detalle": "turno dia, fecha_hora_registro 2026-11-22T00:09"
+    },
+    {
+      "informe": 4,
+      "seccion": "control_respiratorio",
+      "detalle": "hora 10:00"
+    },
+    {
+      "informe": 2,
+      "seccion": "metadatos",
+      "detalle": "dia_estada_uci 4"
+    },
+    {
+      "informe": 2,
+      "seccion": "ingreso",
+      "detalle": "Sin limitación del esfuerzo terapéutico; manejo completo"
+    }
+  ]
+}

@@ -45,7 +45,7 @@ Main config classes in `conf/settings.py`:
 Common local values are defined in:
 
 ```txt
-local/conf/default
+local/conf/local.example
 ```
 
 The default local database URL points to the Postgres service we can spin up with Docker Compose:
@@ -146,7 +146,7 @@ Current account settings:
 - email verification is disabled
 - social account email authentication is enabled
 
-The local development entrypoint always seeds a superuser on startup, defaulting to `test@localhost` / `test`. Override the credentials with the `DJANGO_SUPERUSER_EMAIL` and `DJANGO_SUPERUSER_PASSWORD` env vars (set in `local/conf/`).
+The local development entrypoint does not create a superuser. Set `DJANGO_SUPERUSER_EMAIL` and `DJANGO_SUPERUSER_PASSWORD` in `local/conf/local` to seed one on first start, or run `just local createsuperuser`.
 
 ## Background tasks
 

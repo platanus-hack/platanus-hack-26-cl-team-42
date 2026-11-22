@@ -27,6 +27,10 @@ class DjangoConfig(Config):
 
     DEBUG: bool = False
     DEMO_ACCOUNT_SWITCH_ENABLED: bool = False
+    # Demo desplegada: solo un superusuario con sesión iniciada puede cambiar de cuenta.
+    DEMO_SUPERUSER_SWITCH_ENABLED: bool = False
+    # Si se define, el selector de cuentas muestra solo estos correos (los de la demo).
+    DEMO_SWITCH_EMAILS: StringList = []
     SECRET_KEY: str = InsecureDefault("insecure-development-key")
     ALLOWED_HOSTS: StringList = ["*"]
     # Origins trusted for unsafe (POST/…) requests. Required for the admin over
@@ -94,6 +98,8 @@ project_config = ProjectConfig.load(prefix="PROJECT")
 #############################
 DEBUG = django_config.DEBUG
 DEMO_ACCOUNT_SWITCH_ENABLED = django_config.DEMO_ACCOUNT_SWITCH_ENABLED
+DEMO_SUPERUSER_SWITCH_ENABLED = django_config.DEMO_SUPERUSER_SWITCH_ENABLED
+DEMO_SWITCH_EMAILS = django_config.DEMO_SWITCH_EMAILS
 SECRET_KEY = django_config.SECRET_KEY
 ALLOWED_HOSTS = django_config.ALLOWED_HOSTS
 

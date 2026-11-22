@@ -1,0 +1,10 @@
+{
+  "global": "Paciente en día 5 de estada en UCI (Box 11) por estado epiléptico refractario. En las últimas 24 h las crisis se han controlado con midazolam en infusión continua y monitorización con EEG. Actualmente está en ventilación mecánica invasiva por tubo orotraqueal, con saturación de 98%. Hay una discrepancia en la dosis de midazolam (4 mg/h en el dato estructurado y 2 mg/h en el texto de origen) que debe verificarse. Queda pendiente mantener el EEG continuo en las próximas 24 h, con vigilancia por riesgo de nueva crisis al reducir la sedación.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de estado epiléptico refractario (CIE-10 G41.9). Alerta de severidad media por riesgo de nueva crisis al bajar la sedación.",
+    "Hemodinamia": "Midazolam en infusión continua como sedante, sin cambios de dosis. La dosis registrada es de 4 mg/h, pero la evidencia textual indica 2 mg/h, por lo que debe confirmarse.",
+    "Respiratorio": "En ventilación mecánica invasiva con saturación de O2 de 98%.",
+    "Medicamentos y dispositivos": "Portador de tubo endotraqueal en posición orotraqueal.",
+    "Plan y pendientes": "EEG continuo, con plazo de 24 h."
+  }
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "section": "evaluacion_respiratoria",
+    "message": "Secreciones mucopurulentas abundantes y crépitos bilaterales coinciden con leucocitosis y PCR muy elevada, pero el informe no plantea sospecha de infección (p. ej., neumonía asociada a ventilación) ni conducta al respecto.",
+    "severity": "high"
+  },
+  {
+    "section": "objetivos_terapeuticos",
+    "message": "Se planifica prueba de ventilación espontánea sin considerar un proceso inflamatorio/infeccioso activo, secreciones abundantes, tos inefectiva y PEEP 10. Se debe reevaluar si el paciente está listo para el destete.",
+    "severity": "high"
+  },
+  {
+    "section": "evaluacion_respiratoria",
+    "message": "El cultivo de aspirado traqueal negativo no concuerda con las secreciones mucopurulentas descritas. Revisar antibioterapia previa, calidad de la muestra u otro foco infeccioso.",
+    "severity": "medium"
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "evaluacion_respiratoria": {
+    "tos": "inefectiva",
+    "patron": null,
+    "evidencia": "crépitos basales bilaterales y roncus difusos, secreciones abundantes mucopurulentas, tos inefectiva",
+    "secreciones": {
+      "aspecto": "mucopurulentas",
+      "cantidad": "abundante"
+    },
+    "auscultacion": "crépitos basales bilaterales y roncus difusos",
+    "ventilacion_mecanica": {
+      "fio2": 40,
+      "modo": "VCV",
+      "pafi": null,
+      "weaning": {
+        "prueba_ventilacion_espontanea": "no_realizada",
+        "criterios": null,
+        "extubacion": null,
+        "resultado": "Se planifica preparar prueba de ventilación espontánea para mañana",
+        "evidencia": "Objetivo: preparar prueba de ventilación espontánea para mañana."
+      },
+      "evidencia": "volumen control, volumen corriente cuatrocientos veinte, PEEP diez",
+      "via_aerea": {
+        "tipo": "TET",
+        "numero": "7.5",
+        "fijacion_cm": null,
+        "presion_cuff_cmh2o": null
+      },
+      "peep_cmh2o": 10,
+      "fr_programada": 18,
+      "posicion_prono": null,
+      "presion_peak_cmh2o": null,
+      "volumen_corriente_ml": 420,
+      "presion_plateau_cmh2o": 25,
+      "presion_soporte_cmh2o": null,
+      "driving_pressure_cmh2o": null
+    }
+  }
+}

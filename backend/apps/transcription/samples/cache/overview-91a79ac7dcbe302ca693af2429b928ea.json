@@ -1,0 +1,9 @@
+{
+  "global": "Paciente en día 1 de estada en UCI (Box 8) por posoperatorio de colecistectomía (K80.2). La evolución en las últimas 24 horas ha sido estable, afebril y con analgesia oral. Recibe oxigenoterapia por cánula nasal con saturación de 97% y requiere insulina cristalina subcutánea según esquema. Lo principal pendiente es la vigilancia glicémica, con control de glicemia en ayunas mañana a las 06:00.",
+  "areas": {
+    "Diagnósticos y alertas": "Diagnóstico confirmado de posoperatorio de colecistectomía (CIE-10 K80.2).",
+    "Respiratorio": "Con oxigenoterapia convencional por cánula nasal, saturación de O2 de 97%.",
+    "Medicamentos y dispositivos": "Insulina cristalina 6 UI subcutánea según esquema. Porta vía venosa periférica en antebrazo izquierdo.",
+    "Plan y pendientes": "Control de glicemia en ayunas programado para mañana a las 06:00."
+  }
+}

@@ -42,7 +42,7 @@ services:
       - HF_MODEL_ID=${HF_MODEL_ID:-}
       - EXTRACTION_MODEL=${EXTRACTION_MODEL:-}
     env_file:
-      - ./conf/${LOCAL_ENV:-default}
+      - ./conf/${LOCAL_ENV:-local}
     labels:
       - "traefik.enable=true"
       # All backend routes live under DJANGO_URL_PREFIX ("/-/"), see conf/urls.py.
@@ -67,7 +67,7 @@ services:
     # pnpm may purge an incompatible (stale) modules dir without a TTY prompt.
     command: sh -c "CI=true pnpm install --frozen-lockfile && exec pnpm dev"
     env_file:
-      - ./conf/${LOCAL_ENV:-default}
+      - ./conf/${LOCAL_ENV:-local}
     volumes:
       - node_modules:/app/node_modules
       - ../frontend:/app
@@ -110,7 +110,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - postgres_data_backups:/backups
     env_file:
-      - ./conf/${LOCAL_ENV:-default}
+      - ./conf/${LOCAL_ENV:-local}
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 2s
@@ -150,4 +150,4 @@ services:
       - HF_MODEL_ID=${HF_MODEL_ID:-}
       - EXTRACTION_MODEL=${EXTRACTION_MODEL:-}
     env_file:
-      - ./conf/${LOCAL_ENV:-default}
+      - ./conf/${LOCAL_ENV:-local}

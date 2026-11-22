@@ -16,6 +16,7 @@ import {
 } from "../patients/api";
 import { useReconciliations, type Conflict } from "../reconciliation/api";
 import { EvidencePanel } from "../evidence/EvidencePanel";
+import { AgentCouncil } from "../panel/AgentCouncil";
 import { useEvidence } from "../evidence/api";
 import { VersionChanges } from "./ReportChanges";
 import { TrendList } from "./TrendList";
@@ -112,6 +113,9 @@ export function PatientSummaryView({ patientId, reports, reportsLoading = false,
               assistant={assistant}
             />
           ))}
+          <Box pt="4">
+            <AgentCouncil patientId={patientId} canLaunch />
+          </Box>
         </Tabs.Content>
         <Tabs.Content value="plan">
           {needsSummary((data) => <PlanTab items={data.treatmentPending} patientId={patientId} />)}

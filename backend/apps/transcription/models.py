@@ -378,3 +378,86 @@ class Evidence(models.Model):
 
     class Meta:
         ordering = ["-taken_at", "-id"]
+
+
+class AgentProfile(models.Model):
+    """Miembro de la clínica sin cuenta en la app que igual opina en el consejo de agentes.
+
+    Puede que no trabaje estos días, o que nunca use la app: no tiene informes propios, así que
+    su criterio y su experiencia (la base de conocimiento que alimenta a su agente) se escriben
+    aquí. Quien sí tiene cuenta opina con lo que sale de sus propios informes.
+    """
+
+    name = models.CharField(max_length=100)
+    profession = models.CharField(max_length=32, choices=ClinicalTemplate.Profession.choices)
+    # Su criterio, protocolos que sigue y experiencia (se le entrega a su agente como contexto).
+    experience = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.profession})"
+
+
+class Panel(models.Model):
+    """Consulta médica a un panel de agentes: cada agente representa a un profesional del caso.
+
+    Nace de un conflicto existente o de una pregunta libre sobre un paciente. Los agentes opinan
+    por rondas con el contexto del paciente y la base de conocimiento de su profesional, y un
+    agente de síntesis emite la recomendación final (siempre una sugerencia, no una orden).
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        RUNNING = "running", _("Running")
+        DONE = "done", _("Done")
+        FAILED = "failed", _("Failed")
+
+    patient = models.ForeignKey(
+        "recordings.Patient", on_delete=models.CASCADE, related_name="panels"
+    )
+    opened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="panels"
+    )
+    # Si nació de un conflicto; vacío en una pregunta libre.
+    conflict = models.ForeignKey(
+        Conflict, on_delete=models.SET_NULL, null=True, blank=True, related_name="panels"
+    )
+    question = models.TextField()
+    # Profesionales que representan los agentes.
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="+", blank=True)
+    # Miembros de la clínica sin cuenta que también opinan.
+    profiles = models.ManyToManyField(AgentProfile, related_name="+", blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    # {resumen, recomendacion, acuerdos, desacuerdos, siguientes_pasos, confianza, aviso}
+    recommendation = models.JSONField(null=True, blank=True)
+    error = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PanelTurn(models.Model):
+    """Una intervención de un agente en la discusión del panel."""
+
+    panel = models.ForeignKey(Panel, on_delete=models.CASCADE, related_name="turns")
+    round = models.PositiveSmallIntegerField()
+    # El profesional al que representa el agente: una cuenta o, si no tiene, un perfil de agente.
+    represents = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", null=True, blank=True
+    )
+    profile = models.ForeignKey(
+        AgentProfile, on_delete=models.PROTECT, related_name="+", null=True, blank=True
+    )
+    profession = models.CharField(max_length=32)
+    stance = models.CharField(max_length=300, blank=True)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["round", "id"]
