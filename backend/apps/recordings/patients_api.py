@@ -1,7 +1,7 @@
 """API de pacientes, montada en ``/-/api/patients``.
 
-Cada profesional ve los pacientes que tiene asignados. Los pacientes vienen de otro sistema:
-aquí no se crean, solo se listan y se traspasan a otro usuario.
+Cada profesional ve los pacientes que tiene asignados: los que registra él mismo y los que le
+traspasa otro usuario.
 """
 
 from datetime import datetime
@@ -31,6 +31,12 @@ from . import services
 from .api import PatientOut
 
 router = Router(tags=["patients"])
+
+
+class PatientIn(Schema):
+    name: str
+    identifier: str = ""
+    bed: str = ""
 
 
 class TransferIn(Schema):
@@ -100,9 +106,23 @@ def list_patients(request):
     ]
 
 
+@router.post("", response={201: PatientOut})
+def create_patient(request, data: PatientIn):
+    """Registra un paciente nuevo y lo asigna a quien lo crea."""
+    try:
+        patient = services.create_patient(
+            request.user, name=data.name, identifier=data.identifier, bed=data.bed
+        )
+    except services.DuplicatePatientError as error:
+        raise HttpError(409, str(error)) from error
+    except services.PatientError as error:
+        raise HttpError(400, str(error)) from error
+    return 201, patient_out(patient)
+
+
 @router.post("/{patient_id}/transfer", response=PatientOut)
 def transfer_patient(request, patient_id: int, data: TransferIn):
-    """Traspasa uno de tus pacientes a otro usuario (los pacientes no se crean desde la app)."""
+    """Traspasa uno de tus pacientes a otro usuario, que deja de ser tuyo."""
     patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
     target = (
         get_user_model().objects.filter(email__iexact=data.to_email.strip(), is_active=True).first()

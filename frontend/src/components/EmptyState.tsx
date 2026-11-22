@@ -1,12 +1,15 @@
+import type { ReactNode } from "react";
 import { Card, Flex, Text } from "@radix-ui/themes";
 import { InboxIcon } from "./icons";
 
 interface EmptyStateProps {
   title: string;
   description: string;
+  /** Acción principal bajo el texto (p. ej. «Nuevo paciente»). */
+  action?: ReactNode;
 }
 
-export function EmptyState({ title, description }: EmptyStateProps) {
+export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <Card size="3" style={{ background: "var(--color-panel-solid)" }}>
       <Flex direction="column" align="center" gap="3" py="6" px="4">
@@ -21,6 +24,7 @@ export function EmptyState({ title, description }: EmptyStateProps) {
             {description}
           </Text>
         </Flex>
+        {action}
       </Flex>
     </Card>
   );

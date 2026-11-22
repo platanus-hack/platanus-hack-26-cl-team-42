@@ -296,17 +296,45 @@ def _report_for(author, patient, profession="medico", data=None, validated=True)
     return report
 
 
-def test_patients_cannot_be_created_from_the_app(user):
+def test_a_professional_creates_a_patient_assigned_to_them(user):
+    from apps.recordings import services as recording_services
+
     client = Client()
     client.force_login(user)
+    api = f"/{settings.URL_PREFIX}/api/patients"
 
     response = client.post(
-        f"/{settings.URL_PREFIX}/api/patients",
-        {"name": "Nuevo"},
+        api,
+        {"name": "  Ana Soto ", "identifier": "11.111.111-1", "bed": "Cama 3"},
         content_type="application/json",
     )
 
-    assert response.status_code in (404, 405)
+    assert response.status_code == 201, response.content
+    body = response.json()
+    assert body["name"] == "Ana Soto"
+    assert body["reference"] == "Ana Soto (11.111.111-1) · Cama 3"
+    assert [p.id for p in recording_services.patients_of(user)] == [body["id"]]
+    assert [p["id"] for p in client.get(api).json()] == [body["id"]]
+
+
+def test_creating_a_patient_requires_a_name_and_a_new_identifier(user):
+    other = User.objects.create_user(email="other@example.com", password="pw")
+    _patient(other, identifier="12.345.678-9")
+    client = Client()
+    client.force_login(user)
+    api = f"/{settings.URL_PREFIX}/api/patients"
+
+    def post(**data):
+        return client.post(api, data, content_type="application/json")
+
+    assert post(name="   ").status_code == 400
+    # El paciente ya existe en otra cuenta: se pide por traspaso, no se duplica.
+    duplicate = post(name="Juan", identifier="12.345.678-9")
+    assert duplicate.status_code == 409
+    assert "traspasen" in duplicate.json()["detail"]
+    # Sin identificador no hay con qué detectar duplicados.
+    assert post(name="Sin RUT").status_code == 201
+    assert post(name="Sin RUT").status_code == 201
 
 
 def test_a_patient_is_transferred_to_another_user(user):

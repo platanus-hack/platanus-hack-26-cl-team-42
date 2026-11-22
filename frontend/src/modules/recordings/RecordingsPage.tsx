@@ -64,7 +64,7 @@ function PatientPicker({ value, onChange }: { value: number | undefined; onChang
         </Select.Root>
       </Flex>
       <Text size="1" color="gray">
-        Solo aparecen los pacientes que tienes asignados (vienen de otro sistema o te los traspasa otro usuario). El
+        Solo aparecen los pacientes que tienes asignados (los que registras en «Mis pacientes» o te traspasa otro usuario). El
         audio se nombra solo con tu cuenta, el profesional y la hora.
       </Text>
     </Flex>
