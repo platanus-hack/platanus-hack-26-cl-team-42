@@ -307,6 +307,23 @@ def done_record(transcription):
     return record
 
 
+def test_a_complement_is_kept_as_written_even_if_the_section_cannot_hold_it(
+    monkeypatch, done_record
+):
+    _use_model(monkeypatch, [json.dumps({"resumen_24h": "Evolución estable."})] * 2)
+    text = "El cultivo de aspirado traqueal fue negativo."
+
+    for _ in range(2):  # repetir el mismo complemento no lo duplica
+        done_record.status = ExtractedRecord.Status.DONE
+        done_record.save()
+        extraction.run_section_update(done_record.id, "resumen_24h", text, "")
+
+    done_record.refresh_from_db()
+    notes = done_record.data["observaciones_no_estructuradas"]
+    assert notes.count(text) == 1
+    assert "resumen 24h" in notes
+
+
 def test_section_is_completed_with_written_information(monkeypatch, done_record):
     model = _use_model(monkeypatch, [json.dumps({"resumen_24h": "Evolución estable."})])
 

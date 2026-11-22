@@ -163,41 +163,54 @@ function Answer({ exchange }: { exchange: Exchange }) {
         }}
       >
         <FormattedAnswer text={answer} />
-      {references.length > 0 && (
+      <References references={references} />
+      </Flex>
+    </Flex>
+  );
+}
+
+/** Las referencias de la respuesta, colapsadas: se abren solo si se quiere verificar un dato. */
+function References({ references }: { references: AssistantAnswer["references"] }) {
+  const [open, setOpen] = useState(false);
+  if (references.length === 0) return null;
+  return (
+    <Flex direction="column" gap="1">
+      <Flex>
+        <Button size="1" variant="ghost" color="gray" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+          {open ? "▾" : "▸"} Referencias ({references.length})
+        </Button>
+      </Flex>
+      {open && (
         <Flex direction="column" gap="1">
-          <Text size="1" color="gray" weight="medium">
-            Referencias
-          </Text>
-          {references.map((reference) => (
-            <Text key={`${reference.reportId ?? "e"}-${reference.section ?? reference.evidenceId}`} size="1">
-              {reference.evidenceId ? (
-                <Link to="/" search={{ patient: reference.patientId !== null ? String(reference.patientId) : undefined }}>
-                  Examen · {reference.evidenceTitle} · {reference.patientName}
-                </Link>
-              ) : (
-                <Link
-                  to="/"
-                  search={{
-                    patient: reference.patientId !== null ? String(reference.patientId) : undefined,
-                    report: reference.reportId ?? undefined,
-                    section: reference.section ?? undefined,
-                  }}
-                >
-                  {reportTitle(reference.sequence, reference.profession)} · {reference.patientName} ·{" "}
-                  {sectionLabel(reference.section ?? "")}
-                </Link>
-              )}
-              {reference.detail && <> — «{reference.detail}»</>}
-              <span style={{ color: "var(--gray-11)" }}>
-                {" "}
-                ({reference.profession ? `${professionLabel(reference.profession)}, ` : "evidencia cargada por "}
-                {reference.authorName})
-              </span>
-            </Text>
-          ))}
+            {references.map((reference) => (
+              <Text key={`${reference.reportId ?? "e"}-${reference.section ?? reference.evidenceId}`} size="1">
+                {reference.evidenceId ? (
+                  <Link to="/" search={{ patient: reference.patientId !== null ? String(reference.patientId) : undefined }}>
+                    Examen · {reference.evidenceTitle} · {reference.patientName}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/"
+                    search={{
+                      patient: reference.patientId !== null ? String(reference.patientId) : undefined,
+                      report: reference.reportId ?? undefined,
+                      section: reference.section ?? undefined,
+                    }}
+                  >
+                    {reportTitle(reference.sequence, reference.profession)} · {reference.patientName} ·{" "}
+                    {sectionLabel(reference.section ?? "")}
+                  </Link>
+                )}
+                {reference.detail && <> — «{reference.detail}»</>}
+                <span style={{ color: "var(--gray-11)" }}>
+                  {" "}
+                  ({reference.profession ? `${professionLabel(reference.profession)}, ` : "evidencia cargada por "}
+                  {reference.authorName})
+                </span>
+              </Text>
+            ))}
         </Flex>
       )}
-      </Flex>
     </Flex>
   );
 }

@@ -1,10 +1,9 @@
 #!/bin/bash
 set -e
 
-# Always seed a known dev login so the local stack is usable out of the box.
-# Override via DJANGO_SUPERUSER_EMAIL / DJANGO_SUPERUSER_PASSWORD.
-export DJANGO_SUPERUSER_EMAIL="${DJANGO_SUPERUSER_EMAIL:-test@localhost}"
-export DJANGO_SUPERUSER_PASSWORD="${DJANGO_SUPERUSER_PASSWORD:-test}"
+# No superuser is created by default. To seed one for development, set both
+# DJANGO_SUPERUSER_EMAIL and DJANGO_SUPERUSER_PASSWORD in the local profile (or create one with
+# `just local createsuperuser`). There is no default password.
 
 python manage.py migrate --noinput
 
@@ -21,14 +20,11 @@ import os
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
-email = os.environ['DJANGO_SUPERUSER_EMAIL']
-if not User.objects.filter(email=email).exists():
-    User.objects.create_superuser(email=email, password=os.environ['DJANGO_SUPERUSER_PASSWORD'])
+email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
+password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+if email and password and not User.objects.filter(email=email).exists():
+    User.objects.create_superuser(email=email, password=password)
 "
-# Pacientes ficticios repartidos entre la cuenta de desarrollo y un colega (colega@localhost / test),
-# para probar dictados e informes y que cada uno solo ve a sus pacientes.
-python manage.py load_demo_patients "$DJANGO_SUPERUSER_EMAIL" --colleague colega@localhost || echo "Warning: no se cargaron los pacientes demo"
-
 # No collectstatic here: with DEBUG, runserver serves static straight from the
 # staticfiles finders, and dev-user cannot write into the bind-mounted /app
 # (which fails collectstatic on Linux/CI and kills the container).

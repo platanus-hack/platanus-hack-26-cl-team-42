@@ -1,0 +1,20 @@
+{
+  "respuesta": "No hay drogas vasoactivas registradas en el informe; el único fármaco consignado es levetiracetam.\n\n## Fármacos\n- **Levetiracetam 500 mg endovenoso cada 12 h**: es un anticonvulsivante, no una droga vasoactiva (INFORME 3, [sección: medicamentos]).\n- No figura noradrenalina, adrenalina, dopamina, dobutamina, vasopresina ni otro vasoactivo (INFORME 3, [sección: medicamentos]).\n\n## Contexto\n- **TEC leve**, despierto y orientado, en observación neurológica (INFORME 3, [sección: resumen_24h]).\n- Solo tiene una **vía venosa periférica** en el antebrazo derecho (INFORME 3, [sección: dispositivos_invasivos]).\n- No hay exámenes cargados.",
+  "referencias": [
+    {
+      "informe": 3,
+      "seccion": "medicamentos",
+      "detalle": "levetiracetam 500 mg Endovenosa cada 12 h"
+    },
+    {
+      "informe": 3,
+      "seccion": "resumen_24h",
+      "detalle": "TEC leve, despierto y orientado, sin déficit; observación neurológica."
+    },
+    {
+      "informe": 3,
+      "seccion": "dispositivos_invasivos",
+      "detalle": "Vía venosa periférica, antebrazo derecho"
+    }
+  ]
+}

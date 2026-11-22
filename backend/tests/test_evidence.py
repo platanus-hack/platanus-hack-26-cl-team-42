@@ -262,6 +262,85 @@ def test_a_report_consistent_with_the_exams_raises_no_alert(doctor, patient):
     assert report.evidence_alerts == []
 
 
+def test_a_negative_study_the_report_does_not_mention_is_alerted(doctor, patient):
+    _lab(
+        doctor,
+        patient,
+        kind="culture",
+        title="Cultivo de aspirado traqueal",
+        findings="Sin desarrollo bacteriano a las 48 horas (negativo).",
+    )
+    data = {"control_respiratorio": [{"soporte": "VMI", "saturacion_o2": 95}]}
+
+    report = _draft(doctor, patient, "medico", data)
+
+    (alert,) = report.evidence_alerts
+    assert alert["kind"] == "omission" and alert["section"] == "control_respiratorio"
+    assert "Cultivo de aspirado traqueal" in alert["message"]
+
+
+def test_a_negative_study_the_report_names_raises_no_alert(doctor, patient):
+    _lab(
+        doctor,
+        patient,
+        kind="culture",
+        title="Cultivo de aspirado traqueal",
+        findings="Sin desarrollo bacteriano (negativo).",
+    )
+    data = {
+        "control_respiratorio": [{"soporte": "VMI", "saturacion_o2": 95}],
+        "observaciones_no_estructuradas": "Aspirado traqueal negativo, sin neumonía.",
+    }
+
+    assert _draft(doctor, patient, "medico", data).evidence_alerts == []
+
+
+def test_saying_the_culture_was_negative_counts_as_mentioning_it(doctor, patient):
+    _lab(
+        doctor,
+        patient,
+        kind="culture",
+        title="Cultivo de aspirado traqueal",
+        findings="Sin desarrollo bacteriano (negativo).",
+    )
+    data = {
+        "control_respiratorio": [{"soporte": "VMI"}],
+        "observaciones_no_estructuradas": "El cultivo salió negativo, se descarta neumonía.",
+    }
+
+    assert _draft(doctor, patient, "medico", data).evidence_alerts == []
+
+
+def test_a_word_that_merely_contains_the_study_term_does_not_count_as_naming_it(doctor, patient):
+    _lab(
+        doctor,
+        patient,
+        kind="culture",
+        title="Cultivo de aspirado traqueal",
+        findings="Sin desarrollo bacteriano (negativo).",
+    )
+    data = {
+        "dispositivos_invasivos": [{"tipo": "TET", "ubicacion": "orotraqueal"}],
+        "control_respiratorio": [{"soporte": "VMI"}],
+    }
+
+    assert len(_draft(doctor, patient, "kinesiologia", data).evidence_alerts) == 1
+
+
+def test_a_positive_study_is_not_treated_as_a_missing_negative(doctor, patient):
+    _lab(
+        doctor,
+        patient,
+        kind="culture",
+        title="Hemocultivo",
+        findings="Streptococcus pneumoniae, sensible a penicilina.",
+    )
+
+    report = _draft(doctor, patient, "medico", {"control_respiratorio": [{"soporte": "VMI"}]})
+
+    assert report.evidence_alerts == []
+
+
 def test_exams_far_from_the_report_time_are_not_compared(doctor, patient):
     _lab(doctor, patient, hours_ago=72, results=[{"name": "Lactato", "value": "6"}])
 

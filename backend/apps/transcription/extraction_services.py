@@ -33,6 +33,7 @@ from .models import ExtractedRecord, Report, Transcription
 from .partial_json import parse_partial_json_object
 
 logger = logging.getLogger(__name__)
+NOTES_KEY = "observaciones_no_estructuradas"
 
 # Primer modelo disponible en este orden; EXTRACTION_MODEL fuerza uno concreto.
 MODEL_PREFERENCE = ("claude", "qwen-hf", "qwen-local")
@@ -180,7 +181,9 @@ def run_section_update(record_id: int, section: str, text: str, audio_name: str)
             text = f"{text}\n{_transcribe_stored_audio(audio_name)}".strip()
         current = record.data or {}
         updated = _extract_section(record, section, text)[section]
-        record.data = {**current, section: _keep_existing(current.get(section), updated)}
+        record.data = _with_complement_note(
+            {**current, section: _keep_existing(current.get(section), updated)}, section, text
+        )
         record.error = ""
     except Exception as error:
         logger.exception("Falló completar la sección %s del registro %s", section, record_id)
@@ -431,6 +434,24 @@ def _dictation_metadata(transcription: Transcription) -> str:
     }
     lines = "\n".join(f"- {label}: {value}" for label, value in known.items() if value)
     return f"Datos del dictado (úsalos para los metadatos del registro):\n{lines}"
+
+
+def _with_complement_note(data: dict[str, Any], section: str, text: str) -> dict[str, Any]:
+    """Deja el complemento tal como lo escribió el profesional en las observaciones del registro.
+
+    El modelo lo incorpora a los campos de la sección, pero lo que no cabe en ellos se pierde (un
+    examen negativo, una razón clínica…). Guardado aquí no se pierde, y el informe lo menciona.
+    """
+    note = text.strip()
+    if not note:
+        return data
+    line = f"Complemento a «{section.replace('_', ' ')}»: {note}"
+    existing = data.get(NOTES_KEY)
+    if not isinstance(existing, str) or not existing.strip():
+        return {**data, NOTES_KEY: line}
+    if line in existing:
+        return data
+    return {**data, NOTES_KEY: f"{existing}\n{line}"}
 
 
 def _keep_existing(old: Any, new: Any) -> Any:

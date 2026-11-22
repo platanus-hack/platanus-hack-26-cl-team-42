@@ -1,0 +1,12 @@
+[
+  {
+    "section": "evaluacion_respiratoria",
+    "message": "Secreciones abundantes mucopurulentas y crépitos bilaterales con leucocitosis y PCR 160 mg/L sugieren un proceso infeccioso activo (posible neumonía asociada a ventilación mecánica). El informe no lo menciona ni lo integra al razonamiento clínico. El cultivo de aspirado negativo no descarta infecció",
+    "severity": "high"
+  },
+  {
+    "section": "objetivos_terapeuticos",
+    "message": "Se planifica la prueba de ventilación espontánea para mañana pese a un proceso inflamatorio/infeccioso activo (PCR 160, leucocitosis), secreciones abundantes y tos inefectiva. No se cumplen criterios de resolución de la causa ni de manejo seguro de la vía aérea para el weaning.",
+    "severity": "medium"
+  }
+]

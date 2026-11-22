@@ -239,7 +239,7 @@ def test_team_lists_everyone_for_names_and_real_colleagues_as_recipients(doctor,
     assert str(stranger.id) not in team["recipientIds"]
 
 
-def test_a_handoff_is_saved_for_both_sides_and_shares_the_patients(doctor, nurse, patient):
+def test_a_handoff_is_saved_for_both_sides_and_moves_the_patients(doctor, nurse, patient):
     _report(doctor, patient, "medico", DOCTOR_DATA)
     third = User.objects.create_user(
         email="kine@x.cl", password="pw", name="Klgo", profession="kinesiologia"
@@ -262,6 +262,7 @@ def test_a_handoff_is_saved_for_both_sides_and_shares_the_patients(doctor, nurse
         "Vigilar PAM",
     )
     assert third in patient.assigned_to.all()  # quien recibe pasa a ver al paciente
+    assert doctor not in patient.assigned_to.all()  # y quien entrega deja de tenerlo
     for user, direction in ((doctor, "fromId"), (third, "toId")):
         c = Client()
         c.force_login(user)

@@ -127,13 +127,18 @@ export const reconciliationKeys = ["reconciliations"] as const;
 export const consultKeys = ["external-consults"] as const;
 
 const POLL_INTERVAL_MS = 4000;
+// Sin conflictos abiertos también se revisa de vez en cuando: otro profesional puede abrir uno.
+const IDLE_POLL_INTERVAL_MS = 20000;
 
 /** Las reconciliaciones donde participas; se refrescan solas mientras haya alguna abierta. */
 export function useReconciliations() {
   return useQuery({
     queryKey: reconciliationKeys,
     queryFn: () => apiRequest<Reconciliation[]>("/transcription/reconciliations"),
-    refetchInterval: (query) => (query.state.data?.some((item) => item.status === "open") ? POLL_INTERVAL_MS : false),
+    // Los conflictos nacen de acciones de otros profesionales: no sirve una lista guardada en caché.
+    staleTime: 0,
+    refetchInterval: (query) =>
+      query.state.data?.some((item) => item.status === "open") ? POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS,
   });
 }
 

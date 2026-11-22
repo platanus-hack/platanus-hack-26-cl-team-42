@@ -35,6 +35,14 @@ def refine_conflict_guidance(reconciliation_id: int) -> int:
     return conflicts.count()
 
 
+@app.task(name="transcription.tasks.run_panel", soft_time_limit=240, time_limit=300)
+def run_panel(panel_id: int) -> None:
+    """Corre la discusión multiagente de una consulta al panel y deja la recomendación."""
+    from .panel_services import run_panel as run
+
+    run(panel_id)
+
+
 @app.task(soft_time_limit=45, time_limit=60)
 def generate_patient_synthesis(
     stage: str, key: str, version_id: int, professional_id: int | None

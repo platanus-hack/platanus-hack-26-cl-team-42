@@ -86,6 +86,21 @@ NUMERIC_TOLERANCE = 0.10
 OMISSION_FACTOR = 0.30  # un resultado alterado se avisa si está 30 % fuera de su rango
 NORMAL_WORDS = ("normal", "sin alteracion", "dentro de rango", "conservad")
 ABNORMAL_WORDS = ("elevad", "alto", "alta", "aument", "bajo", "baja", "disminuid", "alterad")
+# Un estudio en texto (cultivo, imagen) con resultado negativo: «sin desarrollo», «sin hallazgos»…
+NEGATIVE_WORDS = (
+    "negativo",
+    "sin desarrollo",
+    "sin evidencia",
+    "sin hallazgos",
+    "no se observ",
+    "no se evidenci",
+    "se descarta",
+)
+# Palabras de un título de estudio que no lo distinguen de otro («cultivo de …», «control de …»).
+GENERIC_STUDY_WORDS = frozenset(
+    {"cultivo", "estudio", "examen", "informe", "imagen", "radiografia", "resultado", "control"}
+)
+MIN_STUDY_TERM_LENGTH = 5
 
 
 class EvidenceError(ValueError):
@@ -198,7 +213,11 @@ def check_report(report: Report, *, edited_section: str | None = None) -> list[d
     if not evidence:
         return []
     labs = _latest_results(evidence)
-    alerts = [*_numeric_alerts(report, labs), *_omission_alerts(report, labs)]
+    alerts = [
+        *_numeric_alerts(report, labs),
+        *_omission_alerts(report, labs),
+        *_unreported_negative_alerts(report, evidence),
+    ]
     if edited_section is None:
         alerts += _model_alerts(report, evidence)
         return _carry_acknowledgements(alerts, report.evidence_alerts)
@@ -383,6 +402,62 @@ def _omission_alerts(report: Report, labs: dict[str, dict[str, Any]]) -> list[di
             )
         )
     return alerts
+
+
+def _unreported_negative_alerts(report: Report, evidence: list[Evidence]) -> list[dict[str, Any]]:
+    """Estudios con resultado negativo (cultivos, imágenes) que el informe no menciona.
+
+    Un negativo también es información clínica (descarta una infección o un hallazgo) y suele
+    perderse si nadie lo anota. Se considera mencionado si el informe nombra el estudio.
+    """
+    data = report.data or {}
+    section = _section_for_study(data)
+    if section is None:
+        return []
+    text = normalize(
+        json.dumps({k: v for k, v in data.items() if k != "metadatos"}, ensure_ascii=False)
+    )
+    words = re.findall(r"[a-z0-9]+", text)
+    alerts = []
+    for item in evidence:
+        if item.kind not in (Evidence.Kind.CULTURE, Evidence.Kind.IMAGING):
+            continue
+        if not any(word in normalize(item.findings) for word in NEGATIVE_WORDS):
+            continue
+        if _mentions_study(item.title, words):
+            continue
+        alerts.append(
+            _alert(
+                report,
+                "omission",
+                section,
+                f"negative-{item.id}",
+                "medium",
+                f"Estudio con resultado negativo que el informe no menciona: {item.title} "
+                f"({item.taken_at:%d/%m %H:%M}): {item.findings}",
+                item.id,
+            )
+        )
+    return alerts
+
+
+def _mentions_study(title: str, words: list[str]) -> bool:
+    """El informe nombra el estudio, o habla de «cultivo»/«imagen» con un resultado negativo."""
+    title_words = re.findall(r"[a-z0-9]+", normalize(title))
+    terms = [
+        w for w in title_words if len(w) >= MIN_STUDY_TERM_LENGTH and w not in GENERIC_STUDY_WORDS
+    ]
+    if not terms or any(word.startswith(term) for term in terms for word in words):
+        return True
+    generic = [w for w in title_words if w in GENERIC_STUDY_WORDS]
+    says_negative = any(word.startswith(("negativ", "descart")) for word in words)
+    return says_negative and any(word.startswith(g) for g in generic for word in words)
+
+
+def _section_for_study(data: dict[str, Any]) -> str | None:
+    """Dónde mostrar la alerta: la sección de exámenes o respiratoria si el informe la tiene."""
+    preferred = ("examenes", "cultivos", "evaluacion_respiratoria", "control_respiratorio")
+    return next((key for key in preferred if key in data), None)
 
 
 def _alert(report, kind, section, key, severity, message, evidence_id) -> dict[str, Any]:

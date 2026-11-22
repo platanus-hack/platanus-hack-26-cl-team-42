@@ -13,10 +13,16 @@ from ninja import File, Form, Router, Schema
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
-from apps.recordings.models import Recording
+from apps.recordings.models import Patient, Recording
 from apps.recordings.services import ALLOWED_MIME_TYPES, MAX_AUDIO_BYTES, base_mime_type
 
-from . import diff_services, reconciliation_services, report_assistant, report_services
+from . import (
+    diff_services,
+    panel_services,
+    reconciliation_services,
+    report_assistant,
+    report_services,
+)
 from .extraction_services import (
     ExtractionError,
     ExtractionOut,
@@ -187,6 +193,52 @@ def ask_assistant(request, payload: AskIn):
         return report_assistant.ask(request.user, payload.question, payload.patient_id)
     except report_assistant.AssistantError as error:
         raise HttpError(422, str(error)) from error
+
+
+class PanelIn(Schema):
+    # Una pregunta libre necesita paciente; si parte de un conflicto, la pregunta es opcional.
+    question: str = ""
+    patient_id: int | None = None
+    conflict_id: int | None = None
+    # Áreas (tipos de profesional) que opinan; vacío = las que atienden al caso.
+    areas: list[str] = []
+
+
+@router.post("/panels", response=panel_services.PanelOut)
+def open_panel(request, payload: PanelIn):
+    """Somete una pregunta (libre o a partir de un conflicto) a la discusión del panel."""
+    conflict = None
+    if payload.conflict_id is not None:
+        conflict = reconciliation_services.get_conflict(request.user, payload.conflict_id)
+        if conflict is None:
+            raise HttpError(404, "Conflicto no encontrado.")
+        patient = conflict.reconciliation.patient
+    else:
+        patient = Patient.objects.filter(pk=payload.patient_id, assigned_to=request.user).first()
+        if patient is None:
+            raise HttpError(404, "Paciente no encontrado.")
+    try:
+        panel = panel_services.open_panel(
+            request.user, patient, payload.question, conflict, payload.areas
+        )
+    except panel_services.PanelError as error:
+        raise HttpError(422, str(error)) from error
+    return panel_services.to_out(panel)
+
+
+@router.get("/panels", response=list[panel_services.PanelOut])
+def list_panels(request, patient_id: int | None = None, conflict_id: int | None = None):
+    """Las consultas al panel de tus pacientes, más recientes primero."""
+    return panel_services.list_panels(request.user, patient_id, conflict_id)
+
+
+@router.get("/panels/{panel_id}", response=panel_services.PanelOut)
+def get_panel(request, panel_id: int):
+    """Una consulta con su discusión y su recomendación (mientras corre, `status` lo indica)."""
+    panel = panel_services.get_panel(request.user, panel_id)
+    if panel is None:
+        raise HttpError(404, "Consulta no encontrada.")
+    return panel_services.to_out(panel)
 
 
 @router.post("/reports/{report_id}/validate", response=ReportOut)

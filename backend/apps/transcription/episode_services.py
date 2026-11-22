@@ -438,9 +438,11 @@ def close_pending(user, patient_id: int, pending_id: str) -> dict[str, Any]:
 def pending_chart_counts(user, patient_ids: list[int]) -> dict[int, int]:
     """Cuántos informes propios y guardados de cada paciente faltan por pasar a la ficha."""
     counts = dict.fromkeys(patient_ids, 0)
-    for patient_id in _own_saved_reports(user).filter(
-        patient_id__in=patient_ids, charted_at__isnull=True
-    ).values_list("patient_id", flat=True):
+    for patient_id in (
+        _own_saved_reports(user)
+        .filter(patient_id__in=patient_ids, charted_at__isnull=True)
+        .values_list("patient_id", flat=True)
+    ):
         counts[patient_id] += 1
     return counts
 
@@ -497,7 +499,8 @@ def list_handoffs(user) -> list[dict[str, Any]]:
 
 @transaction.atomic
 def send_handoff(user, to_id: int, note: str, snapshots: list[dict[str, Any]]) -> dict[str, Any]:
-    """Envía una entrega con los pacientes indicados; quien la recibe pasa a verlos."""
+    """Envía una entrega con los pacientes indicados: quien la recibe pasa a verlos y quien la
+    entrega deja de tenerlos asignados (su copia fija queda en el traspaso enviado)."""
     recipient = get_user_model().objects.filter(pk=to_id, is_active=True).first()
     if recipient is None:
         raise EpisodeError("No existe el destinatario.")
@@ -517,6 +520,7 @@ def send_handoff(user, to_id: int, note: str, snapshots: list[dict[str, Any]]) -
     )
     for patient in patients:
         patient.assigned_to.add(recipient)
+        patient.assigned_to.remove(user)
     return _handoff_out(handoff)
 
 
