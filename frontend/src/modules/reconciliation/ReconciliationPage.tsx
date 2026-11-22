@@ -17,11 +17,13 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
   const pendingConsults = consults.filter((consult) => consult.status !== "answered");
   const answeredConsults = consults.filter((consult) => consult.status === "answered");
   const [selectedId, setSelectedId] = useState<string>();
+  // Las resueltas también se archivan: solo se muestran si se eligen o se llega a ellas por un enlace.
   const open = reconciliations.filter((item) => item.status === "open");
+  const resolved = reconciliations.filter((item) => item.status === "resolved");
   const selected =
     reconciliations.find((item) => item.id === selectedId) ??
     reconciliations.find((item) => item.conflicts.some((conflict) => conflict.id === conflictId)) ??
-    reconciliations.find((item) => item.id === reconciliationId) ?? open[0] ?? reconciliations[0];
+    reconciliations.find((item) => item.id === reconciliationId) ?? open[0];
   const [toast, closeToast] = useVersionToast(selected);
   const focused = selectedId === undefined && selected?.conflicts.some((conflict) => conflict.id === conflictId);
   useEffect(() => {
@@ -64,12 +66,17 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
         <Grid columns={{ initial: "1", md: "280px 1fr" }} gap="5" align="start">
           <Flex direction="column" gap="2" role="list" aria-label="Reconciliaciones">
             <Heading size="3" as="h2">
-              Reconciliaciones{" "}
+              Por resolver{" "}
               <Text size="2" color="gray" weight="regular">
-                {reconciliations.length}
+                {open.length}
               </Text>
             </Heading>
-            {reconciliations.map((item) => (
+            {open.length === 0 && (
+              <Text size="2" color="gray">
+                No tienes conflictos abiertos.
+              </Text>
+            )}
+            {open.map((item) => (
               <ReconciliationItem
                 key={item.id}
                 reconciliation={item}
@@ -77,6 +84,13 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
                 onSelect={() => setSelectedId(item.id)}
               />
             ))}
+            {resolved.length > 0 && (
+              <ResolvedReconciliations
+                reconciliations={resolved}
+                selectedId={selected?.id}
+                onSelect={setSelectedId}
+              />
+            )}
           </Flex>
           {selected && (
             <Flex direction="column" gap="3" style={{ minWidth: 0 }}>
@@ -188,6 +202,38 @@ function ReconciliationContext({ reconciliation }: { reconciliation: Reconciliat
         </Link>
       </Text>
     </Flex>
+  );
+}
+
+/** Archivo de las reconciliaciones resueltas: colapsado, y abierto si la seleccionada es una de ellas. */
+function ResolvedReconciliations({
+  reconciliations,
+  selectedId,
+  onSelect,
+}: {
+  reconciliations: Reconciliation[];
+  selectedId: string | undefined;
+  onSelect: (id: string) => void;
+}) {
+  const containsSelected = reconciliations.some((item) => item.id === selectedId);
+  return (
+    <details open={containsSelected} style={{ marginTop: "var(--space-2)" }}>
+      <summary style={{ cursor: "pointer", width: "fit-content" }}>
+        <Text size="2" color="gray">
+          Resueltas ({reconciliations.length})
+        </Text>
+      </summary>
+      <Flex direction="column" gap="2" mt="2">
+        {reconciliations.map((item) => (
+          <ReconciliationItem
+            key={item.id}
+            reconciliation={item}
+            selected={item.id === selectedId}
+            onSelect={() => onSelect(item.id)}
+          />
+        ))}
+      </Flex>
+    </details>
   );
 }
 
