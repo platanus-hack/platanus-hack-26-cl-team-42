@@ -20,10 +20,12 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
   // Las resueltas también se archivan: solo se muestran si se eligen o se llega a ellas por un enlace.
   const open = reconciliations.filter((item) => item.status === "open");
   const resolved = reconciliations.filter((item) => item.status === "resolved");
+  // Una resuelta solo se muestra si la eliges en el archivo; los enlaces y la vista por defecto
+  // apuntan a lo que sigue abierto.
   const selected =
     reconciliations.find((item) => item.id === selectedId) ??
-    reconciliations.find((item) => item.conflicts.some((conflict) => conflict.id === conflictId)) ??
-    reconciliations.find((item) => item.id === reconciliationId) ?? open[0];
+    open.find((item) => item.conflicts.some((conflict) => conflict.id === conflictId)) ??
+    open.find((item) => item.id === reconciliationId) ?? open[0];
   const [toast, closeToast] = useVersionToast(selected);
   const focused = selectedId === undefined && selected?.conflicts.some((conflict) => conflict.id === conflictId);
   useEffect(() => {
@@ -92,7 +94,7 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
               />
             )}
           </Flex>
-          {selected && (
+          {selected ? (
             <Flex direction="column" gap="3" style={{ minWidth: 0 }}>
               {selected.conflicts.map((conflict) => (
                 <Box key={conflict.id} id={`conflict-${conflict.id}`} tabIndex={-1}>
@@ -100,6 +102,14 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
                 </Box>
               ))}
             </Flex>
+          ) : (
+            <Card variant="surface">
+              <Flex align="center" justify="center" p="6">
+                <Text size="2" color="gray">
+                  Selecciona un conflicto para mostrar su información.
+                </Text>
+              </Flex>
+            </Card>
           )}
         </Grid>
       )}
