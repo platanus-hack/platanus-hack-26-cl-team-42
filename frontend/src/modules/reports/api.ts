@@ -108,6 +108,42 @@ export interface Report {
   updated_at: string;
 }
 
+/** Un cambio entre dos registros (informes o versiones oficiales), ya homologados. */
+export interface RecordChange {
+  key: string;
+  section: string;
+  sectionTitle: string;
+  /** `added`: elemento nuevo · `removed`: no mencionado (no implica suspensión) · `changed`: valor distinto · `updated`: texto. */
+  kind: "added" | "removed" | "changed" | "updated";
+  /** Elemento al que afecta (fármaco, dispositivo…); vacío si es un dato de la sección. */
+  item: string;
+  field: string;
+  before: string;
+  after: string;
+}
+
+/**
+ * Qué pasó (o pasaría, en un borrador) con un cambio en el registro oficial del paciente:
+ * `in_record` lo tiene · `official_differs` mantiene otro valor · `still_in_record` lo no mencionado
+ * sigue vigente · `out_of_record` no lo tiene · `conflict` espera la reconciliación.
+ */
+export type ChangeImpact = "in_record" | "official_differs" | "still_in_record" | "out_of_record" | "conflict";
+
+export interface ReportChange extends RecordChange {
+  impact: ChangeImpact | null;
+  officialValue: string;
+}
+
+export interface ReportDiff {
+  reportId: string;
+  /** Informe guardado anterior de la misma profesión; `null` si este es el primero. */
+  previous: { id: string; sequence: number; authorName: string; recordedAt: string } | null;
+  /** Borrador: el impacto es lo que pasaría al guardarlo. */
+  preview: boolean;
+  officialVersion: number | null;
+  changes: ReportChange[];
+}
+
 export interface AssistantReference {
   /** Informe y sección de origen, o `null` si la fuente es un examen (`evidenceId`). */
   reportId: string | null;
@@ -153,6 +189,16 @@ export function useReport(reportId: string, initial?: Report) {
     queryFn: () => apiRequest<Report>(`/transcription/reports/${reportId}`),
     initialData: initial,
     refetchInterval: (query) => (query.state.data && isReportBusy(query.state.data) ? POLL_INTERVAL_MS : false),
+  });
+}
+
+/** Cambios respecto del informe anterior de la misma profesión y su impacto en el registro oficial. */
+export function useReportDiff(report: Pick<Report, "id" | "editRevision" | "consolidation">, enabled = true) {
+  return useQuery({
+    // Cambia al editar el borrador o al consolidarse: se vuelve a calcular.
+    queryKey: [...reportKeys, "diff", report.id, report.editRevision, report.consolidation],
+    queryFn: () => apiRequest<ReportDiff>(`/transcription/reports/${report.id}/diff`),
+    enabled,
   });
 }
 

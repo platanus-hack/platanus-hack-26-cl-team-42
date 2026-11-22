@@ -17,6 +17,7 @@ import {
 import { useReconciliations, type Conflict } from "../reconciliation/api";
 import { EvidencePanel } from "../evidence/EvidencePanel";
 import { useEvidence } from "../evidence/api";
+import { VersionChanges } from "./ReportChanges";
 import { TrendList } from "./TrendList";
 import { reportTitle } from "./format";
 import type { Report } from "./api";
@@ -780,6 +781,7 @@ export function VersionHistory({ patientId }: { patientId: number }) {
                   </Link>
                 </ThemeLink>
               )}
+              <VersionChanges changes={version.changes} />
             </Flex>
           ))}
         </Flex>

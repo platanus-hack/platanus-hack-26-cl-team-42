@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from apps.transcription import evidence_services
+from apps.transcription import diff_services, evidence_services
 from apps.transcription.episode_services import pending_chart_counts
 from apps.transcription.inbox_services import inbox_states
 from apps.transcription.models import ConsolidatedVersion
@@ -174,15 +174,18 @@ class VersionOut(Schema):
     sourceReportId: str | None
     sourceAuthor: str
     sourceProfession: str
+    # Qué cambió en el registro oficial respecto de la versión anterior.
+    changes: list[diff_services.Change]
 
 
 @router.get("/{patient_id}/versions", response=list[VersionOut])
 def list_patient_versions(request, patient_id: int):
     """Historial de versiones oficiales del paciente: las anteriores nunca se pierden."""
     patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
-    versions = ConsolidatedVersion.objects.filter(patient=patient).select_related(
-        "source_report__author"
+    versions = list(
+        ConsolidatedVersion.objects.filter(patient=patient).select_related("source_report__author")
     )
+    previous = {v.version: v for v in versions}
     return [
         VersionOut(
             version=v.version,
@@ -194,6 +197,7 @@ def list_patient_versions(request, patient_id: int):
             if v.source_report
             else "",
             sourceProfession=v.source_report.profession if v.source_report else "",
+            changes=diff_services.version_changes(v, previous.get(v.version - 1)),
         )
         for v in versions
     ]

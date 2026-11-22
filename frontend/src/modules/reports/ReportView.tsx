@@ -8,6 +8,7 @@ import { sectionLabel } from "../templates/recordFields";
 import { useTemplate } from "../templates/api";
 import { reportTitle, sectionAnchor } from "./format";
 import { pendingSections } from "./pending";
+import { ReportChangesSection } from "./ReportChanges";
 import { ReviewHeaderAction, ReviewPointCallout, ReviewTopicPicker } from "./ReviewPanel";
 import { SectionBlock } from "./SectionBlock";
 import { useReportReview } from "./useReportReview";
@@ -85,6 +86,8 @@ function ReportContent({ report, interactive = true, focusSection }: ReportViewP
       )}
 
       <ConsolidationNotice report={report} />
+
+      <ReportChangesSection report={report} enabled={report.data !== null && !busy && report.status !== "failed"} />
 
       {!validating && <ConceptSummary homologations={report.homologations} />}
 
