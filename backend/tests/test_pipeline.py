@@ -337,44 +337,6 @@ def test_creating_a_patient_requires_a_name_and_a_new_identifier(user):
     assert post(name="Sin RUT").status_code == 201
 
 
-def test_a_patient_is_transferred_to_another_user(user):
-    from apps.recordings import services as recording_services
-
-    receiver = User.objects.create_user(email="rec@example.com", password="pw")
-    patient = _patient(user)
-    api = f"/{settings.URL_PREFIX}/api/patients"
-    mine, theirs = Client(), Client()
-    mine.force_login(user)
-    theirs.force_login(receiver)
-
-    # Quien no tiene al paciente no puede traspasarlo.
-    assert (
-        theirs.post(
-            f"{api}/{patient.id}/transfer",
-            {"to_email": "klgo@example.com"},
-            content_type="application/json",
-        ).status_code
-        == 404
-    )
-    response = mine.post(
-        f"{api}/{patient.id}/transfer",
-        {"to_email": "REC@example.com"},
-        content_type="application/json",
-    )
-
-    assert response.status_code == 200, response.content
-    assert set(patient.assigned_to.all()) == {receiver}
-    assert recording_services.patients_of(user).count() == 0
-    assert (
-        mine.post(
-            f"{api}/{patient.id}/transfer",
-            {"to_email": "rec@example.com"},
-            content_type="application/json",
-        ).status_code
-        == 404
-    )
-
-
 def test_recording_requires_an_assigned_patient(user):
     from apps.recordings import services as recording_services
 

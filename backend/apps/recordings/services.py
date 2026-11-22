@@ -44,7 +44,7 @@ PROFESSION_LABELS = {
 
 
 class PatientError(ValueError):
-    """No se pudo crear o traspasar el paciente."""
+    """No se pudo crear el paciente."""
 
 
 class DuplicatePatientError(PatientError):
@@ -179,21 +179,6 @@ def create_patient(professional, *, name: str, identifier: str = "", bed: str = 
                 )
         patient = Patient.objects.create(name=name, identifier=identifier, bed=bed)
         patient.assigned_to.add(professional)
-    return patient
-
-
-def transfer_patient(patient: Patient, *, from_professional, to_professional) -> Patient:
-    """Traspasa un paciente asignado a ``from_professional`` a otro profesional.
-
-    Quien lo recibe lo ve (con sus informes validados) y quien lo entrega deja de tenerlo.
-    """
-    if from_professional.pk == to_professional.pk:
-        raise PatientError("El paciente ya está asignado a esa cuenta.")
-    if not patient.assigned_to.filter(pk=from_professional.pk).exists():
-        raise PatientError("El paciente no está asignado a tu cuenta.")
-    with transaction.atomic():
-        patient.assigned_to.add(to_professional)
-        patient.assigned_to.remove(from_professional)
     return patient
 
 
