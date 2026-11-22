@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Box,
   Button,
@@ -27,9 +27,12 @@ import { Toast, type ToastMessage } from "../../components/Toast";
 import {
   PROCESSING_STEPS,
   patientKeys,
+  useCreatePatient,
   usePatientSummary,
   usePatients,
   useTransferPatient,
+  type NewPatient,
+  type Patient,
   type PatientWithCount,
 } from "../patients/api";
 import { ChartCard, type ChartedNotice } from "../charting/ChartCard";
@@ -77,6 +80,8 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const closeToast = useCallback(() => setToast(null), []);
   useProcessingToasts(data, setToast);
   const unmark = useChartMark("unmark");
+  const [creating, setCreating] = useState(false);
+  const newPatient = <Button onClick={() => setCreating(true)}>+ Nuevo paciente</Button>;
 
   /** Tras confirmar, avisa con «Deshacer» y, en cierre de turno, sigue con el próximo paciente. */
   const onCharted = (patient: PatientWithCount, notice: ChartedNotice) => {
@@ -94,6 +99,14 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   return (
     <ModulePage stepId="patients">
       <Toast message={toast} onClose={closeToast} />
+      <NewPatientDialog
+        open={creating}
+        onOpenChange={setCreating}
+        onCreated={(patient) => {
+          setPatientQuery("");
+          navigate({ to: "/", search: { patient: String(patient.id) } });
+        }}
+      />
       {showList ? (
         openConflicts > 0 && (
           <Flex align="center" gap="2" wrap="wrap">
@@ -121,7 +134,8 @@ export function InboxPage({ search }: { search: InboxSearch }) {
       ) : !isPending && patients.length === 0 ? (
         <EmptyState
           title="Sin pacientes asignados"
-          description="Los pacientes vienen de otro sistema o te los traspasa otro usuario. Cuando tengas uno asignado aparecerá aquí."
+          description="Registra un paciente nuevo o pide que otro usuario te traspase uno. Cuando tengas uno asignado aparecerá aquí."
+          action={newPatient}
         />
       ) : (
         <Grid columns={wide ? "280px 1fr" : "1"} gap="5" align="start">
@@ -138,6 +152,7 @@ export function InboxPage({ search }: { search: InboxSearch }) {
               query={patientQuery}
               onQueryChange={setPatientQuery}
               onSelect={(id) => go({ patient: String(id) })}
+              onCreate={() => setCreating(true)}
             />
           )}
           {selected && (
@@ -191,6 +206,7 @@ interface PatientInboxProps {
   query: string;
   onQueryChange: (query: string) => void;
   onSelect: (id: number) => void;
+  onCreate: () => void;
 }
 
 /** La posición en la lista depende de la cama y el nombre. */
@@ -204,15 +220,23 @@ function PatientInbox({
   query,
   onQueryChange,
   onSelect,
+  onCreate,
 }: PatientInboxProps) {
   if (loading) return <Skeleton height="240px" />;
   const visiblePatients = filterInbox(patients, query);
   return (
     <Flex direction="column" gap="2">
-      <Heading size="3" as="h2" id="assigned-patients-heading">
-        {charting ? "Por pasar a la ficha" : "Pacientes asignados"}{" "}
-        <Text size="2" color="gray" weight="regular">{patients.length}</Text>
-      </Heading>
+      <Flex justify="between" align="center" gap="2">
+        <Heading size="3" as="h2" id="assigned-patients-heading">
+          {charting ? "Por pasar a la ficha" : "Pacientes asignados"}{" "}
+          <Text size="2" color="gray" weight="regular">{patients.length}</Text>
+        </Heading>
+        {!charting && (
+          <Button size="1" variant="soft" onClick={onCreate}>
+            + Nuevo
+          </Button>
+        )}
+      </Flex>
       {(toChart > 0 || charting) && (
         <Button
           size="2"
@@ -515,7 +539,7 @@ interface TransferDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Los pacientes no se crean aquí: solo se traspasan a otro usuario, que pasa a verlos. */
+/** Entrega el paciente a otro usuario, que pasa a verlo; tú dejas de tenerlo asignado. */
 function TransferDialog({ patient, open, onOpenChange }: TransferDialogProps) {
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
@@ -571,6 +595,90 @@ function TransferDialog({ patient, open, onOpenChange }: TransferDialogProps) {
             Traspasar
           </Button>
         </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+interface NewPatientDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (patient: Patient) => void;
+}
+
+const EMPTY_PATIENT: NewPatient = { name: "", identifier: "", bed: "" };
+
+/** Registra un paciente nuevo, que queda asignado a quien lo crea. */
+function NewPatientDialog({ open, onOpenChange, onCreated }: NewPatientDialogProps) {
+  const [form, setForm] = useState<NewPatient>(EMPTY_PATIENT);
+  const create = useCreatePatient();
+  const field = (key: keyof NewPatient) => ({
+    value: form[key],
+    onChange: (event: ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: event.target.value }),
+  });
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) return;
+    create.mutate(form, {
+      onSuccess: (patient) => {
+        onOpenChange(false);
+        setForm(EMPTY_PATIENT);
+        onCreated(patient);
+      },
+    });
+  };
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) create.reset();
+      }}
+    >
+      <Dialog.Content maxWidth="440px">
+        <Dialog.Title>Nuevo paciente</Dialog.Title>
+        <Dialog.Description size="2" color="gray">
+          Queda asignado a ti. Si el paciente ya existe en otra cuenta, pide que te lo traspasen.
+        </Dialog.Description>
+        <form onSubmit={submit}>
+          <Flex direction="column" gap="3" mt="3">
+            <label>
+              <Text as="div" size="2" weight="medium" mb="1">
+                Nombre
+              </Text>
+              <TextField.Root autoFocus required maxLength={100} placeholder="Juan Pérez" {...field("name")} />
+            </label>
+            <label>
+              <Text as="div" size="2" weight="medium" mb="1">
+                RUT o n.º de ficha <Text color="gray" weight="regular">(opcional)</Text>
+              </Text>
+              <TextField.Root maxLength={40} placeholder="12.345.678-9" {...field("identifier")} />
+            </label>
+            <label>
+              <Text as="div" size="2" weight="medium" mb="1">
+                Cama <Text color="gray" weight="regular">(opcional)</Text>
+              </Text>
+              <TextField.Root maxLength={60} placeholder="Cama 7" {...field("bed")} />
+            </label>
+            {create.isError && (
+              <Callout.Root color="red" size="1">
+                <Callout.Text>{create.error.message}</Callout.Text>
+              </Callout.Root>
+            )}
+          </Flex>
+          <Flex gap="3" justify="end" mt="4">
+            <Dialog.Close>
+              <Button type="button" variant="soft" color="gray">
+                Cancelar
+              </Button>
+            </Dialog.Close>
+            <Button type="submit" disabled={!form.name.trim()} loading={create.isPending}>
+              Crear paciente
+            </Button>
+          </Flex>
+        </form>
       </Dialog.Content>
     </Dialog.Root>
   );

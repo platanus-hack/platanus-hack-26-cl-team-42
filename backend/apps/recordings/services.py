@@ -44,7 +44,11 @@ PROFESSION_LABELS = {
 
 
 class PatientError(ValueError):
-    """No se pudo traspasar el paciente."""
+    """No se pudo crear o traspasar el paciente."""
+
+
+class DuplicatePatientError(PatientError):
+    """Ya existe un paciente con ese identificador."""
 
 
 class RecordingError(ValueError):
@@ -149,10 +153,38 @@ def delete_recording(recording: Recording) -> None:
         transaction.on_commit(lambda: storage.delete(name))
 
 
+def create_patient(professional, *, name: str, identifier: str = "", bed: str = "") -> Patient:
+    """Crea un paciente y se lo asigna a quien lo registra.
+
+    El identificador (RUT, ficha) es opcional, pero si viene no puede repetirse: un paciente
+    que ya existe se pide por traspaso a quien lo tiene, no se duplica.
+    """
+    name, identifier, bed = name.strip(), identifier.strip(), bed.strip()
+    if not name:
+        raise PatientError("Indica el nombre del paciente.")
+    if len(name) > Patient._meta.get_field("name").max_length:
+        raise PatientError("El nombre es demasiado largo.")
+    if len(identifier) > Patient._meta.get_field("identifier").max_length:
+        raise PatientError("El identificador es demasiado largo.")
+    if len(bed) > Patient._meta.get_field("bed").max_length:
+        raise PatientError("La cama es demasiado larga.")
+    with transaction.atomic():
+        if identifier:
+            existing = Patient.objects.select_for_update().filter(identifier__iexact=identifier)
+            if existing.filter(assigned_to=professional).exists():
+                raise DuplicatePatientError("Ya tienes asignado un paciente con ese identificador.")
+            if existing.exists():
+                raise DuplicatePatientError(
+                    "Ya existe un paciente con ese identificador; pide que te lo traspasen."
+                )
+        patient = Patient.objects.create(name=name, identifier=identifier, bed=bed)
+        patient.assigned_to.add(professional)
+    return patient
+
+
 def transfer_patient(patient: Patient, *, from_professional, to_professional) -> Patient:
     """Traspasa un paciente asignado a ``from_professional`` a otro profesional.
 
-    Los pacientes vienen de otro sistema: la app no los crea, solo los asigna y los traspasa.
     Quien lo recibe lo ve (con sus informes validados) y quien lo entrega deja de tenerlo.
     """
     if from_professional.pk == to_professional.pk:

@@ -225,6 +225,22 @@ export function usePatientOverview(patientId: number | undefined) {
   });
 }
 
+export interface NewPatient {
+  name: string;
+  identifier: string;
+  bed: string;
+}
+
+/** Registra un paciente nuevo, que queda asignado a ti. */
+export function useCreatePatient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patient: NewPatient) =>
+      apiRequest<Patient>("/patients", { method: "POST", body: JSON.stringify(patient) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: patientKeys }),
+  });
+}
+
 /** Traspasa uno de tus pacientes a otro usuario; deja de estar asignado a ti. */
 export function useTransferPatient() {
   const queryClient = useQueryClient();
