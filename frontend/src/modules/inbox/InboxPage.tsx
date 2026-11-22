@@ -5,11 +5,9 @@ import {
   Callout,
   Card,
   Dialog,
-  DropdownMenu,
   Flex,
   Grid,
   Heading,
-  IconButton,
   Progress,
   Skeleton,
   Spinner,
@@ -30,7 +28,6 @@ import {
   useCreatePatient,
   usePatientSummary,
   usePatients,
-  useTransferPatient,
   type NewPatient,
   type Patient,
   type PatientWithCount,
@@ -404,7 +401,6 @@ function PatientDetail({ patient, search, go, showContext, onCharted }: PatientD
 }
 
 function PatientHeader({ patient }: { patient: PatientWithCount }) {
-  const [transferring, setTransferring] = useState(false);
   return (
     <Flex justify="between" align="start" gap="3" wrap="wrap">
       <Flex direction="column">
@@ -415,18 +411,7 @@ function PatientHeader({ patient }: { patient: PatientWithCount }) {
       </Flex>
       <Flex gap="2" align="center">
         <RecordDialog patient={patient} />
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            <IconButton variant="soft" color="gray" aria-label="Más acciones">
-              ⋯
-            </IconButton>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content align="end">
-            <DropdownMenu.Item onSelect={() => setTransferring(true)}>Traspasar paciente</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
       </Flex>
-      <TransferDialog patient={patient} open={transferring} onOpenChange={setTransferring} />
     </Flex>
   );
 }
@@ -530,73 +515,6 @@ function ValidationPrompt({ report, onOpen }: { report: Report; onOpen: () => vo
         <Button onClick={onOpen}>Revisar y validar</Button>
       </Flex>
     </Card>
-  );
-}
-
-interface TransferDialogProps {
-  patient: PatientWithCount;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-/** Entrega el paciente a otro usuario, que pasa a verlo; tú dejas de tenerlo asignado. */
-function TransferDialog({ patient, open, onOpenChange }: TransferDialogProps) {
-  const [email, setEmail] = useState("");
-  const navigate = useNavigate();
-  const transfer = useTransferPatient();
-
-  const submit = () =>
-    transfer.mutate(
-      { patientId: patient.id, toEmail: email.trim() },
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-          setEmail("");
-          // El paciente deja de estar asignado a ti: se vuelve a la bandeja.
-          void navigate({ to: "/", search: {} });
-        },
-      },
-    );
-
-  return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(next) => {
-        onOpenChange(next);
-        if (!next) transfer.reset();
-      }}
-    >
-      <Dialog.Content maxWidth="440px">
-        <Dialog.Title>Traspasar a {patient.name}</Dialog.Title>
-        <Dialog.Description size="2" color="gray">
-          El paciente pasa a la cuenta que indiques y deja de estar asignado a ti. Quien lo recibe verá sus informes
-          guardados.
-        </Dialog.Description>
-        <Flex direction="column" gap="3" mt="3">
-          <TextField.Root
-            type="email"
-            placeholder="Correo del profesional que lo recibe"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          {transfer.isError && (
-            <Callout.Root color="red" size="1">
-              <Callout.Text>{transfer.error.message}</Callout.Text>
-            </Callout.Root>
-          )}
-        </Flex>
-        <Flex gap="3" justify="end" mt="4">
-          <Dialog.Close>
-            <Button variant="soft" color="gray">
-              Cancelar
-            </Button>
-          </Dialog.Close>
-          <Button disabled={!email.trim()} loading={transfer.isPending} onClick={submit}>
-            Traspasar
-          </Button>
-        </Flex>
-      </Dialog.Content>
-    </Dialog.Root>
   );
 }
 

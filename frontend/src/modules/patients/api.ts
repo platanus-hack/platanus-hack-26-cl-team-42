@@ -244,19 +244,6 @@ export function useCreatePatient() {
   });
 }
 
-/** Traspasa uno de tus pacientes a otro usuario; deja de estar asignado a ti. */
-export function useTransferPatient() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ patientId, toEmail }: { patientId: number; toEmail: string }) =>
-      apiRequest<Patient>(`/patients/${patientId}/transfer`, {
-        method: "POST",
-        body: JSON.stringify({ to_email: toEmail }),
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: patientKeys }),
-  });
-}
-
 /** Historial de versiones oficiales del paciente: las anteriores nunca se pierden. */
 export function usePatientVersions(patientId: number) {
   return useQuery({

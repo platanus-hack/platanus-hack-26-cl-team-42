@@ -1,13 +1,12 @@
 """API de pacientes, montada en ``/-/api/patients``.
 
 Cada profesional ve los pacientes que tiene asignados: los que registra él mismo y los que le
-traspasa otro usuario.
+entrega otro usuario en el traspaso de turno.
 """
 
 from datetime import datetime
 from uuid import UUID
 
-from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
@@ -37,10 +36,6 @@ class PatientIn(Schema):
     name: str
     identifier: str = ""
     bed: str = ""
-
-
-class TransferIn(Schema):
-    to_email: str
 
 
 class PatientListOut(PatientOut):
@@ -118,22 +113,6 @@ def create_patient(request, data: PatientIn):
     except services.PatientError as error:
         raise HttpError(400, str(error)) from error
     return 201, patient_out(patient)
-
-
-@router.post("/{patient_id}/transfer", response=PatientOut)
-def transfer_patient(request, patient_id: int, data: TransferIn):
-    """Traspasa uno de tus pacientes a otro usuario, que deja de ser tuyo."""
-    patient = get_object_or_404(services.patients_of(request.user), pk=patient_id)
-    target = (
-        get_user_model().objects.filter(email__iexact=data.to_email.strip(), is_active=True).first()
-    )
-    if target is None:
-        raise HttpError(404, "No existe una cuenta activa con ese correo.")
-    try:
-        services.transfer_patient(patient, from_professional=request.user, to_professional=target)
-    except services.PatientError as error:
-        raise HttpError(409, str(error)) from error
-    return patient_out(patient)
 
 
 @router.get("/{patient_id}/summary", response=PatientSummary)
