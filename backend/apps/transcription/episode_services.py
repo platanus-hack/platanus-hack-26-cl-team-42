@@ -120,6 +120,7 @@ def _encounter(patient: Patient, report: Report) -> dict[str, Any]:
             "label": f"Dictado de {_name(author)} · {role} (informe n.º {report.sequence})",
         },
         "entries": _entries(report),
+        "chartedAt": report.charted_at.isoformat() if report.charted_at else None,
     }
 
 
@@ -429,6 +430,64 @@ def close_pending(user, patient_id: int, pending_id: str) -> dict[str, Any]:
         "closedAt": closure.closed_at.isoformat(),
         "closedById": str(user.id),
     }
+
+
+# --- pasar a la ficha institucional ----------------------------------------------------------
+
+
+def pending_chart_counts(user, patient_ids: list[int]) -> dict[int, int]:
+    """Cuántos informes propios y guardados de cada paciente faltan por pasar a la ficha."""
+    counts = dict.fromkeys(patient_ids, 0)
+    for patient_id in _own_saved_reports(user).filter(
+        patient_id__in=patient_ids, charted_at__isnull=True
+    ).values_list("patient_id", flat=True):
+        counts[patient_id] += 1
+    return counts
+
+
+@transaction.atomic
+def mark_charted(user, patient_id: int, encounter_ids: list[str]) -> list[str]:
+    """Da por pasadas a la ficha las atenciones indicadas (solo las propias y aún por pasar).
+
+    Se marcan exactamente las que el profesional copió: un informe guardado después de copiar
+    sigue por pasar.
+    """
+    reports = _chartable(user, patient_id, encounter_ids).filter(charted_at__isnull=True)
+    marked = [_encounter_id(report_id) for report_id in reports.values_list("id", flat=True)]
+    reports.update(charted_at=timezone.now())
+    return marked
+
+
+@transaction.atomic
+def unmark_charted(user, patient_id: int, encounter_ids: list[str]) -> list[str]:
+    """Deshace la marca: las atenciones vuelven a quedar por pasar a la ficha."""
+    reports = _chartable(user, patient_id, encounter_ids).filter(charted_at__isnull=False)
+    unmarked = [_encounter_id(report_id) for report_id in reports.values_list("id", flat=True)]
+    reports.update(charted_at=None)
+    return unmarked
+
+
+def _own_saved_reports(user):
+    return Report.objects.filter(author=user, status=Report.Status.DONE)
+
+
+def _chartable(user, patient_id: int, encounter_ids: list[str]):
+    if not patients_of(user).filter(pk=patient_id).exists():
+        raise EpisodeError("El paciente no está asignado a tu cuenta.")
+    report_ids = {_report_id(encounter_id) for encounter_id in encounter_ids}
+    if not report_ids:
+        raise EpisodeError("Indica qué atenciones pasaste a la ficha.")
+    reports = _own_saved_reports(user).filter(patient_id=patient_id, id__in=report_ids)
+    if reports.count() != len(report_ids):
+        raise EpisodeError("Solo puedes marcar tus propias atenciones guardadas de este paciente.")
+    return reports
+
+
+def _report_id(encounter_id: str) -> int:
+    match = re.fullmatch(r"enc-(\d+)", encounter_id)
+    if match is None:
+        raise EpisodeError(f"Atención desconocida: {encounter_id}.")
+    return int(match.group(1))
 
 
 def list_handoffs(user) -> list[dict[str, Any]]:

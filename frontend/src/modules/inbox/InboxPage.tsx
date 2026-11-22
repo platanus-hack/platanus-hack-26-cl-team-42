@@ -32,6 +32,8 @@ import {
   useTransferPatient,
   type PatientWithCount,
 } from "../patients/api";
+import { ChartCard, type ChartedNotice } from "../charting/ChartCard";
+import { useChartMark } from "../episode/api";
 import { useOpenConflictCount, useReconciliations } from "../reconciliation/api";
 import { Recorder } from "../recordings/Recorder";
 import { PatientSummaryView, type PatientTab } from "../reports/PatientSummaryView";
@@ -47,6 +49,8 @@ export interface InboxSearch {
   report?: string;
   /** Sección del informe a destacar (enlaces del asistente y del resumen). */
   section?: string;
+  /** Cierre de turno: la lista muestra solo los pacientes con atenciones por pasar a la ficha. */
+  chart?: boolean;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "short" });
@@ -56,18 +60,36 @@ export function InboxPage({ search }: { search: InboxSearch }) {
   const navigate = useNavigate();
   const { data = [], isPending, isError, error } = usePatients();
   const patients = sortInbox(data);
+  const charting = search.chart === true;
+  const toChart = patients.filter((patient) => patient.pendingChart > 0);
+  const listed = charting ? toChart : patients;
   const openConflicts = useOpenConflictCount();
   // En tablet horizontal y escritorio, lista y detalle lado a lado; en teléfono y tablet vertical,
   // un panel a la vez: la lista y, al tocar un paciente, su detalle con un botón para volver.
   const wide = useMediaQuery("(min-width: 900px)");
   const chosen = patients.find((patient) => String(patient.id) === search.patient);
-  const selected = chosen ?? (wide ? patients[0] : undefined);
+  const selected = chosen ?? (wide ? listed[0] : undefined);
   const showList = wide || !chosen;
-  const go = (next: InboxSearch) => navigate({ to: "/", search: next });
+  // El modo de cierre de turno se conserva al moverse entre pacientes.
+  const go = (next: InboxSearch) => navigate({ to: "/", search: { ...next, chart: charting || undefined } });
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [patientQuery, setPatientQuery] = useState("");
   const closeToast = useCallback(() => setToast(null), []);
   useProcessingToasts(data, setToast);
+  const unmark = useChartMark("unmark");
+
+  /** Tras confirmar, avisa con «Deshacer» y, en cierre de turno, sigue con el próximo paciente. */
+  const onCharted = (patient: PatientWithCount, notice: ChartedNotice) => {
+    setToast({
+      id: Date.now(),
+      text: `Registro de ${patient.name} marcado como pasado a la ficha.`,
+      action: { label: "Deshacer", onClick: () => unmark.mutate(notice) },
+    });
+    if (!charting) return;
+    const index = toChart.findIndex((item) => item.id === patient.id);
+    const next = [...toChart.slice(index + 1), ...toChart.slice(0, index)].find((item) => item.id !== patient.id);
+    go(next ? { patient: String(next.id) } : {});
+  };
 
   return (
     <ModulePage stepId="patients">
@@ -105,8 +127,13 @@ export function InboxPage({ search }: { search: InboxSearch }) {
         <Grid columns={wide ? "280px 1fr" : "1"} gap="5" align="start">
           {showList && (
             <PatientInbox
-              patients={patients}
+              patients={listed}
               loading={isPending}
+              toChart={toChart.length}
+              charting={charting}
+              onChartingChange={(next) =>
+                navigate({ to: "/", search: { patient: search.patient, chart: next || undefined } })
+              }
               selected={wide ? selected?.id : undefined}
               query={patientQuery}
               onQueryChange={setPatientQuery}
@@ -115,7 +142,14 @@ export function InboxPage({ search }: { search: InboxSearch }) {
           )}
           {selected && (
             <Box style={{ minWidth: 0 }}>
-              <PatientDetail key={selected.id} patient={selected} search={search} go={go} showContext={!wide} />
+              <PatientDetail
+                key={selected.id}
+                patient={selected}
+                search={search}
+                go={go}
+                showContext={!wide}
+                onCharted={(notice) => onCharted(selected, notice)}
+              />
             </Box>
           )}
         </Grid>
@@ -149,6 +183,10 @@ function useProcessingToasts(patients: PatientWithCount[], notify: (message: Toa
 interface PatientInboxProps {
   patients: PatientWithCount[];
   loading: boolean;
+  /** Cuántos pacientes tienen atenciones tuyas por pasar a la ficha. */
+  toChart: number;
+  charting: boolean;
+  onChartingChange: (charting: boolean) => void;
   selected: number | undefined;
   query: string;
   onQueryChange: (query: string) => void;
@@ -156,22 +194,49 @@ interface PatientInboxProps {
 }
 
 /** La posición en la lista depende de la cama y el nombre. */
-function PatientInbox({ patients, loading, selected, query, onQueryChange, onSelect }: PatientInboxProps) {
+function PatientInbox({
+  patients,
+  loading,
+  toChart,
+  charting,
+  onChartingChange,
+  selected,
+  query,
+  onQueryChange,
+  onSelect,
+}: PatientInboxProps) {
   if (loading) return <Skeleton height="240px" />;
   const visiblePatients = filterInbox(patients, query);
   return (
     <Flex direction="column" gap="2">
       <Heading size="3" as="h2" id="assigned-patients-heading">
-        Pacientes asignados{" "}
+        {charting ? "Por pasar a la ficha" : "Pacientes asignados"}{" "}
         <Text size="2" color="gray" weight="regular">{patients.length}</Text>
       </Heading>
-      <TextField.Root
-        type="search"
-        aria-label="Buscar pacientes por nombre o cama"
-        placeholder="Buscar por nombre o cama"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-      />
+      {(toChart > 0 || charting) && (
+        <Button
+          size="2"
+          variant={charting ? "solid" : "soft"}
+          aria-pressed={charting}
+          onClick={() => onChartingChange(!charting)}
+        >
+          {charting ? "Ver todos los pacientes" : `Pasar a ficha · ${toChart}`}
+        </Button>
+      )}
+      {charting && patients.length === 0 && (
+        <Text size="2" color="gray" role="status">
+          Ya pasaste todo a la ficha. Buen cierre de turno.
+        </Text>
+      )}
+      {patients.length > 0 && (
+        <TextField.Root
+          type="search"
+          aria-label="Buscar pacientes por nombre o cama"
+          placeholder="Buscar por nombre o cama"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      )}
       {query.trim() && (
         <Text size="1" color="gray" role="status">
           {visiblePatients.length === 0
@@ -256,9 +321,10 @@ interface PatientDetailProps {
   go: (next: InboxSearch) => void;
   /** En teléfono la fila no se ve junto al detalle: el contexto va bajo el encabezado. */
   showContext: boolean;
+  onCharted: (notice: ChartedNotice) => void;
 }
 
-function PatientDetail({ patient, search, go, showContext }: PatientDetailProps) {
+function PatientDetail({ patient, search, go, showContext, onCharted }: PatientDetailProps) {
   const [tab, setTab] = useState<PatientTab>("summary");
   // Incluye tus borradores (para «Informe por validar»); el historial solo muestra los guardados.
   const { data: allReports = [], isPending } = useReports(patient.id, true);
@@ -300,6 +366,7 @@ function PatientDetail({ patient, search, go, showContext }: PatientDetailProps)
       {toValidate.map((report) => (
         <ValidationPrompt key={report.id} report={report} onOpen={() => openReport(report.id)} />
       ))}
+      {patient.pendingChart > 0 && <ChartCard patientId={patient.id} onCharted={onCharted} />}
       <PatientSummaryView
         patientId={patient.id}
         reports={reports}

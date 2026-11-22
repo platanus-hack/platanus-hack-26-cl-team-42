@@ -85,6 +85,11 @@ export function encounterAnchor(encounterId: string): string {
   return `atencion-${encounterId}`;
 }
 
+/** Las atenciones son informes guardados: `enc-12` es el informe 12. */
+export function reportIdOf(encounterId: string): string | undefined {
+  return /^enc-(\d+)$/.exec(encounterId)?.[1];
+}
+
 export function professionalById(
   record: Pick<EpisodeRecord, "professionals">,
   id: string | null | undefined,
@@ -139,6 +144,41 @@ export function renderRecordText(record: EpisodeRecord, view: RecordView): strin
   for (const pending of view.pendings) lines.push(`  ${pendingText(record, pending)}`);
   if (view.openConflicts.length > 0) {
     lines.push("", "CONFLICTOS POR REVISAR", ...view.openConflicts.map((conflict) => `  ${conflict.description}`));
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Lo que te falta pasar a la ficha: tus atenciones de este paciente que aún no confirmas,
+ * en orden clínico (incluye las de turnos anteriores que se quedaron sin pasar).
+ */
+export function pendingChartEncounters(record: EpisodeRecord, meId: string): Encounter[] {
+  return episodeEncountersAtCutoff(record)
+    .filter((encounter) => encounter.authorId === meId && !encounter.chartedAt)
+    .map((encounter) => ({ ...encounter, entries: encounter.entries.filter(isValidated) }))
+    .sort(byOccurredAt);
+}
+
+/** Texto plano para pegar en la ficha: solo tus atenciones por pasar, agrupadas por turno. */
+export function renderChartText(record: EpisodeRecord, encounters: Encounter[], meId: string): string {
+  const { episode } = record;
+  const lines: string[] = [`REGISTRO CLÍNICO · ${authorLine(record, meId)}`, `Paciente: ${episode.label} · ${episode.unit}`];
+  for (const shift of record.shifts) {
+    const ofShift = encounters.filter((encounter) => encounter.shiftId === shift.id);
+    if (ofShift.length === 0) continue;
+    lines.push("", `TURNO ${shift.label.toUpperCase()}`);
+    for (const encounter of ofShift) {
+      lines.push(`— ${formatClinicalTime(encounter.occurredAt)}`);
+      if (encounter.entries.length === 0) lines.push("  (sin entradas clínicas)");
+      for (const entry of encounter.entries) {
+        lines.push(`  ${ENTRY_KIND_LABEL[entry.kind]}: ${entry.text}${measurementsText(entry)}`);
+      }
+    }
+  }
+  const sourceIds = new Set(encounters.map((encounter) => encounter.id));
+  const pendings = record.pendings.filter((pending) => sourceIds.has(pending.sourceEncounterId));
+  if (pendings.length > 0) {
+    lines.push("", "PENDIENTES", ...pendings.map((pending) => `  ${pendingText(record, pending)}`));
   }
   return lines.join("\n");
 }

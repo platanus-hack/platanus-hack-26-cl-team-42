@@ -124,6 +124,7 @@ function signalsOf(patient: PatientWithCount): InboxSignal[] {
     },
     patient.visitPriority === "soon" && { text: patient.visitPriorityLabel || "Visitar pronto", color: "amber" },
     patient.criticality === "high" && { text: "Criticidad alta", color: "amber" },
+    patient.pendingChart > 0 && { text: "Por pasar a ficha", color: "gray" },
     patient.inboxStatus === "processing" && {
       text: patient.processingLabel ? `${patient.processingLabel} ${patient.processingStep ?? 0}/${PROCESSING_STEPS}` : "Procesando…",
       color: "gray",

@@ -169,6 +169,8 @@ class Report(models.Model):
         max_length=14, choices=Consolidation.choices, default=Consolidation.PENDING
     )
     validated_at = models.DateTimeField(null=True, blank=True)
+    # Cuándo su autor confirmó haberlo pasado a la ficha institucional (``None`` = por pasar).
+    charted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

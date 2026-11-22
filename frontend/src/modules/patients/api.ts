@@ -44,6 +44,8 @@ export interface PatientWithCount extends Patient {
   /** Conflictos abiertos entre informes de este paciente y cuántos son tuyos. */
   openConflicts: number;
   myOpenConflicts: number;
+  /** Informes tuyos guardados que aún no pasas a la ficha institucional. */
+  pendingChart: number;
 }
 
 /** Etapas visibles de un dictado en proceso: transcribir, parsear a la plantilla y homologar. */

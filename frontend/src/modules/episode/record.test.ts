@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_EPISODE } from "./testing/fixture";
-import { renderRecordText, selectRecord, sourcedEntries } from "./record";
+import { pendingChartEncounters, renderChartText, renderRecordText, reportIdOf, selectRecord, sourcedEntries } from "./record";
 
 describe("selectRecord · invariante de corte", () => {
   const cutoff = Date.parse(DEMO_EPISODE.episode.cutoffAt);
@@ -95,5 +95,38 @@ describe("selectRecord · invariante de corte", () => {
     const view = selectRecord(record, { professionalId: "prof-nurse-day" });
 
     expect(view.pendings.map((pending) => pending.id)).toEqual(["pend-abg"]);
+  });
+});
+
+describe("pasar a la ficha", () => {
+  it("solo trae tus atenciones validadas al corte que aún no confirmas", () => {
+    const pending = pendingChartEncounters(DEMO_EPISODE, "prof-nurse-night");
+    expect(pending.map((encounter) => encounter.id)).toEqual(["enc-nurse-night-1"]);
+
+    const med = pendingChartEncounters(DEMO_EPISODE, "prof-med");
+    expect(med.flatMap((encounter) => encounter.entries.map((entry) => entry.id))).not.toContain("ent-md1-draft");
+
+    const charted = {
+      ...DEMO_EPISODE,
+      encounters: DEMO_EPISODE.encounters.map((encounter) => ({ ...encounter, chartedAt: "2026-11-20T21:00:00-03:00" })),
+    };
+    expect(pendingChartEncounters(charted, "prof-med")).toEqual([]);
+  });
+
+  it("arma el texto por turno con tus pendientes y nada de otros profesionales", () => {
+    const text = renderChartText(DEMO_EPISODE, pendingChartEncounters(DEMO_EPISODE, "prof-med"), "prof-med");
+
+    expect(text).toContain("REGISTRO CLÍNICO · Tomás Ibarra (Médico residente)");
+    expect(text).toContain(`TURNO ${DEMO_EPISODE.shifts[1].label.toUpperCase()}`);
+    expect(text).toContain("PENDIENTES");
+    expect(text).not.toContain("Rosa Fuentes");
+    expect(text).not.toContain("Camila Rojas");
+  });
+});
+
+describe("reportIdOf", () => {
+  it("lleva una atención a su informe y descarta lo que no es una atención", () => {
+    expect(reportIdOf("enc-12")).toBe("12");
+    expect(reportIdOf("enc-nurse-night-1")).toBeUndefined();
   });
 });

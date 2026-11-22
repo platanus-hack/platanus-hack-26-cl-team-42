@@ -328,3 +328,62 @@ def test_patients_can_be_split_between_different_recipients(doctor, nurse, patie
         (str(nurse.id), (str(patient.id),)),
         (str(kine.id), (str(second.id),)),
     }
+
+
+def test_own_saved_reports_stay_pending_until_marked_as_charted(doctor, nurse, patient):
+    first = _report(doctor, patient, "medico", DOCTOR_DATA, hours_ago=3)
+    second = _report(doctor, patient, "medico", DOCTOR_DATA, hours_ago=1)
+    _report(nurse, patient, "enfermeria", {"metadatos": {"cama": "Box 7"}})
+    client = Client()
+    client.force_login(doctor)
+    url = f"{API}/{patient.id}/charted"
+
+    assert episodes.pending_chart_counts(doctor, [patient.id]) == {patient.id: 2}
+    marked = client.post(url, {"encounter_ids": [f"enc-{first.id}"]}, content_type="application/json")
+
+    # Solo se marca lo copiado: el otro informe sigue por pasar.
+    assert marked.status_code == 200 and marked.json() == {"encounterIds": [f"enc-{first.id}"]}
+    assert episodes.pending_chart_counts(doctor, [patient.id]) == {patient.id: 1}
+    encounters = {e["id"]: e for e in episodes.episode_records(doctor)[0]["encounters"]}
+    assert encounters[f"enc-{first.id}"]["chartedAt"] is not None
+    assert encounters[f"enc-{second.id}"]["chartedAt"] is None
+
+    undone = client.post(f"{url}/undo", {"encounter_ids": [f"enc-{first.id}"]}, content_type="application/json")
+    assert undone.json() == {"encounterIds": [f"enc-{first.id}"]}
+    assert episodes.pending_chart_counts(doctor, [patient.id]) == {patient.id: 2}
+
+
+def test_only_your_own_saved_reports_of_your_patients_can_be_charted(doctor, nurse, patient):
+    nurse_report = _report(nurse, patient, "enfermeria", {"metadatos": {"cama": "Box 7"}})
+    own = _report(doctor, patient, "medico", DOCTOR_DATA)
+    stranger = User.objects.create_user(email="z@x.cl", password="pw")
+    client = Client()
+    client.force_login(doctor)
+    outsider = Client()
+    outsider.force_login(stranger)
+    url = f"{API}/{patient.id}/charted"
+
+    def post(c, ids):
+        return c.post(url, {"encounter_ids": ids}, content_type="application/json")
+
+    assert post(client, [f"enc-{nurse_report.id}"]).status_code == 409
+    assert post(client, [f"enc-{own.id}", f"enc-{nurse_report.id}"]).status_code == 409
+    assert post(client, ["otra-cosa"]).status_code == 409
+    assert post(client, []).status_code == 409
+    assert post(outsider, [f"enc-{own.id}"]).status_code == 409
+    own.refresh_from_db()
+    assert own.charted_at is None
+
+
+def test_the_patient_list_counts_what_you_still_have_to_chart(doctor, nurse, patient):
+    _report(doctor, patient, "medico", DOCTOR_DATA)
+    client = Client()
+    client.force_login(doctor)
+    colleague = Client()
+    colleague.force_login(nurse)
+
+    [row] = client.get(f"/{settings.URL_PREFIX}/api/patients").json()
+    [other_row] = colleague.get(f"/{settings.URL_PREFIX}/api/patients").json()
+
+    assert row["pendingChart"] == 1
+    assert other_row["pendingChart"] == 0

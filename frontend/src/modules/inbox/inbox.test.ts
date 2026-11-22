@@ -133,6 +133,7 @@ function patient(name: string, bed: string, inboxStatus: PatientWithCount["inbox
     processingLabel: null,
     openConflicts: 0,
     myOpenConflicts: 0,
+    pendingChart: 0,
   };
 }
 

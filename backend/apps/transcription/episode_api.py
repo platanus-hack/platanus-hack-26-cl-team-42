@@ -14,6 +14,10 @@ from . import episode_services as episodes
 router = Router(tags=["episodes"])
 
 
+class ChartIn(Schema):
+    encounter_ids: list[str]
+
+
 class HandoffIn(Schema):
     to_id: int
     note: str = ""
@@ -36,6 +40,26 @@ def get_team(request):
 def close_pending(request, patient_id: int, pending_id: str):
     try:
         return episodes.close_pending(request.user, patient_id, pending_id)
+    except episodes.EpisodeError as error:
+        raise HttpError(409, str(error)) from error
+
+
+@router.post("/{patient_id}/charted", response=dict[str, list[str]])
+def mark_charted(request, patient_id: int, payload: ChartIn):
+    """Confirma que las atenciones indicadas ya se pegaron en la ficha institucional."""
+    try:
+        return {"encounterIds": episodes.mark_charted(request.user, patient_id, payload.encounter_ids)}
+    except episodes.EpisodeError as error:
+        raise HttpError(409, str(error)) from error
+
+
+@router.post("/{patient_id}/charted/undo", response=dict[str, list[str]])
+def unmark_charted(request, patient_id: int, payload: ChartIn):
+    """Las atenciones vuelven a quedar por pasar a la ficha."""
+    try:
+        return {
+            "encounterIds": episodes.unmark_charted(request.user, patient_id, payload.encounter_ids)
+        }
     except episodes.EpisodeError as error:
         raise HttpError(409, str(error)) from error
 

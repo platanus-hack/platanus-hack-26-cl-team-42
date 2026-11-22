@@ -1,31 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ClinicalRecordPage } from "../../modules/clinical-record/ClinicalRecordPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { reportIdOf } from "../../modules/episode/record";
 
-export interface ClinicalRecordSearch {
-  episode?: string;
-  /** Filtro por autor de la atención. */
-  professional?: string;
-  /** Filtro por turno. */
-  shift?: string;
-  /** Atención de origen a destacar (enlaces desde traspasos y datos de corte). */
-  encounter?: string;
-}
-
+/**
+ * El registro clínico ahora vive en «Mis pacientes» (Pasar a ficha): los enlaces antiguos
+ * llevan al paciente y, si apuntaban a una atención, a su informe.
+ */
 export const Route = createFileRoute("/_authenticated/official-form")({
-  validateSearch: (search: Record<string, unknown>): ClinicalRecordSearch => ({
-    episode: optionalString(search.episode),
-    professional: optionalString(search.professional),
-    shift: optionalString(search.shift),
-    encounter: optionalString(search.encounter),
-  }),
-  component: ClinicalRecordRoute,
+  beforeLoad: ({ search }) => {
+    const { episode, encounter } = search as Record<string, unknown>;
+    throw redirect({
+      to: "/",
+      search: {
+        // El router lee `episode=8` como número: se acepta en cualquiera de las dos formas.
+        patient: typeof episode === "string" || typeof episode === "number" ? String(episode) : undefined,
+        report: typeof encounter === "string" ? reportIdOf(encounter) : undefined,
+      },
+      replace: true,
+    });
+  },
 });
-
-function ClinicalRecordRoute() {
-  const search = Route.useSearch();
-  return <ClinicalRecordPage search={search} />;
-}
-
-function optionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
