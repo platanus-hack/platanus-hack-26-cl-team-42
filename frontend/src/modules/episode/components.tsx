@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Badge, Button, Callout, Flex, Heading, Text } from "@radix-ui/themes";
 import { Link } from "@tanstack/react-router";
 import { formatClinicalTime } from "./format";
+import { reportIdOf } from "./record";
 import type { Episode, OpenConflict, PendingTask } from "./model";
 
 /** Encabezado del paciente: quién es, su unidad y el instante de corte del registro. */
@@ -18,7 +19,7 @@ export function EpisodeBanner({ episode, children }: { episode: Episode; childre
   );
 }
 
-/** Enlace real a la atención de origen dentro del registro clínico. */
+/** Enlace a la atención de origen: el informe de ese dictado, dentro de «Mis pacientes». */
 export function SourceLink({
   episodeId,
   encounterId,
@@ -29,7 +30,7 @@ export function SourceLink({
   children: ReactNode;
 }) {
   return (
-    <Link to="/official-form" search={{ episode: episodeId, encounter: encounterId }}>
+    <Link to="/" search={{ patient: episodeId, report: reportIdOf(encounterId) }}>
       {children}
     </Link>
   );

@@ -22,11 +22,24 @@ export interface EpisodeGateway {
   /** Traspasos que el usuario activo envió o recibió. */
   listHandoffs(): Promise<Handoff[]>;
   sendHandoff(input: SendHandoffInput): Promise<Handoff>;
+  /** Confirma que estas atenciones tuyas ya se pegaron en la ficha institucional. */
+  markCharted(input: ChartInput): Promise<ChartResult>;
+  /** Deshace la confirmación: vuelven a quedar por pasar. */
+  unmarkCharted(input: ChartInput): Promise<ChartResult>;
 }
 
 export interface ClosePendingInput {
   episodeId: string;
   pendingId: string;
+}
+
+export interface ChartInput {
+  episodeId: string;
+  encounterIds: string[];
+}
+
+export interface ChartResult {
+  encounterIds: string[];
 }
 
 export const episodeGateway: EpisodeGateway = {
@@ -35,6 +48,16 @@ export const episodeGateway: EpisodeGateway = {
   closePending: ({ episodeId, pendingId }) =>
     apiRequest<PendingTask>(`/episodes/${episodeId}/pendings/${pendingId}/close`, { method: "POST" }),
   listHandoffs: () => apiRequest<Handoff[]>("/episodes/handoffs"),
+  markCharted: ({ episodeId, encounterIds }) =>
+    apiRequest<ChartResult>(`/episodes/${episodeId}/charted`, {
+      method: "POST",
+      body: JSON.stringify({ encounter_ids: encounterIds }),
+    }),
+  unmarkCharted: ({ episodeId, encounterIds }) =>
+    apiRequest<ChartResult>(`/episodes/${episodeId}/charted/undo`, {
+      method: "POST",
+      body: JSON.stringify({ encounter_ids: encounterIds }),
+    }),
   async sendHandoff({ fromId, toId, note, episodeIds }) {
     const [records, handoffs] = await Promise.all([episodeGateway.listRecords(), episodeGateway.listHandoffs()]);
     // La copia fija de lo comunicado se arma con el registro vigente de cada paciente elegido.

@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import { Flex, IconButton, Text } from "@radix-ui/themes";
+import { Button, Flex, IconButton, Text } from "@radix-ui/themes";
 
 export interface ToastMessage {
   /** Cambia en cada aviso, para que el temporizador vuelva a empezar. */
   id: number;
   text: string;
+  /** Acción opcional junto al texto (p. ej. «Deshacer»); al usarla se cierra el aviso. */
+  action?: { label: string; onClick: () => void };
 }
 
 const DURATION_MS = 6000;
@@ -24,6 +26,18 @@ export function Toast({ message, onClose }: { message: ToastMessage | null; onCl
         <Text size="2" style={{ flex: 1 }}>
           {message.text}
         </Text>
+        {message.action && (
+          <Button
+            size="1"
+            variant="soft"
+            onClick={() => {
+              message.action?.onClick();
+              onClose();
+            }}
+          >
+            {message.action.label}
+          </Button>
+        )}
         <IconButton size="1" variant="ghost" color="gray" aria-label="Cerrar aviso" onClick={onClose}>
           ×
         </IconButton>

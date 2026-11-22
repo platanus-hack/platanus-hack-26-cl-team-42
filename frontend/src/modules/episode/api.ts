@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { patientKeys } from "../patients/api";
-import { episodeGateway, type ClosePendingInput } from "./gateway";
+import { episodeGateway, type ChartInput, type ClosePendingInput } from "./gateway";
 import type { SendHandoffInput } from "./model";
 
 const recordKeys = ["episode-records"] as const;
@@ -40,5 +40,19 @@ export function useClosePending() {
   return useMutation({
     mutationFn: (input: ClosePendingInput) => episodeGateway.closePending(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: recordKeys }),
+  });
+}
+
+/** Confirma (o deshace) que tus atenciones se pasaron a la ficha: cambia el registro y la bandeja. */
+export function useChartMark(action: "mark" | "unmark") {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ChartInput) =>
+      action === "mark" ? episodeGateway.markCharted(input) : episodeGateway.unmarkCharted(input),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: recordKeys }),
+        queryClient.invalidateQueries({ queryKey: patientKeys }),
+      ]),
   });
 }

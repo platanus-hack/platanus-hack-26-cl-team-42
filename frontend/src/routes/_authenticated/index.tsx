@@ -6,6 +6,7 @@ export const Route = createFileRoute("/_authenticated/")({
     patient: optionalId(search.patient),
     report: optionalId(search.report),
     section: typeof search.section === "string" ? search.section : undefined,
+    chart: search.chart === true || search.chart === "true" ? true : undefined,
   }),
   component: InboxRoute,
 });

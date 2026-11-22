@@ -14,6 +14,7 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 
 from apps.transcription import evidence_services
+from apps.transcription.episode_services import pending_chart_counts
 from apps.transcription.inbox_services import inbox_states
 from apps.transcription.models import ConsolidatedVersion
 from apps.transcription.reconciliation_services import open_conflict_counts
@@ -55,6 +56,8 @@ class PatientListOut(PatientOut):
     # Conflictos abiertos entre informes de este paciente y cuántos son tuyos.
     openConflicts: int
     myOpenConflicts: int
+    # Informes tuyos guardados que aún no pasas a la ficha institucional.
+    pendingChart: int
 
 
 @router.get("", response=list[PatientListOut])
@@ -68,6 +71,7 @@ def list_patients(request):
     ids = [p.id for p in patients]
     states = inbox_states(request.user, ids)
     conflicts = open_conflict_counts(request.user, ids)
+    charting = pending_chart_counts(request.user, ids)
     triage = triage_for(ids, {pid: state.last_dictation_at for pid, state in states.items()})
     return [
         PatientListOut(
@@ -90,6 +94,7 @@ def list_patients(request):
             processingLabel=states[p.id].stage_label,
             openConflicts=conflicts[p.id][0],
             myOpenConflicts=conflicts[p.id][1],
+            pendingChart=charting[p.id],
         )
         for p in patients
     ]

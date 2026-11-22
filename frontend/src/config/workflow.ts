@@ -47,7 +47,8 @@ export const WORKFLOW_STEPS = [
     label: "Registro clínico",
     summary: "Registro prellenado por atención, listo para copiar a la ficha institucional.",
     path: "/official-form",
-    hidden: false,
+    // Ahora vive en «Mis pacientes» (Pasar a ficha): la ruta solo redirige.
+    hidden: true,
     connected: true,
   },
   {

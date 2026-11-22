@@ -76,6 +76,8 @@ export interface Encounter {
   /** Origen del evento: un dictado de audio. */
   source: { type: "audio_dictation"; label: string };
   entries: ClinicalEntry[];
+  /** Cuándo su autor confirmó haberla pasado a la ficha institucional (`null` = por pasar). */
+  chartedAt?: string | null;
 }
 
 export type PendingStatus = "open" | "done";

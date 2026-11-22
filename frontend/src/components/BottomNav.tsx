@@ -5,11 +5,10 @@ import { VISIBLE_STEPS } from "../config/workflow";
 import { useOpenConflictCount } from "../modules/reconciliation/api";
 import { StepIcon } from "./icons";
 
-/** Etiquetas cortas: en un teléfono cada pestaña mide un cuarto del ancho. */
+/** Etiquetas cortas: en un teléfono cada pestaña mide un tercio del ancho. */
 const SHORT_LABEL: Record<string, string> = {
   patients: "Pacientes",
   reconciliation: "Conflictos",
-  "official-form": "Registro",
   handoff: "Traspaso",
 };
 
