@@ -13,6 +13,9 @@ const DATE_FORMAT = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeS
 export function ReconciliationPage({ reconciliationId, conflictId }: { reconciliationId?: string; conflictId?: string }) {
   const { data: reconciliations = [], isPending, isError, error } = useReconciliations();
   const { data: consults = [] } = useIncomingConsults();
+  // Las consultas ya respondidas se archivan al final: no deben tapar los conflictos por resolver.
+  const pendingConsults = consults.filter((consult) => consult.status !== "answered");
+  const answeredConsults = consults.filter((consult) => consult.status === "answered");
   const [selectedId, setSelectedId] = useState<string>();
   const open = reconciliations.filter((item) => item.status === "open");
   const selected =
@@ -44,14 +47,14 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
         </Text>
       </details>
 
-      {consults.length > 0 && <IncomingConsults consults={consults} />}
+      {pendingConsults.length > 0 && <IncomingConsults consults={pendingConsults} />}
 
       {isError ? (
         <Callout.Root color="red">
           <Callout.Text>No se pudieron cargar las reconciliaciones: {error.message}</Callout.Text>
         </Callout.Root>
       ) : !isPending && reconciliations.length === 0 ? (
-        consults.length > 0 ? null : (
+        pendingConsults.length > 0 ? null : (
         <EmptyState
           title="Sin conflictos"
           description="Cuando un informe que guardes choque con lo reportado por otro profesional, aparecerá aquí."
@@ -86,6 +89,8 @@ export function ReconciliationPage({ reconciliationId, conflictId }: { reconcili
           )}
         </Grid>
       )}
+
+      {answeredConsults.length > 0 && <AnsweredConsults consults={answeredConsults} />}
     </ModulePage>
   );
 }
@@ -195,6 +200,24 @@ function IncomingConsults({ consults }: { consults: IncomingConsult[] }) {
         <ConsultCard key={consult.id} consult={consult} />
       ))}
     </Flex>
+  );
+}
+
+/** Archivo de las opiniones que ya diste: colapsado, al final de la página. */
+function AnsweredConsults({ consults }: { consults: IncomingConsult[] }) {
+  return (
+    <details>
+      <summary style={{ cursor: "pointer", width: "fit-content" }}>
+        <Text size="2" color="gray">
+          Opiniones que ya diste ({consults.length})
+        </Text>
+      </summary>
+      <Flex direction="column" gap="2" mt="2">
+        {consults.map((consult) => (
+          <ConsultCard key={consult.id} consult={consult} />
+        ))}
+      </Flex>
+    </details>
   );
 }
 
