@@ -16,7 +16,7 @@ from ninja.files import UploadedFile
 from apps.recordings.models import Recording
 from apps.recordings.services import ALLOWED_MIME_TYPES, MAX_AUDIO_BYTES, base_mime_type
 
-from . import reconciliation_services, report_assistant, report_services
+from . import diff_services, reconciliation_services, report_assistant, report_services
 from .extraction_services import (
     ExtractionError,
     ExtractionOut,
@@ -146,6 +146,15 @@ def get_user_report(request, report_id: int):
     if report is None:
         raise HttpError(404, "Informe no encontrado.")
     return report
+
+
+@router.get("/reports/{report_id}/diff", response=diff_services.ReportDiff)
+def get_user_report_diff(request, report_id: int):
+    """Cambios respecto del informe anterior de la misma profesión y su impacto en el registro."""
+    report = report_services.visible_reports(request.user).filter(pk=report_id).first()
+    if report is None:
+        raise HttpError(404, "Informe no encontrado.")
+    return diff_services.report_diff(request.user, report)
 
 
 @router.get("/concepts", response=list[ConceptMappingOut])

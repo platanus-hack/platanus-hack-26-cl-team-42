@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../../services/api/client";
+import type { RecordChange } from "../reports/api";
 
 // Pacientes asignados al profesional y su resumen.
 // Backend: `backend/apps/recordings/patients_api.py` → `/-/api/patients`.
@@ -166,6 +167,8 @@ export interface PatientVersion {
   sourceReportId: string | null;
   sourceAuthor: string;
   sourceProfession: string;
+  /** Qué cambió en el registro oficial respecto de la versión anterior (vacío en la primera). */
+  changes: RecordChange[];
 }
 
 export const patientKeys = ["patients"] as const;

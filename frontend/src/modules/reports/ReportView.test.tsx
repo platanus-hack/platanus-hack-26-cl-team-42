@@ -10,6 +10,7 @@ vi.mock("./api", async (importOriginal) => ({
   useEditReportItem: vi.fn(),
   useReviewItem: vi.fn(),
   useValidateReport: vi.fn(),
+  useReportDiff: () => ({ data: undefined, isPending: true, isError: false }),
 }));
 vi.mock("../templates/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../templates/api")>()),
