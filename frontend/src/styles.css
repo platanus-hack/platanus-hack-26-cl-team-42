@@ -38,6 +38,48 @@
   --teal-track: var(--teal-9);
 }
 
+/* La misma marca en modo oscuro: el paso 9 sigue siendo el verde del logo (botones sólidos) y los
+   pasos de texto (11, 12) se aclaran para que se lean sobre fondo oscuro. */
+.dark.dark,
+.dark-theme.dark-theme {
+  --teal-1: #0b1514;
+  --teal-2: #0f1c1a;
+  --teal-3: #0d2c27;
+  --teal-4: #093a33;
+  --teal-5: #0d473f;
+  --teal-6: #14564c;
+  --teal-7: #1a685c;
+  --teal-8: #1f7f70;
+  --teal-9: #006f60;
+  --teal-10: #0a7f6e;
+  --teal-11: #4fd1b8;
+  --teal-12: #b0f0e1;
+
+  --teal-a1: rgb(0 187 153 / 0.03);
+  --teal-a2: rgb(0 230 190 / 0.06);
+  --teal-a3: rgb(0 240 200 / 0.13);
+  --teal-a4: rgb(0 230 190 / 0.2);
+  --teal-a5: rgb(10 240 200 / 0.26);
+  --teal-a6: rgb(40 245 210 / 0.32);
+  --teal-a7: rgb(50 250 215 / 0.4);
+  --teal-a8: rgb(50 250 215 / 0.5);
+  --teal-a9: rgb(0 210 180 / 0.48);
+  --teal-a10: rgb(20 220 190 / 0.52);
+  --teal-a11: #4fd1b8;
+  --teal-a12: #b0f0e1;
+
+  --teal-contrast: #ffffff;
+  --teal-surface: rgb(13 44 39 / 0.5);
+  --teal-indicator: var(--teal-9);
+  --teal-track: var(--teal-9);
+}
+
+/* El logo es un PNG sin transparencia (círculo sobre fondo blanco): se recorta al círculo para
+   que no aparezca el cuadrado blanco en modo oscuro. */
+.brand-mark {
+  clip-path: circle(43% at 50% 50%);
+}
+
 /* Barra superior: marca, cuenta y (solo en pantallas anchas) la navegación. En teléfono y tablet
    vertical la navegación va abajo, en la barra de pestañas. */
 .app-header {
